@@ -1,0 +1,110 @@
+version: "3.8"
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: smart-ai-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: smart_ai_internship
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - smart-ai-network
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: smart-ai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart-ai-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart-ai-backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/smart_ai_internship?authSource=admin
+      AI_SERVICE_URL: http://ai-service:8000
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - smart-ai-network
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: smart-ai-ai-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: development
+      HOST: 0.0.0.0
+      PORT: 8000
+      MONGODB_URI: mongodb://admin:password@mongodb:27017/smart_ai_internship?authSource=admin
+      REDIS_URL: redis://redis:6379
+      BACKEND_URL: http://backend:5000
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - smart-ai-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smart-ai-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:5000
+      NEXT_PUBLIC_AI_SERVICE_URL: http://localhost:8000
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      - backend
+      - ai-service
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - smart-ai-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  smart-ai-network:
+    driver: bridge
