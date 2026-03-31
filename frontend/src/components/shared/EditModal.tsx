@@ -7,7 +7,8 @@ interface EditModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
-    onSubmit: () => void;
+    onSubmit?: () => void;
+    onSave?: () => void;
     isLoading?: boolean;
     children: ReactNode;
 }
@@ -17,9 +18,11 @@ export default function EditModal({
     onClose,
     title,
     onSubmit,
+    onSave,
     isLoading = false,
     children,
 }: EditModalProps) {
+    const handleSubmit = onSubmit || onSave || (() => { });
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isOpen) {
@@ -67,7 +70,7 @@ export default function EditModal({
                         Cancel
                     </button>
                     <button
-                        onClick={onSubmit}
+                        onClick={handleSubmit}
                         disabled={isLoading}
                         className="px-6 py-2.5 bg-[#4F46E5] text-white text-sm font-semibold rounded-lg hover:bg-[#4338CA] transition-colors duration-200 disabled:opacity-70 flex items-center gap-2"
                     >

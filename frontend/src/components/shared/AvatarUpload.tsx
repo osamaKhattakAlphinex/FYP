@@ -4,19 +4,25 @@ import { UploadCloud, X } from "lucide-react";
 import { useState, useRef, DragEvent } from "react";
 
 interface AvatarUploadProps {
-    currentImage: string | null;
-    initials: string;
-    onUpload: (file: File) => void;
+    currentImage?: string | null;
+    currentAvatar?: string | null;
+    initials?: string;
+    onUpload?: (file: File) => void;
+    onSave?: (url: any) => void;
     onClose: () => void;
+    label?: string;
 }
 
 export default function AvatarUpload({
     currentImage,
-    initials,
+    currentAvatar,
+    initials = "?",
     onUpload,
+    onSave,
     onClose,
+    label,
 }: AvatarUploadProps) {
-    const [preview, setPreview] = useState<string | null>(currentImage);
+    const [preview, setPreview] = useState<string | null>(currentImage || currentAvatar || null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,7 +63,11 @@ export default function AvatarUpload({
 
     const handleSave = () => {
         if (fileInputRef.current?.files?.[0]) {
-            onUpload(fileInputRef.current.files[0]);
+            if (onUpload) {
+                onUpload(fileInputRef.current.files[0]);
+            } else if (onSave) {
+                onSave(preview);
+            }
             onClose();
         }
     };
@@ -116,8 +126,8 @@ export default function AvatarUpload({
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${isDragging
-                                    ? "border-[#4F46E5] bg-[#EEF2FF]"
-                                    : "border-[#C7D2FE] bg-[#F8FAFC] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                ? "border-[#4F46E5] bg-[#EEF2FF]"
+                                : "border-[#C7D2FE] bg-[#F8FAFC] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
                                 }`}
                             onClick={() => fileInputRef.current?.click()}
                         >

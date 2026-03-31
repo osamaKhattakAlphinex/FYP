@@ -8,6 +8,7 @@ interface SectionCardProps {
     icon: LucideIcon;
     onEdit?: () => void;
     isEmpty?: boolean;
+    action?: ReactNode;
     children: ReactNode;
 }
 
@@ -16,6 +17,7 @@ export default function SectionCard({
     icon: Icon,
     onEdit,
     isEmpty = false,
+    action,
     children,
 }: SectionCardProps) {
     return (
@@ -25,7 +27,7 @@ export default function SectionCard({
                     <Icon className="w-5 h-5 text-[#4F46E5]" />
                     <h2 className="text-lg font-semibold text-[#0F172A]">{title}</h2>
                 </div>
-                {onEdit && (
+                {action || (onEdit && (
                     <button
                         onClick={onEdit}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F8FAFC] border border-[#E2E8F0] text-[#475569] text-[13px] font-medium rounded-lg hover:bg-[#EEF2FF] hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200"
@@ -42,7 +44,7 @@ export default function SectionCard({
                             </>
                         )}
                     </button>
-                )}
+                ))}
             </div>
             {children}
         </div>

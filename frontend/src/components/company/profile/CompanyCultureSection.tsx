@@ -95,6 +95,7 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
 
             {showEditModal && (
                 <EditModal
+                    isOpen={showEditModal}
                     title="Edit Culture & Perks"
                     onSave={handleSave}
                     onClose={() => {

@@ -198,6 +198,7 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
 
             {showEditModal && (
                 <EditModal
+                    isOpen={showEditModal}
                     title={editingMember ? 'Edit Team Member' : 'Add Team Member'}
                     onSave={handleSave}
                     onClose={() => {

@@ -132,6 +132,7 @@ export default function AboutSection({
             {/* About Edit Modal */}
             {showAboutModal && (
                 <EditModal
+                    isOpen={showAboutModal}
                     title="Edit About Company"
                     onSave={handleSaveAbout}
                     onClose={() => {
@@ -199,6 +200,7 @@ export default function AboutSection({
             {/* Tech Stack Edit Modal */}
             {showTechModal && (
                 <EditModal
+                    isOpen={showTechModal}
                     title="Edit Tech Stack"
                     onSave={() => {
                         setShowTechModal(false);

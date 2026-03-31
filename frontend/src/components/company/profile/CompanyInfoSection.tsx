@@ -147,6 +147,7 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
 
             {showEditModal && (
                 <EditModal
+                    isOpen={showEditModal}
                     title="Edit Company Details"
                     onSave={handleSave}
                     onClose={() => {

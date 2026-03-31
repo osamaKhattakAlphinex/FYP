@@ -178,6 +178,7 @@ export default function CompanySidebar({
             {/* Social Links Edit Modal */}
             {showSocialModal && (
                 <EditModal
+                    isOpen={showSocialModal}
                     title="Edit Social Links"
                     onSave={handleSaveSocial}
                     onClose={() => {
