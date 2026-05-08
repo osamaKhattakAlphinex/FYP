@@ -1,109 +1,86 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from 'react';
-import { Heart, Briefcase, Star, Loader2 } from 'lucide-react';
-import { useParams } from 'next/navigation';
-import { companyService } from '@/services/companyService';
-import CompanyProfileHeader from '@/components/company/profile/CompanyProfileHeader';
-import AboutSection from '@/components/company/profile/AboutSection';
-import CompanyInfoSection from '@/components/company/profile/CompanyInfoSection';
-import CompanyCultureSection from '@/components/company/profile/CompanyCultureSection';
-import CompanyTeamSection from '@/components/company/profile/CompanyTeamSection';
-import CompanyStatsPanel from '@/components/company/profile/CompanyStatsPanel';
-import ActiveTasksPreview from '@/components/company/profile/ActiveTasksPreview';
-import SectionCard from '@/components/shared/SectionCard';
-import type { CompanyProfile, CompanyReview, CompanyTask } from '@/types/company.types';
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { Heart, Briefcase, Star, ArrowRight } from 'lucide-react'
+import { companyService } from '@/services/companyService'
+import CompanyProfileHeader from '@/components/company/profile/CompanyProfileHeader'
+import AboutSection from '@/components/company/profile/AboutSection'
+import CompanyInfoSection from '@/components/company/profile/CompanyInfoSection'
+import CompanyCultureSection from '@/components/company/profile/CompanyCultureSection'
+import CompanyTeamSection from '@/components/company/profile/CompanyTeamSection'
+import CompanyStatsPanel from '@/components/company/profile/CompanyStatsPanel'
+import ActiveTasksPreview from '@/components/company/profile/ActiveTasksPreview'
+import SectionCard from '@/components/shared/SectionCard'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
+import type {
+    CompanyProfile,
+    CompanyReview,
+    CompanyTask,
+} from '@/types/company.types'
+import { cn, getInitials } from '@/lib/utils'
 
-// Transform backend company data to frontend format
-const transformCompanyData = (backendData: any): CompanyProfile => {
-    return {
-        id: backendData._id,
-        userId: backendData.userId,
-        companyName: backendData.companyName,
-        logo: backendData.logo,
-        coverImage: backendData.coverImage,
-        tagline: backendData.culture?.workEnvironment || backendData.companyName || '',
-        about: backendData.description || '',
-        industry: backendData.industry,
-        companySize: backendData.companySize,
-        founded: backendData.foundedYear,
-        headquarters: backendData.location ?
-            `${backendData.location.city || ''}${backendData.location.city && backendData.location.country ? ', ' : ''}${backendData.location.country || ''}`.trim() || 'Not specified' : 'Not specified',
-        website: backendData.website,
-        email: backendData.contactInfo?.email || '',
-        phone: backendData.contactInfo?.phone || '',
-        isVerified: backendData.verification?.isVerified || false,
-        verificationDate: backendData.verification?.verifiedAt || null,
-        profileCompletionScore: backendData.profileCompletion || 0,
-        status: 'Active' as const,
-        techStack: backendData.culture?.values || [], // Using values as tech stack for now
-        perks: backendData.culture?.benefits || [],
-        socialLinks: {
-            linkedin: backendData.socialLinks?.linkedin || null,
-            twitter: backendData.socialLinks?.twitter || null,
-            github: null, // Not available in backend model
-            facebook: backendData.socialLinks?.facebook || null
-        },
-        teamMembers: (backendData.team || []).map((member: any, index: number) => ({
-            id: member._id || index.toString(),
-            name: member.name || 'Team Member',
-            role: member.designation || 'Team Member',
-            avatar: member.avatar,
-            linkedinUrl: member.linkedIn
-        })),
-        activeTasks: backendData.stats?.activeTasks || 0,
-        totalTasksPosted: (backendData.stats?.completedTasks || 0) + (backendData.stats?.activeTasks || 0),
-        totalInterns: backendData.stats?.hiredCandidates || 0,
-        avgRating: backendData.stats?.averageRating || 0,
-        totalReviews: backendData.stats?.totalRatings || 0,
-        createdAt: backendData.createdAt,
-        updatedAt: backendData.updatedAt
-    };
-};
+const transformCompanyData = (backendData: any): CompanyProfile => ({
+    id: backendData._id,
+    userId: backendData.userId,
+    companyName: backendData.companyName,
+    logo: backendData.logo,
+    coverImage: backendData.coverImage,
+    tagline:
+        backendData.culture?.workEnvironment || backendData.companyName || '',
+    about: backendData.description || '',
+    industry: backendData.industry,
+    companySize: backendData.companySize,
+    founded: backendData.foundedYear,
+    headquarters: backendData.location
+        ? `${backendData.location.city || ''}${
+              backendData.location.city && backendData.location.country ? ', ' : ''
+          }${backendData.location.country || ''}`.trim() || 'Not specified'
+        : 'Not specified',
+    website: backendData.website,
+    email: backendData.contactInfo?.email || '',
+    phone: backendData.contactInfo?.phone || '',
+    isVerified: backendData.verification?.isVerified || false,
+    verificationDate: backendData.verification?.verifiedAt || null,
+    profileCompletionScore: backendData.profileCompletion || 0,
+    status: 'Active' as const,
+    techStack: backendData.culture?.values || [],
+    perks: backendData.culture?.benefits || [],
+    socialLinks: {
+        linkedin: backendData.socialLinks?.linkedin || null,
+        twitter: backendData.socialLinks?.twitter || null,
+        github: null,
+        facebook: backendData.socialLinks?.facebook || null,
+    },
+    teamMembers: (backendData.team || []).map((m: any, i: number) => ({
+        id: m._id || i.toString(),
+        name: m.name || 'Team Member',
+        role: m.designation || 'Team Member',
+        avatar: m.avatar,
+        linkedinUrl: m.linkedIn,
+    })),
+    activeTasks: backendData.stats?.activeTasks || 0,
+    totalTasksPosted:
+        (backendData.stats?.completedTasks || 0) +
+        (backendData.stats?.activeTasks || 0),
+    totalInterns: backendData.stats?.hiredCandidates || 0,
+    avgRating: backendData.stats?.averageRating || 0,
+    totalReviews: backendData.stats?.totalRatings || 0,
+    createdAt: backendData.createdAt,
+    updatedAt: backendData.updatedAt,
+})
 
-// Mock data for tasks and reviews (until backend endpoints are available)
 const mockTasks: CompanyTask[] = [
-    {
-        id: '1',
-        title: 'Build a React Dashboard Component',
-        skills: ['React', 'TypeScript'],
-        applicants: 12,
-        deadline: '2026-04-15T00:00:00Z',
-        status: 'Active'
-    },
-    {
-        id: '2',
-        title: 'API Integration for Mobile App',
-        skills: ['Node.js', 'Express'],
-        applicants: 8,
-        deadline: '2026-04-10T00:00:00Z',
-        status: 'Active'
-    },
-    {
-        id: '3',
-        title: 'Database Schema Design',
-        skills: ['PostgreSQL', 'SQL'],
-        applicants: 5,
-        deadline: '2026-04-02T00:00:00Z',
-        status: 'Active'
-    },
-    {
-        id: '4',
-        title: 'UI/UX Design for Landing Page',
-        skills: ['Figma', 'Design'],
-        applicants: 15,
-        deadline: '2026-04-20T00:00:00Z',
-        status: 'Active'
-    },
-    {
-        id: '5',
-        title: 'Write Technical Documentation',
-        skills: ['Technical Writing'],
-        applicants: 6,
-        deadline: '2026-04-18T00:00:00Z',
-        status: 'Active'
-    }
-];
+    { id: '1', title: 'Build a React Dashboard Component', skills: ['React', 'TypeScript'], applicants: 12, deadline: '2026-04-15T00:00:00Z', status: 'Active' },
+    { id: '2', title: 'API Integration for Mobile App', skills: ['Node.js', 'Express'], applicants: 8, deadline: '2026-04-10T00:00:00Z', status: 'Active' },
+    { id: '3', title: 'Database Schema Design', skills: ['PostgreSQL', 'SQL'], applicants: 5, deadline: '2026-04-02T00:00:00Z', status: 'Active' },
+    { id: '4', title: 'UI/UX Design for Landing Page', skills: ['Figma', 'Design'], applicants: 15, deadline: '2026-04-20T00:00:00Z', status: 'Active' },
+    { id: '5', title: 'Write Technical Documentation', skills: ['Technical Writing'], applicants: 6, deadline: '2026-04-18T00:00:00Z', status: 'Active' },
+]
 
 const mockReviews: CompanyReview[] = [
     {
@@ -112,8 +89,9 @@ const mockReviews: CompanyReview[] = [
         studentAvatar: null,
         taskTitle: 'React Dashboard Component',
         rating: 5,
-        comment: 'Excellent mentorship and clear requirements. The team was very supportive throughout the project. I learned a lot about React best practices and component architecture.',
-        createdAt: '2024-03-10T00:00:00Z'
+        comment:
+            'Excellent mentorship and clear requirements. The team was very supportive throughout the project. I learned a lot about React best practices.',
+        createdAt: '2024-03-10T00:00:00Z',
     },
     {
         id: '2',
@@ -121,8 +99,9 @@ const mockReviews: CompanyReview[] = [
         studentAvatar: null,
         taskTitle: 'API Integration',
         rating: 4,
-        comment: 'Great experience working with TechVenture. The project was challenging but rewarding. Would definitely recommend to other students.',
-        createdAt: '2024-03-05T00:00:00Z'
+        comment:
+            'Great experience. The project was challenging but rewarding. Would recommend to other students.',
+        createdAt: '2024-03-05T00:00:00Z',
     },
     {
         id: '3',
@@ -130,210 +109,182 @@ const mockReviews: CompanyReview[] = [
         studentAvatar: null,
         taskTitle: 'Database Design',
         rating: 5,
-        comment: 'Professional environment and real-world project experience. The feedback was constructive and helped me improve my skills significantly.',
-        createdAt: '2024-02-28T00:00:00Z'
-    }
-];
+        comment:
+            'Professional environment and real-world project experience. The feedback was constructive and helped me improve significantly.',
+        createdAt: '2024-02-28T00:00:00Z',
+    },
+]
 
 export default function PublicCompanyProfilePage() {
-    const params = useParams();
-    const [isFollowing, setIsFollowing] = useState(false);
-    const [profile, setProfile] = useState<CompanyProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const params = useParams()
+    const [isFollowing, setIsFollowing] = useState(false)
+    const [profile, setProfile] = useState<CompanyProfile | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        const fetchCompanyProfile = async () => {
+        if (!params.companyId) return
+        ;(async () => {
             try {
-                setLoading(true);
-                setError(null);
-
-                const companyId = params.companyId as string;
-                const backendData = await companyService.getPublicProfile(companyId);
-                const transformedProfile = transformCompanyData(backendData);
-
-                setProfile(transformedProfile);
+                setLoading(true)
+                setError(null)
+                const data = await companyService.getPublicProfile(
+                    params.companyId as string
+                )
+                setProfile(transformCompanyData(data))
             } catch (err: any) {
-                console.error('Error fetching company profile:', err);
-                setError(err.response?.data?.message || 'Failed to load company profile');
+                setError(err.response?.data?.message || 'Failed to load company profile')
             } finally {
-                setLoading(false);
+                setLoading(false)
             }
-        };
+        })()
+    }, [params.companyId])
 
-        if (params.companyId) {
-            fetchCompanyProfile();
-        }
-    }, [params.companyId]);
-
-    const handleFollowToggle = () => {
-        setIsFollowing(!isFollowing);
-    };
-
-    const handleViewTasks = () => {
-        document.getElementById('active-tasks')?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const getInitials = (name: string) => {
-        return name
-            .split(' ')
-            .map(word => word[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    };
+    const scrollToTasks = () =>
+        document.getElementById('active-tasks')?.scrollIntoView({ behavior: 'smooth' })
 
     const getRatingBreakdown = () => {
-        if (!profile || profile.totalReviews === 0) {
-            return [
-                { stars: 5, count: 0, percentage: 0 },
-                { stars: 4, count: 0, percentage: 0 },
-                { stars: 3, count: 0, percentage: 0 },
-                { stars: 2, count: 0, percentage: 0 },
-                { stars: 1, count: 0, percentage: 0 }
-            ];
-        }
-
-        // Mock rating breakdown based on average rating
-        const avgRating = profile.avgRating;
-        const totalReviews = profile.totalReviews;
-
-        // Simple distribution based on average rating
-        const fiveStars = Math.round(totalReviews * (avgRating >= 4.5 ? 0.7 : avgRating >= 4 ? 0.5 : 0.3));
-        const fourStars = Math.round(totalReviews * (avgRating >= 4 ? 0.3 : 0.4));
-        const threeStars = Math.round(totalReviews * 0.15);
-        const twoStars = Math.round(totalReviews * 0.05);
-        const oneStars = totalReviews - fiveStars - fourStars - threeStars - twoStars;
-
+        if (!profile || profile.totalReviews === 0)
+            return [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0, percentage: 0 }))
+        const total = profile.totalReviews
+        const avg = profile.avgRating
+        const five = Math.round(total * (avg >= 4.5 ? 0.7 : avg >= 4 ? 0.5 : 0.3))
+        const four = Math.round(total * (avg >= 4 ? 0.3 : 0.4))
+        const three = Math.round(total * 0.15)
+        const two = Math.round(total * 0.05)
+        const one = total - five - four - three - two
         return [
-            { stars: 5, count: fiveStars, percentage: (fiveStars / totalReviews) * 100 },
-            { stars: 4, count: fourStars, percentage: (fourStars / totalReviews) * 100 },
-            { stars: 3, count: threeStars, percentage: (threeStars / totalReviews) * 100 },
-            { stars: 2, count: twoStars, percentage: (twoStars / totalReviews) * 100 },
-            { stars: 1, count: oneStars, percentage: (oneStars / totalReviews) * 100 }
-        ];
-    };
+            { stars: 5, count: five, percentage: (five / total) * 100 },
+            { stars: 4, count: four, percentage: (four / total) * 100 },
+            { stars: 3, count: three, percentage: (three / total) * 100 },
+            { stars: 2, count: two, percentage: (two / total) * 100 },
+            { stars: 1, count: one, percentage: (one / total) * 100 },
+        ]
+    }
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-                <div className="flex items-center gap-3 text-[#64748B]">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Loading company profile...</span>
+            <div className="surface-canvas min-h-[calc(100vh-3.5rem)]">
+                <div className="mx-auto max-w-[1128px] space-y-3 px-4 py-6 lg:px-6">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-48 w-full" />
                 </div>
             </div>
-        );
+        )
     }
 
-    if (error) {
+    if (error || !profile) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-6xl mb-4">😞</div>
-                    <h1 className="text-2xl font-bold text-[#0F172A] mb-2">Company Not Found</h1>
-                    <p className="text-[#64748B] mb-6">{error}</p>
-                    <button
-                        onClick={() => window.history.back()}
-                        className="bg-[#4F46E5] text-white px-6 py-2 rounded-lg hover:bg-[#4338CA] transition-colors"
-                    >
-                        Go Back
-                    </button>
-                </div>
+            <div className="surface-canvas grid min-h-[calc(100vh-3.5rem)] place-items-center px-4">
+                <Card className="w-full max-w-md p-8 text-center">
+                    <p className="text-sm text-destructive">
+                        {error || 'Company not found'}
+                    </p>
+                    <Button onClick={() => window.history.back()} className="mt-4">
+                        Go back
+                    </Button>
+                </Card>
             </div>
-        );
-    }
-
-    if (!profile) {
-        return null;
+        )
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
-            {/* Profile Header with Action Buttons */}
-            <div className="relative">
+        <div className="surface-canvas min-h-[calc(100vh-3.5rem)]">
+            <div className="mx-auto max-w-[1128px] space-y-3 px-4 py-6 lg:px-6">
                 <CompanyProfileHeader profile={profile} isEditMode={false} />
 
-                {/* Action Buttons */}
-                <div className="absolute bottom-6 right-8 flex items-center gap-3">
-                    <button
-                        onClick={handleFollowToggle}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isFollowing
-                            ? 'bg-[#FEF2F2] border border-[#FECACA] text-[#EF4444]'
-                            : 'bg-white border border-[#E2E8F0] text-[#475569] hover:border-[#EF4444] hover:text-[#EF4444]'
-                            }`}
-                    >
-                        <Heart className={`w-4 h-4 ${isFollowing ? 'fill-current' : ''}`} />
-                        <span>{isFollowing ? 'Following' : 'Follow Company'}</span>
-                    </button>
-                    <button
-                        onClick={handleViewTasks}
-                        className="flex items-center gap-2 bg-[#4F46E5] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[#4338CA] transition-colors duration-200"
-                    >
-                        <Briefcase className="w-4 h-4" />
-                        <span>View Open Tasks</span>
-                    </button>
-                </div>
-            </div>
+                <Card className="flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-foreground">
+                            Interested in {profile.companyName}?
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {profile.activeTasks} active task{profile.activeTasks === 1 ? '' : 's'} ·{' '}
+                            {profile.totalInterns} students hired
+                        </p>
+                    </div>
+                    <div className="flex flex-shrink-0 gap-2">
+                        <Button
+                            variant={isFollowing ? 'soft' : 'secondary'}
+                            size="sm"
+                            onClick={() => setIsFollowing(!isFollowing)}
+                            className={cn(isFollowing && 'text-brand-700')}
+                        >
+                            <Heart
+                                className={cn(
+                                    'h-4 w-4',
+                                    isFollowing && 'fill-current text-brand-700'
+                                )}
+                            />
+                            {isFollowing ? 'Following' : 'Follow'}
+                        </Button>
+                        <Button size="sm" onClick={scrollToTasks}>
+                            <Briefcase className="h-4 w-4" />
+                            View open tasks
+                        </Button>
+                    </div>
+                </Card>
 
-            {/* Main Content */}
-            <div className="max-w-[1200px] mx-auto px-8 py-8">
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left Column - Main Content */}
-                    <div className="flex-1 space-y-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <main className="space-y-3">
                         <AboutSection
                             about={profile.about || ''}
                             tagline={profile.tagline}
                             techStack={profile.techStack}
                             isEditMode={false}
                         />
-
                         <CompanyInfoSection profile={profile} isEditMode={false} />
+                        <CompanyCultureSection
+                            perks={profile.perks || []}
+                            isEditMode={false}
+                        />
+                        <CompanyTeamSection
+                            teamMembers={profile.teamMembers || []}
+                            isEditMode={false}
+                        />
 
-                        <CompanyCultureSection perks={profile.perks || []} isEditMode={false} />
-
-                        <CompanyTeamSection teamMembers={profile.teamMembers || []} isEditMode={false} />
-
-                        {/* Student Reviews Section */}
-                        {profile.totalReviews && profile.totalReviews > 0 && (
-                            <SectionCard icon={Star} title="What Students Say">
-                                <div className="space-y-6">
-                                    {/* Rating Summary */}
-                                    <div className="flex flex-col md:flex-row gap-6 pb-6 border-b border-[#E2E8F0]">
-                                        {/* Overall Rating */}
+                        {profile.totalReviews > 0 && (
+                            <SectionCard icon={Star} title="What students say">
+                                <div className="space-y-5">
+                                    <div className="flex flex-col gap-5 border-b border-border pb-5 md:flex-row">
                                         <div className="text-center md:text-left">
-                                            <div className="text-5xl font-extrabold text-[#0F172A]">
+                                            <div className="text-4xl font-bold tracking-tight text-foreground">
                                                 {profile.avgRating.toFixed(1)}
                                             </div>
-                                            <div className="flex items-center justify-center md:justify-start gap-1 mt-2">
+                                            <div className="mt-1 flex items-center justify-center gap-0.5 md:justify-start">
                                                 {[1, 2, 3, 4, 5].map((star) => (
                                                     <Star
                                                         key={star}
-                                                        className={`w-5 h-5 ${star <= Math.round(profile.avgRating)
-                                                            ? 'fill-[#F59E0B] text-[#F59E0B]'
-                                                            : 'text-[#E2E8F0]'
-                                                            }`}
+                                                        className={cn(
+                                                            'h-4 w-4',
+                                                            star <= Math.round(profile.avgRating)
+                                                                ? 'fill-accent-500 text-accent-500'
+                                                                : 'text-muted-foreground/30'
+                                                        )}
                                                     />
                                                 ))}
                                             </div>
-                                            <p className="text-[13px] text-[#94A3B8] mt-1">
-                                                Based on {profile.totalReviews} reviews
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                Based on {profile.totalReviews} review
+                                                {profile.totalReviews === 1 ? '' : 's'}
                                             </p>
                                         </div>
-
-                                        {/* Rating Breakdown */}
-                                        <div className="flex-1 space-y-2">
+                                        <div className="flex-1 space-y-1.5">
                                             {getRatingBreakdown().map((item) => (
-                                                <div key={item.stars} className="flex items-center gap-3">
-                                                    <span className="text-[13px] text-[#475569] w-6">
+                                                <div
+                                                    key={item.stars}
+                                                    className="flex items-center gap-3"
+                                                >
+                                                    <span className="w-7 text-xs text-muted-foreground">
                                                         {item.stars} ★
                                                     </span>
-                                                    <div className="flex-1 h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden">
+                                                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                                                         <div
-                                                            className="h-full bg-[#F59E0B] rounded-full"
+                                                            className="h-full bg-accent-500"
                                                             style={{ width: `${item.percentage}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-xs text-[#94A3B8] w-8 text-right">
+                                                    <span className="w-8 text-right text-xs text-muted-foreground">
                                                         {item.count}
                                                     </span>
                                                 </div>
@@ -341,110 +292,108 @@ export default function PublicCompanyProfilePage() {
                                         </div>
                                     </div>
 
-                                    {/* Reviews List */}
                                     <div className="space-y-3">
                                         {mockReviews.map((review) => (
                                             <div
                                                 key={review.id}
-                                                className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-5"
+                                                className="rounded-md border border-border bg-muted/40 p-4"
                                             >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-[#EEF2FF] flex items-center justify-center">
-                                                            <span className="text-sm font-semibold text-[#4F46E5]">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <Avatar className="h-9 w-9">
+                                                            <AvatarFallback className="text-xs">
                                                                 {getInitials(review.studentName)}
-                                                            </span>
-                                                        </div>
+                                                            </AvatarFallback>
+                                                        </Avatar>
                                                         <div>
-                                                            <h4 className="text-sm font-semibold text-[#0F172A]">
+                                                            <p className="text-sm font-semibold text-foreground">
                                                                 {review.studentName}
-                                                            </h4>
-                                                            <p className="text-xs text-[#94A3B8]">
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
                                                                 for {review.taskTitle}
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <span className="text-xs text-[#CBD5E1]">
+                                                    <span className="text-xs text-muted-foreground/80">
                                                         {new Date(review.createdAt).toLocaleDateString()}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-1 mb-2">
+                                                <div className="mt-2 flex items-center gap-0.5">
                                                     {[1, 2, 3, 4, 5].map((star) => (
                                                         <Star
                                                             key={star}
-                                                            className={`w-3.5 h-3.5 ${star <= review.rating
-                                                                ? 'fill-[#F59E0B] text-[#F59E0B]'
-                                                                : 'text-[#E2E8F0]'
-                                                                }`}
+                                                            className={cn(
+                                                                'h-3 w-3',
+                                                                star <= review.rating
+                                                                    ? 'fill-accent-500 text-accent-500'
+                                                                    : 'text-muted-foreground/30'
+                                                            )}
                                                         />
                                                     ))}
                                                 </div>
-                                                <p className="text-sm text-[#475569] leading-relaxed">
+                                                <p className="mt-2 text-sm leading-relaxed text-foreground/85">
                                                     {review.comment}
                                                 </p>
                                             </div>
                                         ))}
                                     </div>
 
-                                    <button className="flex items-center gap-2 text-sm font-medium text-[#4F46E5] hover:underline mx-auto">
-                                        <span>See All Reviews</span>
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
+                                    <button className="mx-auto flex items-center gap-1 text-sm font-medium text-brand-700 hover:underline">
+                                        See all reviews <ArrowRight className="h-3.5 w-3.5" />
                                     </button>
                                 </div>
                             </SectionCard>
                         )}
-                    </div>
+                    </main>
 
-                    {/* Right Column - Sidebar */}
-                    <div className="lg:w-[380px]">
-                        <div className="lg:sticky lg:top-[88px] space-y-4">
-                            {/* About Summary Card */}
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-lg bg-[#EEF2FF] flex items-center justify-center">
+                    <aside className="hidden lg:block">
+                        <div className="sticky top-[4.5rem] space-y-3">
+                            <Card className="p-5">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10 rounded-md">
                                         {profile.logo ? (
-                                            <img src={profile.logo} alt={profile.companyName} className="w-full h-full object-contain" />
-                                        ) : (
-                                            <span className="text-sm font-bold text-[#4F46E5]">
-                                                {getInitials(profile.companyName)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-sm font-semibold text-[#0F172A]">{profile.companyName}</h3>
-                                        <p className="text-xs text-[#64748B]">{profile.industry}</p>
+                                            <AvatarImage src={profile.logo} alt={profile.companyName} />
+                                        ) : null}
+                                        <AvatarFallback className="rounded-md bg-brand-100 text-brand-700">
+                                            {getInitials(profile.companyName)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-semibold text-foreground">
+                                            {profile.companyName}
+                                        </p>
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {profile.industry}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="space-y-2 text-xs text-[#475569] mb-4">
-                                    <div className="flex justify-between">
-                                        <span className="text-[#94A3B8]">Size:</span>
-                                        <span className="font-medium">{profile.companySize} employees</span>
+                                <Separator className="my-4" />
+                                <dl className="space-y-2 text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <dt className="text-muted-foreground">Size</dt>
+                                        <dd className="font-medium text-foreground">
+                                            {profile.companySize} employees
+                                        </dd>
                                     </div>
                                     {profile.website && (
-                                        <div className="flex justify-between">
-                                            <span className="text-[#94A3B8]">Website:</span>
+                                        <div className="flex items-center justify-between">
+                                            <dt className="text-muted-foreground">Website</dt>
                                             <a
                                                 href={profile.website}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="font-medium text-[#4F46E5] hover:underline"
+                                                className="font-medium text-brand-700 hover:underline"
                                             >
                                                 Visit
                                             </a>
                                         </div>
                                     )}
-                                </div>
-                                <button
-                                    onClick={handleViewTasks}
-                                    className="w-full bg-[#4F46E5] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#4338CA] transition-colors duration-200"
-                                >
-                                    View Open Tasks
-                                </button>
-                            </div>
+                                </dl>
+                                <Button onClick={scrollToTasks} className="mt-4 w-full" size="sm">
+                                    View open tasks
+                                </Button>
+                            </Card>
 
-                            {/* Stats Panel */}
                             <CompanyStatsPanel
                                 totalTasksPosted={profile.totalTasksPosted}
                                 totalInterns={profile.totalInterns}
@@ -453,14 +402,17 @@ export default function PublicCompanyProfilePage() {
                                 isEditMode={false}
                             />
 
-                            {/* Active Tasks Preview */}
                             <div id="active-tasks">
-                                <ActiveTasksPreview tasks={mockTasks} activeTasks={profile.activeTasks} isEditMode={false} />
+                                <ActiveTasksPreview
+                                    tasks={mockTasks}
+                                    activeTasks={profile.activeTasks}
+                                    isEditMode={false}
+                                />
                             </div>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
         </div>
-    );
+    )
 }

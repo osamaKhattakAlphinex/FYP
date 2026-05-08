@@ -2,77 +2,98 @@ import Link from 'next/link'
 import { Linkedin, Twitter, Instagram, Github } from 'lucide-react'
 
 export default function Footer() {
+    const platform = ['How it works', 'For students', 'For companies', 'Pricing', 'AI matching']
+    const company = ['About', 'Blog', 'Careers', 'Press', 'Contact']
+    const legal = ['Privacy', 'Terms', 'Cookie policy']
+
     return (
-        <footer className="bg-slate-900 pt-16 pb-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid md:grid-cols-4 gap-8 mb-12">
-                    {/* Brand Column */}
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                                <div className="w-4 h-4 border-2 border-white transform rotate-45"></div>
-                            </div>
-                            <span className="text-xl font-bold text-white">
-                                <span className="text-indigo-400">Nex</span>Intern
-                            </span>
-                        </div>
-                        <p className="text-slate-400 text-sm leading-relaxed">
-                            Bridging the gap between learning and industry through AI-powered micro-internships.
+        <footer className="bg-brand-800 text-brand-100">
+            <div className="mx-auto max-w-[1280px] px-4 py-14 lg:px-6">
+                <div className="grid gap-10 md:grid-cols-12">
+                    <div className="md:col-span-4">
+                        <Link href="/" className="text-xl font-bold tracking-tight text-white">
+                            <span className="text-brand-300">Nex</span>Intern
+                        </Link>
+                        <p className="mt-3 max-w-sm text-sm leading-relaxed text-brand-100/80">
+                            AI-matched micro-internships connecting students with the work that builds
+                            their careers.
                         </p>
-                        <div className="flex space-x-4">
-                            <Linkedin className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
-                            <Twitter className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
-                            <Instagram className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
-                            <Github className="w-5 h-5 text-slate-500 hover:text-white cursor-pointer transition-colors" />
-                        </div>
-                    </div>
-
-                    {/* Platform Column */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Platform</h4>
-                        <div className="space-y-2">
-                            {['How It Works', 'For Students', 'For Companies', 'Pricing', 'AI Matching'].map((link) => (
-                                <Link key={link} href="#" className="block text-slate-400 hover:text-white transition-colors text-sm">
-                                    {link}
-                                </Link>
+                        <div className="mt-5 flex items-center gap-3">
+                            {[Linkedin, Twitter, Instagram, Github].map((Icon, i) => (
+                                <button
+                                    key={i}
+                                    aria-label="social link"
+                                    className="grid h-8 w-8 place-items-center rounded-full bg-white/5 text-brand-100 transition-colors hover:bg-white/10 hover:text-white"
+                                >
+                                    <Icon className="h-4 w-4" />
+                                </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Company Column */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Company</h4>
-                        <div className="space-y-2">
-                            {['About Us', 'Blog', 'Careers', 'Press', 'Contact'].map((link) => (
-                                <Link key={link} href="#" className="block text-slate-400 hover:text-white transition-colors text-sm">
-                                    {link}
-                                </Link>
+                    <div className="md:col-span-2">
+                        <h4 className="text-sm font-semibold text-white">Platform</h4>
+                        <ul className="mt-4 space-y-2.5 text-sm">
+                            {platform.map((l) => (
+                                <li key={l}>
+                                    <Link href="#" className="text-brand-100/80 hover:text-white">
+                                        {l}
+                                    </Link>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
 
-                    {/* Legal Column */}
-                    <div>
-                        <h4 className="text-white font-semibold mb-4">Legal</h4>
-                        <div className="space-y-2">
-                            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((link) => (
-                                <Link key={link} href="#" className="block text-slate-400 hover:text-white transition-colors text-sm">
-                                    {link}
-                                </Link>
+                    <div className="md:col-span-2">
+                        <h4 className="text-sm font-semibold text-white">Company</h4>
+                        <ul className="mt-4 space-y-2.5 text-sm">
+                            {company.map((l) => (
+                                <li key={l}>
+                                    <Link href="#" className="text-brand-100/80 hover:text-white">
+                                        {l}
+                                    </Link>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h4 className="text-sm font-semibold text-white">Legal</h4>
+                        <ul className="mt-4 space-y-2.5 text-sm">
+                            {legal.map((l) => (
+                                <li key={l}>
+                                    <Link href="#" className="text-brand-100/80 hover:text-white">
+                                        {l}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <h4 className="text-sm font-semibold text-white">Stay updated</h4>
+                        <p className="mt-4 text-xs text-brand-100/80">
+                            New tasks weekly, straight to your inbox.
+                        </p>
+                        <form className="mt-3 flex">
+                            <input
+                                type="email"
+                                placeholder="Email"
+                                className="h-9 w-full rounded-l-md border-0 bg-white/10 px-3 text-sm text-white placeholder:text-brand-100/60 focus:outline-none focus:ring-2 focus:ring-white/40"
+                            />
+                            <button
+                                type="submit"
+                                className="rounded-r-md bg-accent-500 px-3 text-sm font-semibold text-accent-foreground hover:bg-accent-600"
+                            >
+                                Join
+                            </button>
+                        </form>
                     </div>
                 </div>
 
-                <div className="border-t border-slate-800 pt-8">
-                    <div className="flex flex-col md:flex-row justify-between items-center">
-                        <p className="text-slate-500 text-sm">
-                            © 2026 NexIntern. All rights reserved.
-                        </p>
-                        <p className="text-slate-500 text-sm mt-2 md:mt-0">
-                            Made with ❤️ at SZABIST Islamabad
-                        </p>
-                    </div>
+                <div className="mt-12 flex flex-col items-center justify-between gap-2 border-t border-white/10 pt-6 text-xs text-brand-100/60 sm:flex-row">
+                    <p>&copy; {new Date().getFullYear()} NexIntern. All rights reserved.</p>
+                    <p>Built at SZABIST Islamabad</p>
                 </div>
             </div>
         </footer>

@@ -1,26 +1,21 @@
 export default function StatsSection() {
     const stats = [
-        { number: '12,000+', label: 'Students Enrolled' },
-        { number: '500+', label: 'Companies Onboard' },
-        { number: '98%', label: 'Completion Rate' },
-        { number: '4.9/5', label: 'Avg Rating from Employers' }
+        { number: '12,000+', label: 'Students enrolled' },
+        { number: '500+', label: 'Companies hiring' },
+        { number: '98%', label: 'Task completion rate' },
+        { number: '4.9/5', label: 'Avg employer rating' },
     ]
 
     return (
-        <section className="bg-gradient-to-r from-indigo-600 to-cyan-500 py-20">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-                    {stats.map((stat, index) => (
-                        <div key={index} className="relative">
-                            {index > 0 && (
-                                <div className="hidden lg:block absolute left-0 top-1/2 w-px h-16 bg-white/20 -translate-y-1/2"></div>
-                            )}
-                            <div className="text-4xl lg:text-5xl font-extrabold text-white mb-2">
+        <section className="bg-background">
+            <div className="mx-auto max-w-[1280px] px-4 py-16 lg:px-6">
+                <div className="grid grid-cols-2 divide-y divide-border rounded-lg border border-border bg-card sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+                    {stats.map((stat, i) => (
+                        <div key={stat.label} className="px-6 py-8 text-center">
+                            <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                                 {stat.number}
                             </div>
-                            <div className="text-sm text-white/70">
-                                {stat.label}
-                            </div>
+                            <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
                         </div>
                     ))}
                 </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Info } from 'lucide-react';
 import { useState } from 'react';
@@ -94,13 +94,13 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
     const getStatusBadge = (status: string) => {
         if (status === 'Active') {
             return (
-                <span className="inline-flex items-center bg-[#DCFCE7] text-[#16A34A] text-sm font-medium px-3 py-1 rounded-full">
+                <span className="inline-flex items-center bg-[#DCFCE7] text-success text-sm font-medium px-3 py-1 rounded-full">
                     Active
                 </span>
             );
         }
         return (
-            <span className="inline-flex items-center bg-[#F1F5F9] text-[#64748B] text-sm font-medium px-3 py-1 rounded-full">
+            <span className="inline-flex items-center bg-[#F1F5F9] text-muted-foreground text-sm font-medium px-3 py-1 rounded-full">
                 {status}
             </span>
         );
@@ -114,7 +114,7 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
         {
             label: 'Website',
             value: profile.website ? (
-                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-[#4F46E5] hover:underline">
+                <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">
                     {profile.website}
                 </a>
             ) : '—'
@@ -134,10 +134,10 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {detailRows.map((row, index) => (
                         <div key={index}>
-                            <div className="text-[13px] font-medium text-[#94A3B8] uppercase tracking-wider mb-1">
+                            <div className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
                                 {row.label}
                             </div>
-                            <div className="text-sm font-medium text-[#0F172A]">
+                            <div className="text-sm font-medium text-foreground">
                                 {row.value}
                             </div>
                         </div>
@@ -157,13 +157,13 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                 >
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Industry <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Industry <span className="text-destructive">*</span>
                             </label>
                             <select
                                 value={formData.industry}
                                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             >
                                 <option value="">Select industry</option>
                                 {INDUSTRIES.map(industry => (
@@ -171,20 +171,20 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                                 ))}
                             </select>
                             {errors.industry && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.industry}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Company Size <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Company Size <span className="text-destructive">*</span>
                             </label>
                             <select
                                 value={formData.companySize}
                                 onChange={(e) => setFormData({ ...formData, companySize: e.target.value as CompanySize })}
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             >
                                 <option value="">Select size</option>
                                 {COMPANY_SIZES.map(size => (
@@ -192,14 +192,14 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                                 ))}
                             </select>
                             {errors.companySize && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.companySize}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Founded Year
                             </label>
                             <input
@@ -209,35 +209,35 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                                 value={formData.founded}
                                 onChange={(e) => setFormData({ ...formData, founded: e.target.value })}
                                 placeholder="e.g. 2020"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                             {errors.founded && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.founded}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Headquarters <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Headquarters <span className="text-destructive">*</span>
                             </label>
                             <input
                                 type="text"
                                 value={formData.headquarters}
                                 onChange={(e) => setFormData({ ...formData, headquarters: e.target.value })}
                                 placeholder="City, Country"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                             {errors.headquarters && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.headquarters}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Website
                             </label>
                             <input
@@ -245,35 +245,35 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                                 value={formData.website}
                                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                                 placeholder="https://example.com"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                             {errors.website && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.website}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Contact Email <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Contact Email <span className="text-destructive">*</span>
                             </label>
                             <input
                                 type="email"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 placeholder="contact@company.com"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                             {errors.email && (
-                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                     <span>⚠</span> {errors.email}
                                 </p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Phone
                             </label>
                             <input
@@ -281,7 +281,7 @@ export default function CompanyInfoSection({ profile, isEditMode = false, onUpda
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="+1 (555) 123-4567"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                         </div>
                     </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { X } from "lucide-react";
 import { useState, KeyboardEvent, useRef, useEffect } from "react";
@@ -67,13 +67,13 @@ export default function TagInput({
     return (
         <div className="relative" ref={containerRef}>
             <div
-                className="min-h-[48px] p-2 border border-[#E2E8F0] rounded-lg bg-white cursor-text flex flex-wrap gap-1.5 focus-within:border-[#4F46E5] focus-within:shadow-[0_0_0_3px_rgba(79,70,229,0.1)] transition-all duration-200"
+                className="min-h-[48px] p-2 border border-input rounded-lg bg-white cursor-text flex flex-wrap gap-1.5 focus-within:border-[#4F46E5] focus-within:shadow-[0_0_0_3px_rgba(79,70,229,0.1)] transition-all duration-200"
                 onClick={() => inputRef.current?.focus()}
             >
                 {tags.map((tag, index) => (
                     <span
                         key={index}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#EEF2FF] text-[#4F46E5] text-[13px] font-medium rounded-md"
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-brand-50 text-brand-700 text-[13px] font-medium rounded-md"
                     >
                         {tag}
                         <button
@@ -96,16 +96,16 @@ export default function TagInput({
                     onKeyDown={handleKeyDown}
                     placeholder={tags.length === 0 ? placeholder : ""}
                     disabled={maxTags ? tags.length >= maxTags : false}
-                    className="flex-1 min-w-[120px] text-sm text-[#0F172A] bg-transparent outline-none placeholder:text-[#CBD5E1] disabled:cursor-not-allowed"
+                    className="flex-1 min-w-[120px] text-sm text-foreground bg-transparent outline-none placeholder:text-muted-foreground/40 disabled:cursor-not-allowed"
                 />
             </div>
             {showSuggestions && filteredSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-md max-h-[200px] overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white border border-input rounded-lg shadow-md max-h-[200px] overflow-y-auto">
                     {filteredSuggestions.map((suggestion, index) => (
                         <button
                             key={index}
                             onClick={() => addTag(suggestion)}
-                            className="w-full px-3.5 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
+                            className="w-full px-3.5 py-2 text-left text-sm text-foreground hover:bg-muted/40 transition-colors duration-150"
                         >
                             {suggestion}
                         </button>

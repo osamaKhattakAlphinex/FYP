@@ -1,66 +1,68 @@
-"use client";
+'use client'
 
-import { UpcomingDeadline } from '@/types/dashboard.types';
-import { Calendar, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'
+import { Calendar } from 'lucide-react'
+import { UpcomingDeadline } from '@/types/dashboard.types'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
 
 interface UpcomingDeadlinesCardProps {
-    deadlines: UpcomingDeadline[];
+    deadlines: UpcomingDeadline[]
 }
 
-export default function UpcomingDeadlinesCard({ deadlines }: UpcomingDeadlinesCardProps) {
-    const getPriorityColor = (priority: string) => {
-        const colors = {
-            high: 'bg-[#FEE2E2] text-[#DC2626] border-[#FCA5A5]',
-            medium: 'bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]',
-            low: 'bg-[#DBEAFE] text-[#2563EB] border-[#93C5FD]',
-        };
-        return colors[priority as keyof typeof colors];
-    };
+const priorityVariant = {
+    high: 'destructive',
+    medium: 'warning',
+    low: 'soft',
+} as const
 
+export default function UpcomingDeadlinesCard({ deadlines }: UpcomingDeadlinesCardProps) {
     return (
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[#0F172A]">Upcoming Deadlines</h3>
-                <Link href="/student/tasks" className="text-sm font-semibold text-[#4F46E5] hover:text-[#4338CA]">
-                    View All
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Upcoming deadlines</CardTitle>
+                <Link
+                    href="/student/applications"
+                    className="text-xs font-semibold text-brand-700 hover:underline"
+                >
+                    View all
                 </Link>
-            </div>
-            <div className="space-y-3">
-                {deadlines.map((deadline) => (
-                    <div key={deadline.id} className="border border-[#E2E8F0] rounded-xl p-4 hover:border-[#4F46E5] transition-colors duration-200">
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                                <p className="text-sm font-semibold text-[#0F172A] mb-1">
-                                    {deadline.taskTitle}
-                                </p>
-                                {deadline.companyName && (
-                                    <p className="text-xs text-[#64748B]">{deadline.companyName}</p>
-                                )}
+            </CardHeader>
+            <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                    {deadlines.map((d) => (
+                        <li key={d.id} className="px-6 py-4 transition-colors hover:bg-muted/40">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0 flex-1">
+                                    <p className="line-clamp-1 text-sm font-semibold text-foreground">
+                                        {d.taskTitle}
+                                    </p>
+                                    {d.companyName && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {d.companyName}
+                                        </p>
+                                    )}
+                                </div>
+                                <Badge variant={priorityVariant[d.priority]}>
+                                    {d.priority}
+                                </Badge>
                             </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-semibold border ${getPriorityColor(deadline.priority)}`}>
-                                {deadline.priority}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-[#64748B] mb-3">
-                            <Calendar className="w-3.5 h-3.5" />
-                            Due: {deadline.dueDate}
-                        </div>
-                        <div>
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                                <span className="text-[#64748B]">Progress</span>
-                                <span className="font-semibold text-[#0F172A]">{deadline.progress}%</span>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                Due {d.dueDate}
                             </div>
-                            <div className="w-full bg-[#F1F5F9] rounded-full h-1.5">
-                                <div
-                                    className="bg-gradient-to-r from-[#4F46E5] to-[#06B6D4] h-1.5 rounded-full transition-all duration-300"
-                                    style={{ width: `${deadline.progress}%` }}
-                                ></div>
+                            <div className="mt-2.5 flex items-center gap-2">
+                                <Progress value={d.progress} className="flex-1" />
+                                <span className="text-xs font-semibold tabular-nums text-foreground">
+                                    {d.progress}%
+                                </span>
                             </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+                        </li>
+                    ))}
+                </ul>
+            </CardContent>
+        </Card>
+    )
 }

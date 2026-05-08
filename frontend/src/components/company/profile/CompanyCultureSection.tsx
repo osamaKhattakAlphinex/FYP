@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Heart, Wifi, Clock, Users, Award, DollarSign, Globe, BookOpen, Github, Star } from 'lucide-react';
 import { useState } from 'react';
@@ -63,8 +63,8 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                 title="Culture & Perks"
             >
                 <div className="text-center py-8">
-                    <Heart className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
-                    <p className="text-[#64748B] text-sm">No culture or perks information available</p>
+                    <Heart className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="text-muted-foreground text-sm">No culture or perks information available</p>
                 </div>
             </SectionCard>
         );
@@ -92,10 +92,10 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                             return (
                                 <div
                                     key={index}
-                                    className="flex items-center gap-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-2.5"
+                                    className="flex items-center gap-2 bg-muted/40 border border-input rounded-xl px-4 py-2.5"
                                 >
-                                    <Icon className="w-4 h-4 text-[#4F46E5]" />
-                                    <span className="text-[13px] font-medium text-[#0F172A]">{perk}</span>
+                                    <Icon className="w-4 h-4 text-brand-700" />
+                                    <span className="text-[13px] font-medium text-foreground">{perk}</span>
                                 </div>
                             );
                         })}
@@ -115,7 +115,7 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                     }}
                 >
                     <div className="space-y-4">
-                        <p className="text-sm text-[#475569]">
+                        <p className="text-sm text-foreground/85">
                             Select up to 15 perks that describe your company culture ({selectedPerks.length}/15)
                         </p>
 
@@ -128,16 +128,16 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                                         key={perk.label}
                                         onClick={() => handleTogglePerk(perk.label)}
                                         className={`relative flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${isSelected
-                                            ? 'border-[#4F46E5] bg-[#EEF2FF]'
-                                            : 'border-[#E2E8F0] bg-[#F8FAFC] hover:border-[#C7D2FE]'
+                                            ? 'border-[#4F46E5] bg-brand-50'
+                                            : 'border-input bg-muted/40 hover:border-brand-100'
                                             }`}
                                     >
-                                        <Icon className={`w-4 h-4 ${isSelected ? 'text-[#4F46E5]' : 'text-[#64748B]'}`} />
-                                        <span className={`text-sm font-medium ${isSelected ? 'text-[#4F46E5]' : 'text-[#0F172A]'}`}>
+                                        <Icon className={`w-4 h-4 ${isSelected ? 'text-brand-700' : 'text-muted-foreground'}`} />
+                                        <span className={`text-sm font-medium ${isSelected ? 'text-brand-700' : 'text-foreground'}`}>
                                             {perk.label}
                                         </span>
                                         {isSelected && (
-                                            <div className="absolute top-2 right-2 w-4 h-4 bg-[#4F46E5] rounded-full flex items-center justify-center">
+                                            <div className="absolute top-2 right-2 w-4 h-4 bg-brand-600 rounded-full flex items-center justify-center">
                                                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                 </svg>
@@ -151,19 +151,19 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                         {/* Custom Perks */}
                         {selectedPerks.filter(p => !PRESET_PERKS.find(preset => preset.label === p)).length > 0 && (
                             <div>
-                                <p className="text-sm font-medium text-[#0F172A] mb-2">Custom Perks:</p>
+                                <p className="text-sm font-medium text-foreground mb-2">Custom Perks:</p>
                                 <div className="flex flex-wrap gap-2">
                                     {selectedPerks
                                         .filter(p => !PRESET_PERKS.find(preset => preset.label === p))
                                         .map((perk, index) => (
                                             <div
                                                 key={index}
-                                                className="flex items-center gap-2 bg-[#EEF2FF] border border-[#4F46E5] rounded-lg px-3 py-1.5"
+                                                className="flex items-center gap-2 bg-brand-50 border border-[#4F46E5] rounded-lg px-3 py-1.5"
                                             >
-                                                <span className="text-sm text-[#4F46E5]">{perk}</span>
+                                                <span className="text-sm text-brand-700">{perk}</span>
                                                 <button
                                                     onClick={() => setSelectedPerks(selectedPerks.filter(p => p !== perk))}
-                                                    className="text-[#4F46E5] hover:text-[#4338CA]"
+                                                    className="text-brand-700 hover:text-[#4338CA]"
                                                 >
                                                     ×
                                                 </button>
@@ -174,7 +174,7 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                         )}
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
                                 Add Custom Perk
                             </label>
                             <div className="flex gap-2">
@@ -184,13 +184,13 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
                                     onChange={(e) => setCustomPerk(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleAddCustomPerk()}
                                     placeholder="e.g. Free Lunch, Gym Membership..."
-                                    className="flex-1 px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                    className="flex-1 px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                     disabled={selectedPerks.length >= 15}
                                 />
                                 <button
                                     onClick={handleAddCustomPerk}
                                     disabled={!customPerk.trim() || selectedPerks.length >= 15}
-                                    className="px-4 py-2.5 bg-[#4F46E5] text-white text-sm font-medium rounded-lg hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                    className="px-4 py-2.5 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                                 >
                                     Add
                                 </button>

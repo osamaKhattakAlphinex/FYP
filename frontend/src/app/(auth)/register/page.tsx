@@ -55,8 +55,8 @@ export default function RegisterPage() {
 
     return (
         <AuthLayout
-            title="Create Account"
-            subtitle="Start your journey with NexIntern"
+            title="Make the most of your professional life"
+            subtitle="Create your free NexIntern account"
         >
             <RegisterForm onSubmit={handleRegister} />
         </AuthLayout>

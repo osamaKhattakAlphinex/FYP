@@ -1,213 +1,232 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { taskService, Task, TaskFilters } from "@/services/taskService";
-import TaskCard from "@/components/task/TaskCard";
-import TaskFiltersComponent from "@/components/task/TaskFilters";
-import TaskSearch from "@/components/task/TaskSearch";
-import Pagination from "@/components/shared/Pagination";
-import LoadingSpinner from "@/components/shared/LoadingSpinner";
-import { toast } from "react-hot-toast";
+import { useEffect, useState } from 'react'
+import { taskService, Task, TaskFilters } from '@/services/taskService'
+import TaskListItem from '@/components/task/TaskListItem'
+import TaskFiltersComponent from '@/components/task/TaskFilters'
+import TaskSearch from '@/components/task/TaskSearch'
+import TaskDetailPane from '@/components/task/TaskDetailPane'
+import Pagination from '@/components/shared/Pagination'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Search } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+
+const LIMIT = 12
 
 export default function TasksPage() {
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalTasks, setTotalTasks] = useState(0);
+    const [tasks, setTasks] = useState<Task[]>([])
+    const [loading, setLoading] = useState(true)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalTasks, setTotalTasks] = useState(0)
     const [filters, setFilters] = useState<TaskFilters>({
         sortBy: 'createdAt',
-        sortOrder: 'desc'
-    });
-    const [searchQuery, setSearchQuery] = useState("");
+        sortOrder: 'desc',
+    })
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
-    const limit = 12;
+    const selectedTask = tasks.find((t) => t._id === selectedTaskId) ?? null
 
     useEffect(() => {
-        fetchTasks();
-    }, [currentPage, filters]);
+        fetchTasks()
+    }, [currentPage, filters])
 
     const fetchTasks = async () => {
         try {
-            setLoading(true);
-            const response = await taskService.getTasks(currentPage, limit, {
+            setLoading(true)
+            const response = await taskService.getTasks(currentPage, LIMIT, {
                 ...filters,
-                search: searchQuery || undefined
-            });
-
-            setTasks(response.tasks);
-            setTotalPages(response.pagination.totalPages);
-            setTotalTasks(response.pagination.totalTasks);
+                search: searchQuery || undefined,
+            })
+            setTasks(response.tasks)
+            setTotalPages(response.pagination.totalPages)
+            setTotalTasks(response.pagination.totalTasks)
+            if (response.tasks.length > 0 && !selectedTaskId) {
+                setSelectedTaskId(response.tasks[0]._id)
+            } else if (
+                selectedTaskId &&
+                !response.tasks.some((t) => t._id === selectedTaskId)
+            ) {
+                setSelectedTaskId(response.tasks[0]?._id ?? null)
+            }
         } catch (error) {
-            console.error('Error fetching tasks:', error);
-            toast.error('Failed to load tasks');
+            toast.error('Failed to load tasks')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-        setCurrentPage(1);
-        setFilters(prev => ({ ...prev, search: query || undefined }));
-    };
+    const handleSearch = (q: string) => {
+        setSearchQuery(q)
+        setCurrentPage(1)
+        setFilters((p) => ({ ...p, search: q || undefined }))
+    }
 
     const handleFilterChange = (newFilters: TaskFilters) => {
-        setFilters(prev => ({ ...prev, ...newFilters }));
-        setCurrentPage(1);
-    };
+        setFilters((p) => ({ ...p, ...newFilters }))
+        setCurrentPage(1)
+    }
 
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    const handleSortChange = (value: string) => {
+        const [sortBy, sortOrder] = value.split('-')
+        handleFilterChange({ sortBy, sortOrder: sortOrder as 'asc' | 'desc' })
+    }
 
     const clearFilters = () => {
-        setFilters({
-            sortBy: 'createdAt',
-            sortOrder: 'desc'
-        });
-        setSearchQuery("");
-        setCurrentPage(1);
-    };
+        setFilters({ sortBy: 'createdAt', sortOrder: 'desc' })
+        setSearchQuery('')
+        setCurrentPage(1)
+    }
+
+    const activeFilterCount = Object.entries(filters).filter(
+        ([k, v]) => v && k !== 'sortBy' && k !== 'sortOrder'
+    ).length
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Find Your Perfect Micro-Internship
-                        </h1>
-                        <p className="text-lg text-gray-600 mb-6">
-                            Discover short-term opportunities to build your skills and gain real-world experience
-                        </p>
-
-                        {/* Search Bar */}
-                        <div className="max-w-2xl mx-auto">
-                            <TaskSearch
-                                onSearch={handleSearch}
-                                initialValue={searchQuery}
-                                placeholder="Search by title, skills, or company..."
-                            />
-                        </div>
-                    </div>
+        <div className="surface-canvas min-h-[calc(100vh-3.5rem)]">
+            <div className="border-b border-border bg-card">
+                <div className="mx-auto max-w-[1280px] px-4 py-5 lg:px-6">
+                    <TaskSearch onSearch={handleSearch} initialValue={searchQuery} />
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Filters Sidebar */}
-                    <div className="lg:w-1/4">
-                        <div className="bg-white rounded-lg shadow-sm border p-6 sticky top-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
-                                <button
-                                    onClick={clearFilters}
-                                    className="text-sm text-blue-600 hover:text-blue-700"
-                                >
-                                    Clear all
-                                </button>
+            <div className="mx-auto max-w-[1280px] px-4 py-6 lg:px-6">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-[260px_minmax(0,440px)_minmax(0,1fr)] md:grid-cols-[260px_minmax(0,1fr)]">
+                    {/* Filter rail */}
+                    <aside className="hidden md:block">
+                        <div className="sticky top-[4.5rem] rounded-md border border-border bg-card p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <h2 className="text-sm font-semibold text-foreground">Filters</h2>
+                                {activeFilterCount > 0 && (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="text-xs font-medium text-brand-600 hover:underline"
+                                    >
+                                        Clear all
+                                    </button>
+                                )}
                             </div>
-
                             <TaskFiltersComponent
                                 filters={filters}
                                 onFilterChange={handleFilterChange}
                             />
                         </div>
-                    </div>
+                    </aside>
 
-                    {/* Main Content */}
-                    <div className="lg:w-3/4">
-                        {/* Results Header */}
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h2 className="text-xl font-semibold text-gray-900">
-                                    {loading ? 'Loading...' : `${totalTasks.toLocaleString()} opportunities found`}
-                                </h2>
-                                {searchQuery && (
-                                    <p className="text-gray-600 mt-1">
-                                        Results for "{searchQuery}"
-                                    </p>
+                    {/* Result list */}
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm text-muted-foreground">
+                                {loading ? (
+                                    'Loading…'
+                                ) : (
+                                    <>
+                                        <span className="font-semibold text-foreground">
+                                            {totalTasks.toLocaleString()}
+                                        </span>{' '}
+                                        result{totalTasks === 1 ? '' : 's'}
+                                        {searchQuery ? ` for "${searchQuery}"` : ''}
+                                    </>
                                 )}
-                            </div>
-
-                            {/* Sort Options */}
-                            <div className="flex items-center space-x-2">
-                                <label className="text-sm text-gray-600">Sort by:</label>
-                                <select
-                                    value={`${filters.sortBy}-${filters.sortOrder}`}
-                                    onChange={(e) => {
-                                        const [sortBy, sortOrder] = e.target.value.split('-');
-                                        handleFilterChange({ sortBy, sortOrder: sortOrder as 'asc' | 'desc' });
-                                    }}
-                                    className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="createdAt-desc">Newest first</option>
-                                    <option value="createdAt-asc">Oldest first</option>
-                                    <option value="views-desc">Most viewed</option>
-                                    <option value="applicationDeadline-asc">Deadline (earliest)</option>
-                                    <option value="applicationDeadline-desc">Deadline (latest)</option>
-                                </select>
-                            </div>
+                            </p>
+                            <Select
+                                value={`${filters.sortBy}-${filters.sortOrder}`}
+                                onValueChange={handleSortChange}
+                            >
+                                <SelectTrigger className="h-8 w-44 text-xs">
+                                    <SelectValue placeholder="Sort" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="createdAt-desc">Most recent</SelectItem>
+                                    <SelectItem value="createdAt-asc">Oldest first</SelectItem>
+                                    <SelectItem value="views-desc">Most viewed</SelectItem>
+                                    <SelectItem value="applicationDeadline-asc">
+                                        Closing soonest
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
-                        {/* Loading State */}
                         {loading && (
-                            <div className="flex justify-center py-12">
-                                <LoadingSpinner size="lg" />
+                            <div className="space-y-2">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Skeleton key={i} className="h-24 w-full" />
+                                ))}
                             </div>
                         )}
 
-                        {/* Tasks Grid */}
                         {!loading && tasks.length > 0 && (
                             <>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div className="space-y-2">
                                     {tasks.map((task) => (
-                                        <TaskCard key={task._id} task={task} />
+                                        <TaskListItem
+                                            key={task._id}
+                                            task={task}
+                                            selected={selectedTaskId === task._id}
+                                            onClick={() => setSelectedTaskId(task._id)}
+                                        />
                                     ))}
                                 </div>
-
-                                {/* Pagination */}
                                 {totalPages > 1 && (
-                                    <Pagination
-                                        currentPage={currentPage}
-                                        totalPages={totalPages}
-                                        onPageChange={handlePageChange}
-                                    />
+                                    <div className="pt-2">
+                                        <Pagination
+                                            currentPage={currentPage}
+                                            totalPages={totalPages}
+                                            onPageChange={(p) => {
+                                                setCurrentPage(p)
+                                                window.scrollTo({ top: 0, behavior: 'smooth' })
+                                            }}
+                                        />
+                                    </div>
                                 )}
                             </>
                         )}
 
-                        {/* Empty State */}
                         {!loading && tasks.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
+                            <div className="rounded-md border border-dashed border-border bg-card p-10 text-center">
+                                <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+                                    <Search className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
-                                <p className="text-gray-600 mb-4">
-                                    {searchQuery || Object.keys(filters).some(key => filters[key as keyof TaskFilters] && key !== 'sortBy' && key !== 'sortOrder')
-                                        ? "Try adjusting your search criteria or filters"
-                                        : "No tasks are currently available"
-                                    }
+                                <h3 className="mt-3 text-base font-semibold text-foreground">
+                                    No tasks match your filters
+                                </h3>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Try broadening your search or removing a filter.
                                 </p>
-                                {(searchQuery || Object.keys(filters).some(key => filters[key as keyof TaskFilters] && key !== 'sortBy' && key !== 'sortOrder')) && (
-                                    <button
+                                {activeFilterCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-4"
                                         onClick={clearFilters}
-                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                                     >
                                         Clear filters
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         )}
-                    </div>
+                    </section>
+
+                    {/* Detail pane */}
+                    <aside className="hidden lg:block">
+                        <div className="sticky top-[4.5rem] max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin">
+                            <TaskDetailPane
+                                task={selectedTask}
+                                onApply={() => toast.success('Apply flow coming soon')}
+                            />
+                        </div>
+                    </aside>
                 </div>
             </div>
         </div>
-    );
+    )
 }

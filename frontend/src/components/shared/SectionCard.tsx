@@ -1,15 +1,16 @@
-"use client";
+'use client'
 
-import { LucideIcon, Pencil, Plus } from "lucide-react";
-import { ReactNode } from "react";
+import { LucideIcon, Pencil, Plus } from 'lucide-react'
+import { ReactNode } from 'react'
+import { Card } from '@/components/ui/card'
 
 interface SectionCardProps {
-    title: string;
-    icon: LucideIcon;
-    onEdit?: () => void;
-    isEmpty?: boolean;
-    action?: ReactNode;
-    children: ReactNode;
+    title: string
+    icon: LucideIcon
+    onEdit?: () => void
+    isEmpty?: boolean
+    action?: ReactNode
+    children: ReactNode
 }
 
 export default function SectionCard({
@@ -21,32 +22,24 @@ export default function SectionCard({
     children,
 }: SectionCardProps) {
     return (
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-7">
-            <div className="flex items-center justify-between mb-6">
+        <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                    <Icon className="w-5 h-5 text-[#4F46E5]" />
-                    <h2 className="text-lg font-semibold text-[#0F172A]">{title}</h2>
+                    <Icon className="h-4 w-4 text-brand-600" />
+                    <h2 className="text-base font-semibold text-foreground">{title}</h2>
                 </div>
-                {action || (onEdit && (
-                    <button
-                        onClick={onEdit}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#F8FAFC] border border-[#E2E8F0] text-[#475569] text-[13px] font-medium rounded-lg hover:bg-[#EEF2FF] hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200"
-                    >
-                        {isEmpty ? (
-                            <>
-                                <Plus className="w-3.5 h-3.5" />
-                                Add
-                            </>
-                        ) : (
-                            <>
-                                <Pencil className="w-3.5 h-3.5" />
-                                Edit
-                            </>
-                        )}
-                    </button>
-                ))}
+                {action ||
+                    (onEdit && (
+                        <button
+                            onClick={onEdit}
+                            aria-label={isEmpty ? `Add ${title}` : `Edit ${title}`}
+                            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            {isEmpty ? <Plus className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                        </button>
+                    ))}
             </div>
             {children}
-        </div>
-    );
+        </Card>
+    )
 }

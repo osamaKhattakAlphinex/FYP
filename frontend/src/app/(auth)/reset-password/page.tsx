@@ -36,8 +36,8 @@ function ResetPasswordContent() {
 
     return (
         <AuthLayout
-            title="Reset Password"
-            subtitle="Create a new password for your account"
+            title="Set a new password"
+            subtitle="Choose a strong password to secure your account"
         >
             <ResetPasswordForm onSubmit={handleResetPassword} />
         </AuthLayout>

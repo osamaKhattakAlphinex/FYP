@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\M TECH\\\\Desktop\\\\FYP\\\\smart-ai-micro-internship\\\\backend\\\\src\\\\models\" -name \"*.js\" -type f)",
+      "Read(//c/Users/M TECH/Desktop/FYP/smart-ai-micro-internship/backend/src/models/**)",
+      "Read(//c/Users/M TECH/Desktop/FYP/smart-ai-micro-internship/backend/src/routes/**)",
+      "Read(//c/Users/M TECH/Desktop/FYP/smart-ai-micro-internship/backend/**)",
+      "Bash(ls -la \"c:\\\\Users\\\\M TECH\\\\Desktop\\\\FYP\\\\smart-ai-micro-internship\\\\ai-service\" 2>/dev/null || echo \"No AI service directory found\")",
+      "Read(//c/Users/M TECH/Desktop/FYP/smart-ai-micro-internship/ai-service/**)",
+      "Bash(npm install *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} /\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} /login\\\\n\" http://localhost:3001/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} /register\\\\n\" http://localhost:3001/register)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} /tasks\\\\n\" http://localhost:3001/tasks)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} /unauthorized\\\\n\" http://localhost:3001/unauthorized)"
+    ]
+  }
+}

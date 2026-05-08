@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Linkedin, Twitter, Github, Facebook, ShieldCheck, Shield, Pencil } from 'lucide-react';
 import { useState } from 'react';
@@ -83,15 +83,15 @@ export default function CompanySidebar({
             />
 
             {/* Social Links */}
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+            <div className="bg-white border border-input rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[13px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                    <h3 className="text-[13px] font-semibold text-muted-foreground uppercase tracking-wider">
                         Social Links
                     </h3>
                     {isEditMode && (
                         <button
                             onClick={() => setShowSocialModal(true)}
-                            className="text-[#4F46E5] hover:text-[#4338CA] transition-colors duration-200"
+                            className="text-brand-700 hover:text-[#4338CA] transition-colors duration-200"
                         >
                             <Pencil className="w-4 h-4" />
                         </button>
@@ -101,7 +101,7 @@ export default function CompanySidebar({
                 {!hasSocialLinks && isEditMode ? (
                     <button
                         onClick={() => setShowSocialModal(true)}
-                        className="w-full py-3 text-sm text-[#64748B] border border-dashed border-[#E2E8F0] rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200"
+                        className="w-full py-3 text-sm text-muted-foreground border border-dashed border-input rounded-lg hover:border-[#4F46E5] hover:text-brand-700 transition-all duration-200"
                     >
                         Add social links
                     </button>
@@ -133,20 +133,20 @@ export default function CompanySidebar({
 
             {/* Verification Status */}
             {isEditMode && (
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                <div className="bg-white border border-input rounded-2xl p-6">
                     {profile.isVerified ? (
                         <div className="text-center">
                             <div className="w-12 h-12 mx-auto mb-3 bg-[#DCFCE7] rounded-full flex items-center justify-center">
-                                <ShieldCheck className="w-6 h-6 text-[#10B981]" />
+                                <ShieldCheck className="w-6 h-6 text-success" />
                             </div>
-                            <h3 className="text-[15px] font-semibold text-[#0F172A] mb-1">
+                            <h3 className="text-[15px] font-semibold text-foreground mb-1">
                                 Verified Company
                             </h3>
-                            <p className="text-[13px] text-[#94A3B8] mb-3">
+                            <p className="text-[13px] text-muted-foreground mb-3">
                                 Verified on {new Date(profile.verificationDate!).toLocaleDateString()}
                             </p>
-                            <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg p-3">
-                                <p className="text-[13px] text-[#15803D] leading-relaxed">
+                            <div className="bg-success/5 border border-success/20 rounded-lg p-3">
+                                <p className="text-[13px] text-success leading-relaxed">
                                     Your company is verified. Students trust verified companies more and are more likely to apply to your tasks.
                                 </p>
                             </div>
@@ -154,19 +154,19 @@ export default function CompanySidebar({
                     ) : (
                         <div className="text-center">
                             <div className="w-12 h-12 mx-auto mb-3 bg-[#F1F5F9] rounded-full flex items-center justify-center">
-                                <Shield className="w-6 h-6 text-[#94A3B8]" />
+                                <Shield className="w-6 h-6 text-muted-foreground" />
                             </div>
-                            <h3 className="text-[15px] font-semibold text-[#0F172A] mb-3">
+                            <h3 className="text-[15px] font-semibold text-foreground mb-3">
                                 Verification Pending
                             </h3>
-                            <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-lg p-3 mb-4">
-                                <p className="text-[13px] text-[#92400E] leading-relaxed">
+                            <div className="bg-accent-50 border border-accent-100 rounded-lg p-3 mb-4">
+                                <p className="text-[13px] text-accent-700 leading-relaxed">
                                     Complete your profile and submit documents to get verified by NexIntern admin.
                                 </p>
                             </div>
                             <button
                                 onClick={onRequestVerification}
-                                className="w-full bg-white border border-[#E2E8F0] text-[#475569] text-sm font-medium py-2.5 rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200"
+                                className="w-full bg-white border border-input text-foreground/85 text-sm font-medium py-2.5 rounded-lg hover:border-[#4F46E5] hover:text-brand-700 transition-all duration-200"
                             >
                                 Request Verification
                             </button>
@@ -190,7 +190,7 @@ export default function CompanySidebar({
                     <div className="space-y-4">
                         {socialPlatforms.map((platform) => (
                             <div key={platform.key}>
-                                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
+                                <label className="block text-sm font-medium text-foreground mb-1.5">
                                     {platform.label} URL
                                 </label>
                                 <input
@@ -201,10 +201,10 @@ export default function CompanySidebar({
                                         [platform.key]: e.target.value
                                     })}
                                     placeholder={`https://${platform.key}.com/yourcompany`}
-                                    className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                    className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                                 />
                                 {errors[platform.key] && (
-                                    <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                                         <span>⚠</span> {errors[platform.key]}
                                     </p>
                                 )}

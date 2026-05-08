@@ -1,123 +1,298 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+    Search,
+    Home,
+    Briefcase,
+    User as UserIcon,
+    Bell,
+    Menu,
+    LogOut,
+    Settings,
+    LayoutDashboard,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import UserDropdown from './UserDropdown'
+import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn, getInitials } from '@/lib/utils'
+import toast from 'react-hot-toast'
+
+function Wordmark() {
+    return (
+        <Link href="/" className="flex items-center font-bold text-lg tracking-tight">
+            <span className="text-brand-700">Nex</span>
+            <span className="text-foreground">Intern</span>
+        </Link>
+    )
+}
+
+interface NavIconLinkProps {
+    href: string
+    icon: React.ElementType
+    label: string
+    active?: boolean
+}
+
+function NavIconLink({ href, icon: Icon, label, active }: NavIconLinkProps) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                'flex flex-col items-center justify-center px-3 h-full text-xs font-medium border-b-2 transition-colors',
+                active
+                    ? 'text-foreground border-foreground'
+                    : 'text-muted-foreground border-transparent hover:text-foreground'
+            )}
+        >
+            <Icon className="h-5 w-5" />
+            <span className="mt-0.5">{label}</span>
+        </Link>
+    )
+}
 
 export default function Navbar() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false)
-    const [isScrolled, setIsScrolled] = useState(false)
-    const { user, loading } = useAuth()
+    const { user, loading, logout } = useAuth()
+    const pathname = usePathname()
+    const router = useRouter()
+    const [searchValue, setSearchValue] = useState('')
+    const [mobileOpen, setMobileOpen] = useState(false)
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10)
+    const handleLogout = async () => {
+        try {
+            await logout()
+            toast.success('Logged out')
+            router.push('/')
+        } catch {
+            toast.error('Failed to log out')
         }
-        window.addEventListener('scroll', handleScroll)
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
+    }
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault()
+        if (searchValue.trim()) {
+            router.push(`/tasks?search=${encodeURIComponent(searchValue.trim())}`)
+        }
+    }
+
+    const dashboardHref =
+        user?.role === 'company' ? '/company/dashboard' : '/student/dashboard'
+    const profileHref =
+        user?.role === 'company' ? '/company/profile' : '/student/profile'
+
+    const userName =
+        user?.firstName && user?.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user?.firstName || user?.companyName || user?.email?.split('@')[0] || 'User'
 
     return (
-        <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200'
-            : 'bg-white border-b border-slate-200'
-            }`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    {/* Logo */}
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <div className="w-4 h-4 border-2 border-white transform rotate-45"></div>
+        <header className="sticky top-0 z-40 w-full border-b border-border bg-card">
+            <div className="mx-auto flex h-14 max-w-[1280px] items-center gap-3 px-4 lg:px-6">
+                <Wordmark />
+
+                {/* Search bar (logged-in only) */}
+                {user && (
+                    <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md ml-2">
+                        <div className="relative w-full">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <input
+                                value={searchValue}
+                                onChange={(e) => setSearchValue(e.target.value)}
+                                placeholder="Search tasks, skills, companies"
+                                className="h-9 w-full rounded-md border-0 bg-secondary pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            />
                         </div>
-                        <span className="text-xl font-bold">
-                            <span className="text-indigo-600">Nex</span>
-                            <span className="text-slate-900">Intern</span>
-                        </span>
-                    </div>
+                    </form>
+                )}
 
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center space-x-8">
-                        <Link href="#how-it-works" className="text-slate-600 hover:text-indigo-600 transition-colors relative group">
-                            How It Works
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
-                        </Link>
-                        <Link href="#for-students" className="text-slate-600 hover:text-indigo-600 transition-colors relative group">
-                            For Students
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
-                        </Link>
-                        <Link href="#for-companies" className="text-slate-600 hover:text-indigo-600 transition-colors relative group">
-                            For Companies
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
-                        </Link>
-                        <Link href="#testimonials" className="text-slate-600 hover:text-indigo-600 transition-colors relative group">
-                            Success Stories
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
-                        </Link>
-                    </div>
+                <div className="flex-1" />
 
-                    {/* CTA Buttons / User Dropdown */}
-                    <div className="hidden md:flex items-center space-x-3">
-                        {!loading && (
-                            user ? (
-                                <UserDropdown />
-                            ) : (
-                                <>
-                                    <Link href="/login" className="px-5 py-2.5 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors">
-                                        Log In
-                                    </Link>
-                                    <Link href="/register" className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 hover:scale-105 transition-all shadow-sm">
-                                        Get Started Free
-                                    </Link>
-                                </>
-                            )
-                        )}
-                    </div>
+                {/* Logged-in nav */}
+                {user && !loading && (
+                    <nav className="hidden md:flex items-center h-14">
+                        <NavIconLink
+                            href={dashboardHref}
+                            icon={Home}
+                            label="Home"
+                            active={pathname?.includes('/dashboard')}
+                        />
+                        <NavIconLink
+                            href="/tasks"
+                            icon={Briefcase}
+                            label="Tasks"
+                            active={pathname?.startsWith('/tasks')}
+                        />
+                        <NavIconLink
+                            href={profileHref}
+                            icon={UserIcon}
+                            label="Profile"
+                            active={pathname?.includes('/profile')}
+                        />
+                        <button className="flex flex-col items-center justify-center px-3 h-full text-xs font-medium text-muted-foreground hover:text-foreground border-b-2 border-transparent">
+                            <Bell className="h-5 w-5" />
+                            <span className="mt-0.5">Alerts</span>
+                        </button>
 
-                    {/* Mobile menu button */}
-                    <button
-                        className="md:hidden"
-                        onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    >
-                        {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-                </div>
+                        <div className="h-6 w-px bg-border mx-2" />
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger className="flex flex-col items-center justify-center px-2 h-full text-xs font-medium text-muted-foreground hover:text-foreground focus:outline-none">
+                                <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-[10px]">
+                                        {getInitials(userName)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="mt-0.5">Me ▾</span>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-64">
+                                <DropdownMenuLabel className="normal-case tracking-normal">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-foreground">
+                                                {userName}
+                                            </p>
+                                            <p className="truncate text-xs text-muted-foreground">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push(dashboardHref)}>
+                                    <LayoutDashboard className="h-4 w-4" /> Dashboard
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(profileHref)}>
+                                    <UserIcon className="h-4 w-4" /> View profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push('/settings')}>
+                                    <Settings className="h-4 w-4" /> Settings
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                    onClick={handleLogout}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <LogOut className="h-4 w-4" /> Sign out
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </nav>
+                )}
+
+                {/* Anonymous nav */}
+                {!user && !loading && (
+                    <>
+                        <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-muted-foreground">
+                            <Link href="/#how-it-works" className="hover:text-foreground transition-colors">
+                                How it works
+                            </Link>
+                            <Link href="/#for-students" className="hover:text-foreground transition-colors">
+                                For students
+                            </Link>
+                            <Link href="/#for-companies" className="hover:text-foreground transition-colors">
+                                For companies
+                            </Link>
+                            <Link href="/tasks" className="hover:text-foreground transition-colors">
+                                Browse tasks
+                            </Link>
+                        </nav>
+                        <div className="hidden md:flex items-center gap-2 ml-3">
+                            <Button asChild variant="ghost" size="sm">
+                                <Link href="/login">Sign in</Link>
+                            </Button>
+                            <Button asChild size="sm">
+                                <Link href="/register">Join now</Link>
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {/* Mobile menu toggle */}
+                <button
+                    onClick={() => setMobileOpen(!mobileOpen)}
+                    className="md:hidden ml-auto rounded-md p-2 text-foreground hover:bg-muted"
+                    aria-label="Toggle menu"
+                >
+                    <Menu className="h-5 w-5" />
+                </button>
             </div>
 
-            {/* Mobile Menu */}
-            {isMenuOpen && (
-                <div className="md:hidden bg-white border-t border-slate-200">
-                    <div className="px-4 py-4 space-y-4">
-                        <Link href="#how-it-works" className="block text-slate-600">How It Works</Link>
-                        <Link href="#for-students" className="block text-slate-600">For Students</Link>
-                        <Link href="#for-companies" className="block text-slate-600">For Companies</Link>
-                        <Link href="#testimonials" className="block text-slate-600">Success Stories</Link>
-                        <div className="pt-4 space-y-2">
-                            {!loading && (
-                                user ? (
-                                    <div className="space-y-2">
-                                        <div className="px-4 py-3 bg-slate-50 rounded-lg">
-                                            <p className="text-sm font-semibold text-slate-900">{user.email}</p>
-                                            <p className="text-xs text-slate-500 mt-1">{user.role}</p>
-                                        </div>
-                                        <UserDropdown />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <Link href="/login" className="block w-full px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg text-center">
-                                            Log In
-                                        </Link>
-                                        <Link href="/register" className="block w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-center">
-                                            Get Started Free
-                                        </Link>
-                                    </>
-                                )
-                            )}
-                        </div>
+            {/* Mobile drawer */}
+            {mobileOpen && (
+                <div className="md:hidden border-t border-border bg-card">
+                    <div className="px-4 py-3 space-y-1">
+                        {user && !loading ? (
+                            <>
+                                <Link
+                                    href={dashboardHref}
+                                    onClick={() => setMobileOpen(false)}
+                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    <Home className="h-4 w-4" /> Home
+                                </Link>
+                                <Link
+                                    href="/tasks"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    <Briefcase className="h-4 w-4" /> Tasks
+                                </Link>
+                                <Link
+                                    href={profileHref}
+                                    onClick={() => setMobileOpen(false)}
+                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    <UserIcon className="h-4 w-4" /> Profile
+                                </Link>
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+                                >
+                                    <LogOut className="h-4 w-4" /> Sign out
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link
+                                    href="/#how-it-works"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="block rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    How it works
+                                </Link>
+                                <Link
+                                    href="/tasks"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="block rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    Browse tasks
+                                </Link>
+                                <div className="pt-2 grid grid-cols-2 gap-2">
+                                    <Button asChild variant="outline" size="sm" className="w-full">
+                                        <Link href="/login">Sign in</Link>
+                                    </Button>
+                                    <Button asChild size="sm" className="w-full">
+                                        <Link href="/register">Join now</Link>
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
-        </nav>
+        </header>
     )
 }

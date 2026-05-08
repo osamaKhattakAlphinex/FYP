@@ -1,397 +1,452 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, Edit2, Trash2, Eye, Users, MoreVertical } from 'lucide-react';
-import { taskService, Task } from '@/services/taskService';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { toast } from 'react-hot-toast';
-import { useRoleProtection } from '@/hooks/useRoleProtection';
-import { getTextPreview } from '@/utils/textUtils';
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+    Plus,
+    Search,
+    Pencil,
+    Trash2,
+    Eye,
+    Users,
+    MoreVertical,
+    Loader2,
+    ClipboardList,
+    Sparkles,
+} from 'lucide-react'
+import { taskService, Task } from '@/services/taskService'
+import AppShell from '@/components/shared/AppShell'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { useRoleProtection } from '@/hooks/useRoleProtection'
+import { toast } from 'react-hot-toast'
+import { cn } from '@/lib/utils'
+
+const STATUSES: Array<Task['status']> = ['active', 'draft', 'paused', 'closed', 'completed']
+
+const statusFilters = ['all', 'active', 'draft', 'paused', 'closed', 'completed'] as const
+type StatusFilter = (typeof statusFilters)[number]
+
+const statusVariants: Record<string, 'success' | 'muted' | 'warning' | 'destructive' | 'soft'> = {
+    active: 'success',
+    closed: 'muted',
+    draft: 'warning',
+    paused: 'destructive',
+    completed: 'soft',
+}
 
 export default function CompanyTasksPage() {
-    useRoleProtection({ allowedRoles: ['company'] });
+    useRoleProtection({ allowedRoles: ['company'] })
+    const router = useRouter()
 
-    const router = useRouter();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalTasks, setTotalTasks] = useState(0);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-    const [deleting, setDeleting] = useState(false);
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
-    const [changingStatus, setChangingStatus] = useState<string | null>(null);
+    const [tasks, setTasks] = useState<Task[]>([])
+    const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalTasks, setTotalTasks] = useState(0)
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
+    const [deleting, setDeleting] = useState(false)
+    const [changingStatusId, setChangingStatusId] = useState<string | null>(null)
 
-    const limit = 10;
+    const limit = 10
 
     useEffect(() => {
-        fetchTasks();
-    }, [currentPage, statusFilter, searchQuery]);
+        fetchTasks()
+    }, [currentPage, statusFilter])
 
     const fetchTasks = async () => {
         try {
-            setLoading(true);
+            setLoading(true)
             const response = await taskService.getMyTasks(
                 currentPage,
                 limit,
                 statusFilter,
                 'createdAt',
                 'desc'
-            );
-            setTasks(response.tasks);
-            setTotalPages(response.pagination.totalPages);
-            setTotalTasks(response.pagination.totalTasks);
-        } catch (error) {
-            console.error('Error fetching tasks:', error);
-            toast.error('Failed to load tasks');
+            )
+            setTasks(response.tasks)
+            setTotalPages(response.pagination.totalPages)
+            setTotalTasks(response.pagination.totalTasks)
+        } catch {
+            toast.error('Failed to load tasks')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     const handleDelete = async () => {
-        if (!taskToDelete) return;
-
+        if (!taskToDelete) return
         try {
-            setDeleting(true);
-            await taskService.deleteTask(taskToDelete._id);
-            toast.success('Task deleted successfully');
-            setDeleteModalOpen(false);
-            setTaskToDelete(null);
-            fetchTasks();
+            setDeleting(true)
+            await taskService.deleteTask(taskToDelete._id)
+            toast.success('Task deleted')
+            setTaskToDelete(null)
+            fetchTasks()
         } catch (error: any) {
-            console.error('Error deleting task:', error);
-            toast.error(error.response?.data?.message || 'Failed to delete task');
+            toast.error(error.response?.data?.message || 'Failed to delete')
         } finally {
-            setDeleting(false);
+            setDeleting(false)
         }
-    };
+    }
 
-    const handleStatusChange = async (taskId: string, newStatus: string) => {
+    const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
         try {
-            setChangingStatus(taskId);
-            await taskService.updateTask(taskId, { status: newStatus as any });
-            toast.success(`Task status changed to ${newStatus}`);
-            setStatusMenuId(null);
-            setOpenMenuId(null);
-            fetchTasks();
+            setChangingStatusId(taskId)
+            await taskService.updateTask(taskId, { status: newStatus as any })
+            toast.success(`Task ${newStatus}`)
+            fetchTasks()
         } catch (error: any) {
-            console.error('Error changing status:', error);
-            toast.error(error.response?.data?.message || 'Failed to change status');
+            toast.error(error.response?.data?.message || 'Failed to update')
         } finally {
-            setChangingStatus(null);
+            setChangingStatusId(null)
         }
-    };
+    }
 
-    const getStatusColor = (status: string) => {
-        const colors = {
-            active: 'bg-green-100 text-green-800 border-green-200',
-            draft: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            paused: 'bg-orange-100 text-orange-800 border-orange-200',
-            closed: 'bg-gray-100 text-gray-800 border-gray-200',
-            completed: 'bg-blue-100 text-blue-800 border-blue-200',
-        };
-        return colors[status as keyof typeof colors] || colors.draft;
-    };
-
-    const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('en-US', {
+    const formatDate = (date: string) =>
+        new Date(date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
-        });
-    };
+            year: 'numeric',
+        })
+
+    const filteredTasks = searchQuery
+        ? tasks.filter((t) =>
+              t.title.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        : tasks
+
+    // Stats counts (across loaded page only)
+    const counts = STATUSES.reduce(
+        (acc, s) => ({ ...acc, [s]: tasks.filter((t) => t.status === s).length }),
+        {} as Record<Task['status'], number>
+    )
+    const totalApplicants = tasks.reduce((acc, t) => acc + (t.applicationCount || 0), 0)
+    const totalViews = tasks.reduce((acc, t) => acc + (t.views || 0), 0)
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] py-8">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
+        <>
+            <AppShell
+                rightRail={
+                    <>
+                        <Card className="p-4">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                At a glance
+                            </h3>
+                            <dl className="mt-3 space-y-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <dt className="text-muted-foreground">Total tasks</dt>
+                                    <dd className="font-semibold text-foreground">{totalTasks}</dd>
+                                </div>
+                                <Separator />
+                                {STATUSES.map((s) => (
+                                    <div
+                                        key={s}
+                                        className="flex items-center justify-between"
+                                    >
+                                        <dt className="capitalize text-muted-foreground">{s}</dt>
+                                        <dd>
+                                            <Badge variant={statusVariants[s]}>{counts[s]}</Badge>
+                                        </dd>
+                                    </div>
+                                ))}
+                                <Separator />
+                                <div className="flex items-center justify-between">
+                                    <dt className="text-muted-foreground">Total applicants</dt>
+                                    <dd className="font-semibold text-brand-700">
+                                        {totalApplicants}
+                                    </dd>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <dt className="text-muted-foreground">Total views</dt>
+                                    <dd className="font-semibold text-brand-700">{totalViews}</dd>
+                                </div>
+                            </dl>
+                        </Card>
+                        <Card className="overflow-hidden">
+                            <div className="bg-accent-500 px-4 py-3 text-accent-foreground">
+                                <p className="text-xs font-semibold uppercase tracking-wider">
+                                    Tip
+                                </p>
+                                <p className="mt-1 text-sm font-semibold">
+                                    Detailed deliverables hire faster
+                                </p>
+                            </div>
+                            <div className="px-4 py-3">
+                                <p className="text-xs text-muted-foreground">
+                                    Tasks with 3+ deliverables receive 60% more high-quality
+                                    applications.
+                                </p>
+                                <Button asChild variant="accent" size="sm" className="mt-3 w-full">
+                                    <Link href="/company/post-task">
+                                        <Sparkles className="h-3.5 w-3.5" /> Post a task
+                                    </Link>
+                                </Button>
+                            </div>
+                        </Card>
+                    </>
+                }
+            >
+                <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">My Tasks</h1>
-                        <p className="text-gray-600 mt-1">Manage your posted tasks</p>
+                        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                            My tasks
+                        </h1>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                            Manage every task you've posted
+                        </p>
                     </div>
-                    <button
-                        onClick={() => router.push('/company/post-task')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <Plus className="w-5 h-5" />
-                        Post New Task
-                    </button>
+                    <Button asChild size="sm">
+                        <Link href="/company/post-task">
+                            <Plus className="h-4 w-4" />
+                            Post task
+                        </Link>
+                    </Button>
                 </div>
 
-                {/* Filters */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                        {/* Search */}
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search tasks..."
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                <Card className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by title…"
+                            className="h-9 pl-9"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {statusFilters.map((s) => (
+                            <button
+                                key={s}
+                                onClick={() => {
+                                    setStatusFilter(s)
+                                    setCurrentPage(1)
+                                }}
+                                className={cn(
+                                    'rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                    statusFilter === s
+                                        ? 'bg-foreground text-background'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                                )}
+                            >
+                                {s === 'all' ? 'All' : s}
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+
+                <p className="text-xs text-muted-foreground">
+                    {loading
+                        ? 'Loading…'
+                        : `${totalTasks.toLocaleString()} task${totalTasks === 1 ? '' : 's'}`}
+                </p>
+
+                {loading ? (
+                    <div className="space-y-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <Skeleton key={i} className="h-20 w-full" />
+                        ))}
+                    </div>
+                ) : filteredTasks.length === 0 ? (
+                    <Card className="p-10 text-center">
+                        <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-muted text-muted-foreground">
+                            <ClipboardList className="h-5 w-5" />
                         </div>
-
-                        {/* Status Filter */}
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="draft">Draft</option>
-                            <option value="paused">Paused</option>
-                            <option value="closed">Closed</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* Results Count */}
-                <div className="mb-4">
-                    <p className="text-sm text-gray-600">
-                        {loading ? 'Loading...' : `Showing ${tasks.length} of ${totalTasks} tasks`}
-                    </p>
-                </div>
-
-                {/* Loading State */}
-                {loading && (
-                    <div className="flex justify-center py-12">
-                        <LoadingSpinner size="lg" />
-                    </div>
-                )}
-
-                {/* Tasks List */}
-                {!loading && tasks.length === 0 ? (
-                    <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Plus className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No tasks found</h3>
-                        <p className="text-gray-600 mb-4">
+                        <h3 className="mt-3 text-sm font-semibold text-foreground">
+                            No tasks {statusFilter !== 'all' ? `(${statusFilter})` : 'yet'}
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
                             {searchQuery || statusFilter !== 'all'
-                                ? 'Try adjusting your filters'
-                                : 'Get started by posting your first task'}
+                                ? 'Try adjusting your filters.'
+                                : 'Get started by posting your first task.'}
                         </p>
                         {!searchQuery && statusFilter === 'all' && (
-                            <button
-                                onClick={() => router.push('/company/post-task')}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <Plus className="w-5 h-5" />
-                                Post Your First Task
-                            </button>
+                            <Button asChild size="sm" className="mt-4">
+                                <Link href="/company/post-task">
+                                    <Plus className="h-4 w-4" /> Post your first task
+                                </Link>
+                            </Button>
                         )}
-                    </div>
-                ) : !loading && (
-                    <div className="space-y-4">
-                        {tasks.map((task) => (
-                            <div
+                    </Card>
+                ) : (
+                    <div className="space-y-2">
+                        {filteredTasks.map((task) => (
+                            <Card
                                 key={task._id}
-                                className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/30"
                             >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-semibold text-gray-900">
-                                                {task.title}
-                                            </h3>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium border capitalize ${getStatusColor(task.status)}`}>
-                                                {task.status}
-                                            </span>
-                                            {task.isFeatured && (
-                                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                                    ⭐ Featured
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                                            {getTextPreview(task.description, 150)}
-                                        </p>
-
-                                        {/* Stats */}
-                                        <div className="flex items-center gap-6 text-sm text-gray-600">
-                                            <div className="flex items-center gap-1">
-                                                <Users className="w-4 h-4" />
-                                                <span>{task.applicationCount}/{task.maxApplications} applications</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Eye className="w-4 h-4" />
-                                                <span>{task.views} views</span>
-                                            </div>
-                                            <div>
-                                                Deadline: {formatDate(task.applicationDeadline)}
-                                            </div>
-                                            <div className="capitalize">
-                                                {task.workType}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions Menu */}
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setOpenMenuId(openMenuId === task._id ? null : task._id)}
-                                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Link
+                                            href={`/tasks/${task._id}`}
+                                            className="line-clamp-1 text-sm font-semibold text-foreground hover:text-brand-700"
                                         >
-                                            <MoreVertical className="w-5 h-5 text-gray-600" />
-                                        </button>
-
-                                        {openMenuId === task._id && (
-                                            <>
-                                                <div
-                                                    className="fixed inset-0 z-10"
-                                                    onClick={() => setOpenMenuId(null)}
-                                                />
-                                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                                                    <button
-                                                        onClick={() => {
-                                                            router.push(`/tasks/${task._id}`);
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                        View Details
-                                                    </button>
-
-                                                    {/* Status Change Submenu */}
-                                                    <div className="relative">
-                                                        <button
-                                                            onClick={() => setStatusMenuId(statusMenuId === task._id ? null : task._id)}
-                                                            className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                        >
-                                                            <span className="flex items-center gap-2">
-                                                                <span className="w-4 h-4 flex items-center justify-center">⚡</span>
-                                                                Change Status
-                                                            </span>
-                                                            <span className="text-xs">›</span>
-                                                        </button>
-
-                                                        {statusMenuId === task._id && (
-                                                            <div className="absolute left-full top-0 ml-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                                                                {['active', 'draft', 'paused', 'closed', 'completed'].map((status) => (
-                                                                    <button
-                                                                        key={status}
-                                                                        onClick={() => handleStatusChange(task._id, status)}
-                                                                        disabled={task.status === status || changingStatus === task._id}
-                                                                        className={`w-full text-left px-4 py-2 text-sm capitalize ${task.status === status
-                                                                            ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                                                                            : 'text-gray-700 hover:bg-gray-100'
-                                                                            } ${changingStatus === task._id ? 'opacity-50' : ''}`}
-                                                                    >
-                                                                        {status}
-                                                                        {task.status === status && ' ✓'}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            router.push(`/company/tasks/${task._id}/edit`);
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                        Edit Task
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setTaskToDelete(task);
-                                                            setDeleteModalOpen(true);
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete Task
-                                                    </button>
-                                                </div>
-                                            </>
+                                            {task.title}
+                                        </Link>
+                                        <Badge variant={statusVariants[task.status] ?? 'muted'}>
+                                            {task.status}
+                                        </Badge>
+                                        {task.isFeatured && (
+                                            <Badge variant="accent">Featured</Badge>
                                         )}
                                     </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                            <Users className="h-3 w-3" />
+                                            {task.applicationCount}
+                                            {task.maxApplications
+                                                ? ` / ${task.maxApplications}`
+                                                : ''}{' '}
+                                            applicants
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Eye className="h-3 w-3" /> {task.views} views
+                                        </span>
+                                        <span>Deadline {formatDate(task.applicationDeadline)}</span>
+                                        <span className="capitalize">{task.workType}</span>
+                                    </div>
                                 </div>
-                            </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger
+                                        aria-label="Options"
+                                        className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                        <MoreVertical className="h-4 w-4" />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            onClick={() => router.push(`/tasks/${task._id}`)}
+                                        >
+                                            <Eye className="h-4 w-4" /> View details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() =>
+                                                router.push(`/company/tasks/${task._id}/edit`)
+                                            }
+                                        >
+                                            <Pencil className="h-4 w-4" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuLabel>Change status</DropdownMenuLabel>
+                                        {STATUSES.map((s) => (
+                                            <DropdownMenuItem
+                                                key={s}
+                                                disabled={
+                                                    task.status === s ||
+                                                    changingStatusId === task._id
+                                                }
+                                                onClick={() => handleStatusChange(task._id, s)}
+                                                className={cn(task.status === s && 'opacity-50')}
+                                            >
+                                                <span className="capitalize">{s}</span>
+                                                {task.status === s && (
+                                                    <span className="ml-auto text-xs">✓</span>
+                                                )}
+                                            </DropdownMenuItem>
+                                        ))}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            onClick={() => setTaskToDelete(task)}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </Card>
                         ))}
                     </div>
                 )}
 
-                {/* Pagination */}
                 {!loading && totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2 mt-8">
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    <div className="flex items-center justify-center gap-3 pt-2 text-sm">
+                        <Button
+                            variant="secondary"
+                            size="sm"
                             disabled={currentPage === 1}
-                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         >
                             Previous
-                        </button>
-                        <span className="text-sm text-gray-600">
+                        </Button>
+                        <span className="text-muted-foreground">
                             Page {currentPage} of {totalPages}
                         </span>
-                        <button
-                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        <Button
+                            variant="secondary"
+                            size="sm"
                             disabled={currentPage === totalPages}
-                            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         >
                             Next
-                        </button>
+                        </Button>
                     </div>
                 )}
-            </div>
+            </AppShell>
 
-            {/* Delete Confirmation Modal */}
-            {deleteModalOpen && taskToDelete && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Task</h3>
-                        <p className="text-gray-600 mb-4">
-                            Are you sure you want to delete "{taskToDelete.title}"? This action cannot be undone.
+            <Dialog
+                open={!!taskToDelete}
+                onOpenChange={(open) => !open && setTaskToDelete(null)}
+            >
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete task?</DialogTitle>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody>
+                        <p className="text-sm text-foreground/80">
+                            "<span className="font-semibold">{taskToDelete?.title}</span>" will be
+                            permanently removed. This can't be undone.
                         </p>
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={() => {
-                                    setDeleteModalOpen(false);
-                                    setTaskToDelete(null);
-                                }}
-                                disabled={deleting}
-                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {deleting ? (
-                                    <>
-                                        <LoadingSpinner size="sm" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setTaskToDelete(null)}
+                            disabled={deleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                        >
+                            {deleting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4" /> Delete task
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    )
 }

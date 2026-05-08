@@ -1,102 +1,293 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import Modal from "@/components/shared/Modal";
-import { Loader2, Plus, X } from "lucide-react";
-import { Experience } from "@/types/student.types";
+import { useEffect, useState } from 'react'
+import { Loader2, Plus, X } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Experience } from '@/types/student.types'
 
 interface EditExperienceModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    experience: Experience | null;
-    onSave: (data: Omit<Experience, "id">) => Promise<void>;
+    isOpen: boolean
+    onClose: () => void
+    experience: Experience | null
+    onSave: (data: Omit<Experience, 'id'>) => Promise<void>
 }
 
-export default function EditExperienceModal({ isOpen, onClose, experience, onSave }: EditExperienceModalProps) {
+export default function EditExperienceModal({
+    isOpen,
+    onClose,
+    experience,
+    onSave,
+}: EditExperienceModalProps) {
     const [formData, setFormData] = useState({
-        title: "",
-        company: "",
-        employmentType: "Internship" as Experience["employmentType"],
-        startDate: "",
+        title: '',
+        company: '',
+        employmentType: 'Internship' as Experience['employmentType'],
+        startDate: '',
         endDate: null as string | null,
         isCurrentlyWorking: false,
-        description: "",
-        skills: [] as string[]
-    });
-    const [newSkill, setNewSkill] = useState("");
-    const [loading, setLoading] = useState(false);
+        description: '',
+        skills: [] as string[],
+    })
+    const [newSkill, setNewSkill] = useState('')
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        if (experience) {
-            setFormData(experience);
+        if (isOpen) {
+            if (experience) setFormData(experience)
+            else
+                setFormData({
+                    title: '',
+                    company: '',
+                    employmentType: 'Internship',
+                    startDate: '',
+                    endDate: null,
+                    isCurrentlyWorking: false,
+                    description: '',
+                    skills: [],
+                })
+            setNewSkill('')
         }
-    }, [experience, isOpen]);
+    }, [isOpen, experience])
+
+    const addSkill = () => {
+        if (!newSkill.trim()) return
+        setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] })
+        setNewSkill('')
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault()
+        setLoading(true)
         try {
-            await onSave(formData);
-            onClose();
+            await onSave(formData)
+            onClose()
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={experience ? "Edit Experience" : "Add Experience"} size="md">
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Job Title" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent size="md">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {experience ? 'Edit experience' : 'Add experience'}
+                        </DialogTitle>
+                        <DialogCloseButton type="button" />
+                    </DialogHeader>
+                    <DialogBody>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="title">Title *</Label>
+                                <Input
+                                    id="title"
+                                    required
+                                    value={formData.title}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, title: e.target.value })
+                                    }
+                                    placeholder="e.g. Software Engineering Intern"
+                                    className="mt-1.5"
+                                />
+                            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="text" required value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} placeholder="Company" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                    <select value={formData.employmentType} onChange={(e) => setFormData({ ...formData, employmentType: e.target.value as Experience["employmentType"] })} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]">
-                        <option value="Internship">Internship</option>
-                        <option value="Full-time">Full-time</option>
-                        <option value="Part-time">Part-time</option>
-                        <option value="Freelance">Freelance</option>
-                    </select>
-                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="company">Company *</Label>
+                                    <Input
+                                        id="company"
+                                        required
+                                        value={formData.company}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, company: e.target.value })
+                                        }
+                                        placeholder="Acme Inc."
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Employment type</Label>
+                                    <Select
+                                        value={formData.employmentType}
+                                        onValueChange={(v) =>
+                                            setFormData({
+                                                ...formData,
+                                                employmentType: v as Experience['employmentType'],
+                                            })
+                                        }
+                                    >
+                                        <SelectTrigger className="mt-1.5">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Internship">Internship</SelectItem>
+                                            <SelectItem value="Full-time">Full-time</SelectItem>
+                                            <SelectItem value="Part-time">Part-time</SelectItem>
+                                            <SelectItem value="Freelance">Freelance</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="month" required value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                    <input type="month" value={formData.endDate || ""} onChange={(e) => setFormData({ ...formData, endDate: e.target.value || null })} disabled={formData.isCurrentlyWorking} className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] disabled:opacity-50" />
-                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="startDate">Start date *</Label>
+                                    <Input
+                                        id="startDate"
+                                        type="month"
+                                        required
+                                        value={formData.startDate}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, startDate: e.target.value })
+                                        }
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="endDate">End date</Label>
+                                    <Input
+                                        id="endDate"
+                                        type="month"
+                                        value={formData.endDate || ''}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                endDate: e.target.value || null,
+                                            })
+                                        }
+                                        disabled={formData.isCurrentlyWorking}
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                            </div>
 
-                <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={formData.isCurrentlyWorking} onChange={(e) => setFormData({ ...formData, isCurrentlyWorking: e.target.checked, endDate: e.target.checked ? null : formData.endDate })} className="w-4 h-4 text-[#4F46E5] rounded" />
-                    <span className="text-sm text-[#475569]">Currently working here</span>
-                </label>
+                            <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                                <Checkbox
+                                    checked={formData.isCurrentlyWorking}
+                                    onCheckedChange={(c) =>
+                                        setFormData({
+                                            ...formData,
+                                            isCurrentlyWorking: !!c,
+                                            endDate: c ? null : formData.endDate,
+                                        })
+                                    }
+                                />
+                                I'm currently working here
+                            </label>
 
-                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} placeholder="Describe your responsibilities and achievements..." className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] resize-none" />
+                            <div>
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                    rows={4}
+                                    placeholder="Responsibilities, achievements, what you shipped…"
+                                    className="mt-1.5"
+                                />
+                            </div>
 
-                <div>
-                    <label className="block text-sm font-semibold text-[#0F172A] mb-2">Skills Used</label>
-                    <div className="flex gap-2 mb-2">
-                        <input type="text" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} placeholder="Add skill" className="flex-1 px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                        <button type="button" onClick={() => { if (newSkill.trim()) { setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] }); setNewSkill(""); } }} className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA]">
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {formData.skills.map((skill, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-[#EEF2FF] text-[#4F46E5] rounded-full text-sm">
-                                {skill}
-                                <button type="button" onClick={() => setFormData({ ...formData, skills: formData.skills.filter((_, i) => i !== idx) })} className="hover:bg-[#DDD6FE] rounded-full p-0.5">
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC]">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-[#4F46E5] text-white font-medium rounded-lg hover:bg-[#4338CA] disabled:opacity-50 flex items-center justify-center gap-2">
-                        {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : experience ? "Update" : "Add"}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
+                            <div>
+                                <Label>Skills used</Label>
+                                <div className="mt-1.5 flex gap-2">
+                                    <Input
+                                        value={newSkill}
+                                        onChange={(e) => setNewSkill(e.target.value)}
+                                        placeholder="Add a skill"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                addSkill()
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        onClick={addSkill}
+                                        aria-label="Add skill"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                {formData.skills.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {formData.skills.map((s, i) => (
+                                            <Badge
+                                                key={i}
+                                                variant="soft"
+                                                className="inline-flex items-center gap-1"
+                                            >
+                                                {s}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            skills: formData.skills.filter(
+                                                                (_, j) => j !== i
+                                                            ),
+                                                        })
+                                                    }
+                                                    className="rounded-full hover:bg-brand-200/60"
+                                                    aria-label="Remove"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : experience ? (
+                                'Update'
+                            ) : (
+                                'Add'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }

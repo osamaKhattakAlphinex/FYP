@@ -1,75 +1,71 @@
-"use client";
+'use client'
 
-import { UserRole } from '@/types/auth.types';
-import { Briefcase, GraduationCap, Users, Shield } from 'lucide-react';
+import { UserRole } from '@/types/auth.types'
+import { Briefcase, GraduationCap, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface RoleSelectorProps {
-    selectedRole: UserRole | null;
-    onRoleSelect: (role: UserRole) => void;
+    selectedRole: UserRole | null
+    onRoleSelect: (role: UserRole) => void
 }
 
 const roles = [
     {
         value: 'student' as UserRole,
-        label: 'Student',
-        description: 'Find micro-internships and build your portfolio',
+        label: 'I\'m a student',
+        description: 'Find tasks, build proof of work',
         icon: GraduationCap,
-        color: 'from-[#4F46E5] to-[#6366F1]'
     },
     {
         value: 'company' as UserRole,
-        label: 'Company',
-        description: 'Post tasks and find talented students',
+        label: 'I\'m a company',
+        description: 'Post tasks, hire talent',
         icon: Briefcase,
-        color: 'from-[#06B6D4] to-[#0891B2]'
     },
-
-];
+]
 
 export default function RoleSelector({ selectedRole, onRoleSelect }: RoleSelectorProps) {
     return (
         <div className="grid grid-cols-2 gap-3">
             {roles.map((role) => {
-                const Icon = role.icon;
-                const isSelected = selectedRole === role.value;
-
+                const Icon = role.icon
+                const isSelected = selectedRole === role.value
                 return (
                     <button
                         key={role.value}
                         type="button"
                         onClick={() => onRoleSelect(role.value)}
-                        className={`
-                            relative p-4 rounded-xl border-2 text-left transition-all duration-200
-                            ${isSelected
-                                ? 'border-[#4F46E5] bg-[#EEF2FF] shadow-sm'
-                                : 'border-[#E2E8F0] bg-white hover:border-[#CBD5E1] hover:bg-[#F8FAFC]'
-                            }
-                        `}
+                        className={cn(
+                            'relative rounded-md border p-4 text-left transition-all',
+                            isSelected
+                                ? 'border-brand-600 bg-brand-50 ring-2 ring-brand-600/20'
+                                : 'border-input bg-card hover:border-muted-foreground/40'
+                        )}
                     >
-                        <div className={`
-                            w-10 h-10 rounded-lg bg-gradient-to-br ${role.color} 
-                            flex items-center justify-center mb-3
-                            ${isSelected ? 'scale-110' : ''}
-                            transition-transform duration-200
-                        `}>
-                            <Icon className="w-5 h-5 text-white" />
+                        <div
+                            className={cn(
+                                'grid h-9 w-9 place-items-center rounded-md',
+                                isSelected
+                                    ? 'bg-brand-600 text-white'
+                                    : 'bg-muted text-muted-foreground'
+                            )}
+                        >
+                            <Icon className="h-4 w-4" />
                         </div>
-                        <div className="font-semibold text-[#0F172A] text-sm mb-1">
+                        <div className="mt-3 text-sm font-semibold text-foreground">
                             {role.label}
                         </div>
-                        <div className="text-xs text-[#64748B] leading-snug">
+                        <div className="mt-0.5 text-xs text-muted-foreground">
                             {role.description}
                         </div>
                         {isSelected && (
-                            <div className="absolute top-3 right-3 w-5 h-5 bg-[#4F46E5] rounded-full flex items-center justify-center">
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
+                            <span className="absolute right-3 top-3 grid h-4 w-4 place-items-center rounded-full bg-brand-600 text-white">
+                                <Check className="h-3 w-3" strokeWidth={3} />
+                            </span>
                         )}
                     </button>
-                );
+                )
             })}
         </div>
-    );
+    )
 }

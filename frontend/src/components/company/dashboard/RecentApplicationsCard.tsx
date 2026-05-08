@@ -1,77 +1,82 @@
-"use client";
+'use client'
 
-import { User, Star, Clock } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'
+import { Star, Clock } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 interface Application {
-    id: string;
-    candidateName: string;
-    candidateAvatar: string;
-    taskTitle: string;
-    appliedDate: string;
-    matchScore: number;
-    status: 'new' | 'reviewing' | 'shortlisted' | 'rejected';
+    id: string
+    candidateName: string
+    candidateAvatar: string
+    taskTitle: string
+    appliedDate: string
+    matchScore: number
+    status: 'new' | 'reviewing' | 'shortlisted' | 'rejected'
 }
 
 interface RecentApplicationsCardProps {
-    applications: Application[];
+    applications: Application[]
+}
+
+const statusVariant: Record<Application['status'], 'soft' | 'warning' | 'success' | 'muted'> = {
+    new: 'soft',
+    reviewing: 'warning',
+    shortlisted: 'success',
+    rejected: 'muted',
 }
 
 export default function RecentApplicationsCard({ applications }: RecentApplicationsCardProps) {
-    const getStatusColor = (status: string) => {
-        const colors = {
-            new: 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]',
-            reviewing: 'bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]',
-            shortlisted: 'bg-[#DCFCE7] text-[#16A34A] border-[#86EFAC]',
-            rejected: 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]',
-        };
-        return colors[status as keyof typeof colors];
-    };
-
     return (
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-[#0F172A]">Recent Applications</h3>
-                <Link href="/company/candidates" className="text-sm font-semibold text-[#4F46E5] hover:text-[#4338CA]">
-                    View All
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Recent applications</CardTitle>
+                <Link
+                    href="/company/candidates"
+                    className="text-xs font-semibold text-brand-700 hover:underline"
+                >
+                    View all
                 </Link>
-            </div>
-            <div className="space-y-3">
-                {applications.map((app) => (
-                    <Link
-                        key={app.id}
-                        href={`/profile/${app.id}`}
-                        className="block border border-[#E2E8F0] rounded-xl p-4 hover:border-[#4F46E5] hover:shadow-md transition-all duration-200"
-                    >
-                        <div className="flex items-start gap-3 mb-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-[#4F46E5] to-[#06B6D4] rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-                                {app.candidateAvatar}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-[#0F172A] mb-1">
-                                    {app.candidateName}
-                                </p>
-                                <p className="text-xs text-[#64748B] truncate">
-                                    Applied for: {app.taskTitle}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-1 px-2 py-1 bg-[#EEF2FF] text-[#4F46E5] rounded-lg">
-                                <Star className="w-3 h-3 fill-current" />
-                                <span className="text-xs font-bold">{app.matchScore}%</span>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 text-xs text-[#64748B]">
-                                <Clock className="w-3.5 h-3.5" />
-                                {app.appliedDate}
-                            </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-semibold border ${getStatusColor(app.status)}`}>
-                                {app.status}
-                            </span>
-                        </div>
-                    </Link>
-                ))}
-            </div>
-        </div>
-    );
+            </CardHeader>
+            <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                    {applications.map((app) => (
+                        <li key={app.id}>
+                            <Link
+                                href={`/profile/${app.id}`}
+                                className="flex items-center gap-3 px-6 py-3.5 transition-colors hover:bg-muted/40"
+                            >
+                                <Avatar className="h-10 w-10">
+                                    <AvatarFallback className="bg-brand-100 text-brand-700">
+                                        {app.candidateAvatar}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold text-foreground">
+                                        {app.candidateName}
+                                    </p>
+                                    <p className="truncate text-xs text-muted-foreground">
+                                        Applied for {app.taskTitle}
+                                    </p>
+                                    <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                                        <Clock className="h-3 w-3" /> {app.appliedDate}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-accent-100 px-2 py-0.5 text-xs font-bold text-accent-700">
+                                        <Star className="h-3 w-3 fill-current" />
+                                        {app.matchScore}%
+                                    </span>
+                                    <Badge variant={statusVariant[app.status]}>
+                                        {app.status}
+                                    </Badge>
+                                </div>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            </CardContent>
+        </Card>
+    )
 }

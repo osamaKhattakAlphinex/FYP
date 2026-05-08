@@ -1,76 +1,95 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import Modal from "@/components/shared/Modal";
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 interface EditAboutModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    currentAbout: string;
-    onSave: (about: string) => Promise<void>;
+    isOpen: boolean
+    onClose: () => void
+    currentAbout: string
+    onSave: (about: string) => Promise<void>
 }
 
-export default function EditAboutModal({ isOpen, onClose, currentAbout, onSave }: EditAboutModalProps) {
-    const [about, setAbout] = useState(currentAbout);
-    const [loading, setLoading] = useState(false);
+export default function EditAboutModal({
+    isOpen,
+    onClose,
+    currentAbout,
+    onSave,
+}: EditAboutModalProps) {
+    const [about, setAbout] = useState(currentAbout)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        if (isOpen) setAbout(currentAbout)
+    }, [isOpen, currentAbout])
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault()
+        setLoading(true)
         try {
-            await onSave(about);
-            onClose();
-        } catch (error) {
-            console.error("Failed to update about:", error);
+            await onSave(about)
+            onClose()
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Edit About" size="md">
-            <form onSubmit={handleSubmit} className="p-6">
-                <div>
-                    <label htmlFor="about" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                        About You
-                    </label>
-                    <textarea
-                        id="about"
-                        value={about}
-                        onChange={(e) => setAbout(e.target.value)}
-                        rows={8}
-                        maxLength={500}
-                        className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"
-                        placeholder="Tell us about yourself, your interests, and career goals..."
-                    />
-                    <p className="mt-1 text-xs text-[#94A3B8] text-right">{about.length}/500</p>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC] transition-colors duration-200"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-1 px-4 py-2.5 bg-[#4F46E5] text-white font-medium rounded-lg hover:bg-[#4338CA] transition-colors duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save Changes"
-                        )}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
+        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent size="md">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader>
+                        <DialogTitle>Edit about</DialogTitle>
+                        <DialogCloseButton type="button" />
+                    </DialogHeader>
+                    <DialogBody>
+                        <Label htmlFor="about">Tell companies about yourself</Label>
+                        <Textarea
+                            id="about"
+                            value={about}
+                            onChange={(e) => setAbout(e.target.value)}
+                            rows={8}
+                            maxLength={500}
+                            placeholder="Share your background, interests, and what you're hoping to build…"
+                            className="mt-1.5"
+                        />
+                        <p className="mt-1 text-right text-xs text-muted-foreground">
+                            {about.length} / 500
+                        </p>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : (
+                                'Save'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }

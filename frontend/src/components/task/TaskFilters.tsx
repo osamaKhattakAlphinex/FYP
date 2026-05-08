@@ -1,280 +1,226 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { TaskFilters as TaskFiltersType, taskService } from "@/services/taskService";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/24/outline";
+import { useEffect, useState } from 'react'
+import { TaskFilters as TaskFiltersType } from '@/services/taskService'
+import { ChevronDown, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface TaskFiltersProps {
-    filters: TaskFiltersType;
-    onFilterChange: (filters: TaskFiltersType) => void;
+    filters: TaskFiltersType
+    onFilterChange: (filters: TaskFiltersType) => void
 }
 
 interface FilterSection {
-    title: string;
-    key: keyof TaskFiltersType;
-    options: Array<{ value: string; label: string; count?: number }>;
-    isOpen: boolean;
+    title: string
+    key: keyof TaskFiltersType
+    options: Array<{ value: string; label: string }>
+}
+
+const sections: FilterSection[] = [
+    {
+        title: 'Category',
+        key: 'category',
+        options: [
+            { value: 'Web Development', label: 'Web Development' },
+            { value: 'Mobile Development', label: 'Mobile Development' },
+            { value: 'UI/UX Design', label: 'UI/UX Design' },
+            { value: 'Data Science', label: 'Data Science' },
+            { value: 'Machine Learning', label: 'Machine Learning' },
+            { value: 'Digital Marketing', label: 'Digital Marketing' },
+            { value: 'Content Writing', label: 'Content Writing' },
+            { value: 'Graphic Design', label: 'Graphic Design' },
+            { value: 'Video Editing', label: 'Video Editing' },
+            { value: 'Business Analysis', label: 'Business Analysis' },
+            { value: 'Quality Assurance', label: 'QA / Testing' },
+            { value: 'DevOps', label: 'DevOps' },
+            { value: 'Cybersecurity', label: 'Cybersecurity' },
+        ],
+    },
+    {
+        title: 'Work type',
+        key: 'workType',
+        options: [
+            { value: 'remote', label: 'Remote' },
+            { value: 'onsite', label: 'On-site' },
+            { value: 'hybrid', label: 'Hybrid' },
+        ],
+    },
+    {
+        title: 'Experience level',
+        key: 'experienceLevel',
+        options: [
+            { value: 'entry', label: 'Entry' },
+            { value: 'intermediate', label: 'Intermediate' },
+            { value: 'expert', label: 'Expert' },
+        ],
+    },
+    {
+        title: 'Compensation',
+        key: 'budget',
+        options: [
+            { value: 'unpaid', label: 'Unpaid' },
+            { value: 'under-500', label: 'Under $500' },
+            { value: '500-1000', label: '$500 – $1,000' },
+            { value: 'over-1000', label: 'Over $1,000' },
+        ],
+    },
+    {
+        title: 'Location',
+        key: 'location',
+        options: [
+            { value: 'remote', label: 'Remote only' },
+            { value: 'United States', label: 'United States' },
+            { value: 'Canada', label: 'Canada' },
+            { value: 'United Kingdom', label: 'United Kingdom' },
+            { value: 'Germany', label: 'Germany' },
+            { value: 'Australia', label: 'Australia' },
+            { value: 'India', label: 'India' },
+            { value: 'Pakistan', label: 'Pakistan' },
+        ],
+    },
+]
+
+const popularSkills = [
+    'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python',
+    'Next.js', 'Tailwind', 'SQL', 'MongoDB', 'AWS',
+    'Figma', 'Photoshop', 'Java', 'Docker', 'Git',
+]
+
+function FilterAccordion({
+    title,
+    children,
+    defaultOpen = true,
+}: {
+    title: string
+    children: React.ReactNode
+    defaultOpen?: boolean
+}) {
+    const [open, setOpen] = useState(defaultOpen)
+    return (
+        <div className="border-b border-border py-3 last:border-0">
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="flex w-full items-center justify-between py-1 text-left"
+            >
+                <span className="text-sm font-semibold text-foreground">{title}</span>
+                <ChevronDown
+                    className={cn(
+                        'h-4 w-4 text-muted-foreground transition-transform',
+                        open && 'rotate-180'
+                    )}
+                />
+            </button>
+            {open && <div className="mt-2 space-y-1">{children}</div>}
+        </div>
+    )
 }
 
 export default function TaskFilters({ filters, onFilterChange }: TaskFiltersProps) {
-    const [sections, setSections] = useState<FilterSection[]>([
-        {
-            title: "Category",
-            key: "category",
-            isOpen: true,
-            options: [
-                { value: "all", label: "All Categories" },
-                { value: "Web Development", label: "Web Development" },
-                { value: "Mobile Development", label: "Mobile Development" },
-                { value: "UI/UX Design", label: "UI/UX Design" },
-                { value: "Data Science", label: "Data Science" },
-                { value: "Machine Learning", label: "Machine Learning" },
-                { value: "Digital Marketing", label: "Digital Marketing" },
-                { value: "Content Writing", label: "Content Writing" },
-                { value: "Graphic Design", label: "Graphic Design" },
-                { value: "Video Editing", label: "Video Editing" },
-                { value: "Business Analysis", label: "Business Analysis" },
-                { value: "Quality Assurance", label: "Quality Assurance" },
-                { value: "DevOps", label: "DevOps" },
-                { value: "Cybersecurity", label: "Cybersecurity" },
-                { value: "Other", label: "Other" }
-            ]
-        },
-        {
-            title: "Work Type",
-            key: "workType",
-            isOpen: true,
-            options: [
-                { value: "all", label: "All Types" },
-                { value: "remote", label: "🏠 Remote" },
-                { value: "onsite", label: "🏢 On-site" },
-                { value: "hybrid", label: "🔄 Hybrid" }
-            ]
-        },
-        {
-            title: "Experience Level",
-            key: "experienceLevel",
-            isOpen: true,
-            options: [
-                { value: "all", label: "All Levels" },
-                { value: "entry", label: "Entry Level" },
-                { value: "intermediate", label: "Intermediate" },
-                { value: "expert", label: "Expert" }
-            ]
-        },
-        {
-            title: "Budget Range",
-            key: "budget",
-            isOpen: true,
-            options: [
-                { value: "all", label: "All Budgets" },
-                { value: "unpaid", label: "Unpaid" },
-                { value: "under-500", label: "Under $500" },
-                { value: "500-1000", label: "$500 - $1,000" },
-                { value: "over-1000", label: "Over $1,000" }
-            ]
-        },
-        {
-            title: "Location",
-            key: "location",
-            isOpen: false,
-            options: [
-                { value: "all", label: "All Locations" },
-                { value: "remote", label: "Remote Only" },
-                { value: "United States", label: "United States" },
-                { value: "Canada", label: "Canada" },
-                { value: "United Kingdom", label: "United Kingdom" },
-                { value: "Germany", label: "Germany" },
-                { value: "Australia", label: "Australia" },
-                { value: "India", label: "India" },
-                { value: "Pakistan", label: "Pakistan" }
-            ]
-        }
-    ]);
-
-    const [popularSkills] = useState([
-        "JavaScript", "React", "Python", "Node.js", "TypeScript",
-        "Java", "PHP", "CSS", "HTML", "SQL", "MongoDB", "AWS",
-        "Docker", "Git", "Figma", "Photoshop", "WordPress"
-    ]);
-
-    const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+    const [selectedSkills, setSelectedSkills] = useState<string[]>([])
+    const [skillSearch, setSkillSearch] = useState('')
 
     useEffect(() => {
-        // Initialize selected skills from filters
-        if (filters.skills) {
-            setSelectedSkills(filters.skills.split(','));
-        }
-    }, []);
+        if (filters.skills) setSelectedSkills(filters.skills.split(','))
+    }, [])
 
     const handleFilterChange = (key: keyof TaskFiltersType, value: string) => {
-        const newFilters = { ...filters };
-
-        if (value === "all" || value === "") {
-            delete newFilters[key];
-        } else {
-            newFilters[key] = value;
-        }
-
-        onFilterChange(newFilters);
-    };
-
-    const toggleSection = (index: number) => {
-        setSections(prev => prev.map((section, i) =>
-            i === index ? { ...section, isOpen: !section.isOpen } : section
-        ));
-    };
+        const newFilters = { ...filters }
+        if (newFilters[key] === value) delete newFilters[key]
+        else (newFilters[key] as string) = value
+        onFilterChange(newFilters)
+    }
 
     const handleSkillToggle = (skill: string) => {
         const newSkills = selectedSkills.includes(skill)
-            ? selectedSkills.filter(s => s !== skill)
-            : [...selectedSkills, skill];
-
-        setSelectedSkills(newSkills);
-
-        const skillsString = newSkills.length > 0 ? newSkills.join(',') : undefined;
-        onFilterChange({ ...filters, skills: skillsString });
-    };
-
-    const clearSkills = () => {
-        setSelectedSkills([]);
-        const newFilters = { ...filters };
-        delete newFilters.skills;
-        onFilterChange(newFilters);
-    };
+            ? selectedSkills.filter((s) => s !== skill)
+            : [...selectedSkills, skill]
+        setSelectedSkills(newSkills)
+        onFilterChange({
+            ...filters,
+            skills: newSkills.length ? newSkills.join(',') : undefined,
+        })
+    }
 
     return (
-        <div className="space-y-6">
-            {/* Filter Sections */}
-            {sections.map((section, index) => (
-                <div key={section.key} className="border-b border-gray-200 pb-4">
-                    <button
-                        onClick={() => toggleSection(index)}
-                        className="flex items-center justify-between w-full text-left"
-                    >
-                        <h3 className="text-sm font-medium text-gray-900">{section.title}</h3>
-                        {section.isOpen ? (
-                            <ChevronUpIcon className="w-4 h-4 text-gray-500" />
-                        ) : (
-                            <ChevronDownIcon className="w-4 h-4 text-gray-500" />
-                        )}
-                    </button>
-
-                    {section.isOpen && (
-                        <div className="mt-3 space-y-2">
-                            {section.options.map((option) => (
-                                <label key={option.value} className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        name={section.key}
-                                        value={option.value}
-                                        checked={
-                                            option.value === "all"
-                                                ? !filters[section.key] || filters[section.key] === "all"
-                                                : filters[section.key] === option.value
-                                        }
-                                        onChange={(e) => handleFilterChange(section.key, e.target.value)}
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-700 flex-1">
-                                        {option.label}
-                                    </span>
-                                    {option.count && (
-                                        <span className="text-xs text-gray-500">({option.count})</span>
+        <div className="space-y-1">
+            {sections.map((section) => (
+                <FilterAccordion
+                    key={section.key as string}
+                    title={section.title}
+                    defaultOpen={section.key !== 'location'}
+                >
+                    <div className="flex flex-col gap-0.5">
+                        {section.options.map((opt) => {
+                            const active = filters[section.key] === opt.value
+                            return (
+                                <label
+                                    key={opt.value}
+                                    className={cn(
+                                        'flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors',
+                                        active
+                                            ? 'bg-brand-50 text-brand-700 font-medium'
+                                            : 'text-foreground hover:bg-muted'
                                     )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={active}
+                                        onChange={() =>
+                                            handleFilterChange(section.key, opt.value)
+                                        }
+                                        className="h-4 w-4 rounded border-input text-brand-600 focus:ring-2 focus:ring-ring"
+                                    />
+                                    <span className="flex-1">{opt.label}</span>
                                 </label>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                            )
+                        })}
+                    </div>
+                </FilterAccordion>
             ))}
 
-            {/* Skills Filter */}
-            <div className="border-b border-gray-200 pb-4">
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-gray-900">Skills</h3>
-                    {selectedSkills.length > 0 && (
-                        <button
-                            onClick={clearSkills}
-                            className="text-xs text-blue-600 hover:text-blue-700"
-                        >
-                            Clear
-                        </button>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    {/* Selected Skills */}
-                    {selectedSkills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                            {selectedSkills.map((skill) => (
-                                <span
-                                    key={skill}
-                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
-                                >
-                                    {skill}
-                                    <button
-                                        onClick={() => handleSkillToggle(skill)}
-                                        className="ml-1 text-blue-600 hover:text-blue-800"
-                                    >
-                                        ×
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Popular Skills */}
-                    <div className="flex flex-wrap gap-1">
-                        {popularSkills
-                            .filter(skill => !selectedSkills.includes(skill))
-                            .slice(0, 12)
-                            .map((skill) => (
-                                <button
-                                    key={skill}
-                                    onClick={() => handleSkillToggle(skill)}
-                                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                                >
-                                    + {skill}
-                                </button>
-                            ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Active Filters Summary */}
-            {Object.keys(filters).some(key =>
-                filters[key as keyof TaskFiltersType] &&
-                key !== 'sortBy' &&
-                key !== 'sortOrder' &&
-                filters[key as keyof TaskFiltersType] !== 'all'
-            ) && (
-                    <div className="pt-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-2">Active Filters</h4>
-                        <div className="space-y-1">
-                            {Object.entries(filters).map(([key, value]) => {
-                                if (!value || key === 'sortBy' || key === 'sortOrder' || value === 'all') return null;
-
-                                const section = sections.find(s => s.key === key);
-                                const option = section?.options.find(o => o.value === value);
-
-                                return (
-                                    <div key={key} className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-600">
-                                            {section?.title}: {option?.label || value}
-                                        </span>
-                                        <button
-                                            onClick={() => handleFilterChange(key as keyof TaskFiltersType, "all")}
-                                            className="text-red-600 hover:text-red-700 ml-2"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
+            <FilterAccordion title="Skills" defaultOpen>
+                <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="Search skills…"
+                    className="mb-2 h-8 w-full rounded-md border border-input bg-card px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                {selectedSkills.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1">
+                        {selectedSkills.map((s) => (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => handleSkillToggle(s)}
+                                className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100"
+                            >
+                                {s} <X className="h-3 w-3" />
+                            </button>
+                        ))}
                     </div>
                 )}
+                <div className="flex flex-wrap gap-1">
+                    {popularSkills
+                        .filter(
+                            (s) =>
+                                !selectedSkills.includes(s) &&
+                                s.toLowerCase().includes(skillSearch.toLowerCase())
+                        )
+                        .slice(0, 14)
+                        .map((s) => (
+                            <button
+                                key={s}
+                                type="button"
+                                onClick={() => handleSkillToggle(s)}
+                                className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 text-xs text-foreground hover:bg-muted"
+                            >
+                                + {s}
+                            </button>
+                        ))}
+                </div>
+            </FilterAccordion>
         </div>
-    );
+    )
 }

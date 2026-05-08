@@ -1,52 +1,62 @@
-"use client";
+'use client'
 
-import { Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'
+import { Sparkles, ArrowRight } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface WelcomeBannerProps {
-    userName: string;
-    profileCompletion: number;
+    userName: string
+    profileCompletion: number
 }
 
 export default function WelcomeBanner({ userName, profileCompletion }: WelcomeBannerProps) {
     return (
-        <div className="bg-gradient-to-br from-[#4F46E5] via-[#6366F1] to-[#06B6D4] rounded-2xl p-8 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-
-            <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5" />
-                    <span className="text-sm font-semibold">Welcome back!</span>
+        <Card className="overflow-hidden">
+            <div className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Welcome back
+                    </div>
+                    <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                        Hi {userName}, ready to pick up where you left off?
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Continue applying to recommended tasks and finish that strong
+                        portfolio.
+                    </p>
                 </div>
-                <h1 className="text-3xl font-extrabold mb-2">
-                    Hello, {userName}! 👋
-                </h1>
-                <p className="text-white/90 mb-6 max-w-2xl">
-                    Ready to take on new challenges? Check out your recommended tasks and continue building your portfolio.
-                </p>
+                <Button asChild className="flex-shrink-0">
+                    <Link href="/tasks">
+                        Browse new tasks <ArrowRight className="h-4 w-4" />
+                    </Link>
+                </Button>
+            </div>
 
-                {profileCompletion < 100 && (
-                    <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold">Profile Completion</span>
-                            <span className="text-sm font-bold">{profileCompletion}%</span>
-                        </div>
-                        <div className="w-full bg-white/30 rounded-full h-2 mb-3">
-                            <div
-                                className="bg-white h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${profileCompletion}%` }}
-                            ></div>
+            {profileCompletion < 100 && (
+                <div className="border-t border-border bg-accent-50/60 px-6 py-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3 text-sm">
+                            <span className="font-medium text-foreground">
+                                Profile {profileCompletion}% complete
+                            </span>
+                            <div className="hidden h-1.5 w-40 overflow-hidden rounded-full bg-accent-100 sm:block">
+                                <div
+                                    className="h-full bg-accent-500"
+                                    style={{ width: `${profileCompletion}%` }}
+                                />
+                            </div>
                         </div>
                         <Link
                             href="/student/profile"
-                            className="text-sm font-semibold hover:underline"
+                            className="text-sm font-semibold text-brand-700 hover:underline"
                         >
-                            Complete your profile →
+                            Complete profile →
                         </Link>
                     </div>
-                )}
-            </div>
-        </div>
-    );
+                </div>
+            )}
+        </Card>
+    )
 }

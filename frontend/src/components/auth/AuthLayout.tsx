@@ -1,97 +1,88 @@
-"use client";
+'use client'
 
-import { ReactNode } from 'react';
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { ReactNode } from 'react'
+import Link from 'next/link'
+import { Check } from 'lucide-react'
 
 interface AuthLayoutProps {
-    children: ReactNode;
-    title: string;
-    subtitle: string;
+    children: ReactNode
+    title: string
+    subtitle: string
 }
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#EEF2FF] via-[#F8FAFC] to-[#E0F2FE] flex items-center justify-center p-4">
-            <div className="w-full max-w-[1200px] grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                {/* Left Side - Branding */}
-                <div className="hidden lg:block">
-                    <div className="space-y-6">
-                        <Link href="/" className="inline-flex items-center gap-2 group">
-                            <div className="w-12 h-12 bg-gradient-to-br from-[#4F46E5] to-[#06B6D4] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                                <Sparkles className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="text-2xl font-extrabold text-[#0F172A]">NexIntern</span>
-                        </Link>
+        <div className="min-h-screen bg-background">
+            <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.05fr_1fr]">
+                {/* Brand panel */}
+                <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-700 px-12 py-10 text-white lg:flex">
+                    <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-white/[0.04]" />
+                    <div className="absolute -bottom-40 -left-32 h-96 w-96 rounded-full bg-accent-500/10" />
 
-                        <div className="space-y-4">
-                            <h1 className="text-4xl font-extrabold text-[#0F172A] leading-tight">
-                                Bridge the Gap Between
-                                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#4F46E5] to-[#06B6D4]">
-                                    Learning & Industry
-                                </span>
-                            </h1>
-                            <p className="text-lg text-[#475569] leading-relaxed">
-                                Join thousands of students gaining real-world experience through micro-internships,
-                                or find talented individuals for your next project.
-                            </p>
-                        </div>
+                    <Link href="/" className="relative z-10 inline-flex items-center text-2xl font-bold tracking-tight">
+                        <span className="text-brand-300">Nex</span>Intern
+                    </Link>
 
-                        {/* Features */}
-                        <div className="space-y-3">
+                    <div className="relative z-10 max-w-md space-y-6">
+                        <h1 className="text-balance text-4xl font-bold leading-[1.15] tracking-tight">
+                            Build proof of work that gets you hired.
+                        </h1>
+                        <p className="text-base leading-relaxed text-brand-100">
+                            Join the platform connecting students with paid micro-internships from real companies.
+                        </p>
+                        <ul className="space-y-3">
                             {[
-                                'AI-powered task matching',
-                                'Verified certificates upon completion',
-                                'Build your professional portfolio',
-                                'Connect with top companies'
-                            ].map((feature, index) => (
-                                <div key={index} className="flex items-center gap-3">
-                                    <div className="w-6 h-6 bg-[#DCFCE7] rounded-full flex items-center justify-center flex-shrink-0">
-                                        <svg className="w-4 h-4 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-[#475569]">{feature}</span>
-                                </div>
+                                'AI-matched tasks for your skills',
+                                'Verified credentials linked to deliverables',
+                                'Free for students, forever',
+                            ].map((f) => (
+                                <li key={f} className="flex items-start gap-3 text-sm text-brand-100">
+                                    <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-accent-500 text-accent-foreground">
+                                        <Check className="h-3 w-3" strokeWidth={3} />
+                                    </span>
+                                    <span>{f}</span>
+                                </li>
                             ))}
-                        </div>
-
-                        {/* Stats */}
-                        <div className="grid grid-cols-3 gap-4 pt-6">
-                            {[
-                                { value: '10K+', label: 'Students' },
-                                { value: '500+', label: 'Companies' },
-                                { value: '5K+', label: 'Tasks Completed' }
-                            ].map((stat, index) => (
-                                <div key={index} className="text-center">
-                                    <div className="text-2xl font-extrabold text-[#4F46E5]">{stat.value}</div>
-                                    <div className="text-sm text-[#64748B]">{stat.label}</div>
-                                </div>
-                            ))}
-                        </div>
+                        </ul>
                     </div>
-                </div>
 
-                {/* Right Side - Auth Form */}
-                <div className="w-full">
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-xl p-8 md:p-10">
-                        {/* Mobile Logo */}
-                        <Link href="/" className="lg:hidden flex items-center gap-2 mb-6">
-                            <div className="w-10 h-10 bg-gradient-to-br from-[#4F46E5] to-[#06B6D4] rounded-xl flex items-center justify-center">
-                                <Sparkles className="w-5 h-5 text-white" />
+                    <div className="relative z-10 grid grid-cols-3 gap-3 max-w-md">
+                        {[
+                            { v: '12K+', l: 'Students' },
+                            { v: '500+', l: 'Companies' },
+                            { v: '5K+', l: 'Tasks shipped' },
+                        ].map((s) => (
+                            <div key={s.l} className="rounded-md bg-white/5 px-3 py-2.5">
+                                <div className="text-lg font-bold text-white">{s.v}</div>
+                                <div className="text-xs text-brand-100/80">{s.l}</div>
                             </div>
-                            <span className="text-xl font-extrabold text-[#0F172A]">NexIntern</span>
+                        ))}
+                    </div>
+                </aside>
+
+                {/* Form panel */}
+                <main className="flex items-center justify-center px-4 py-10 sm:px-8">
+                    <div className="w-full max-w-md">
+                        <Link
+                            href="/"
+                            className="mb-8 inline-flex items-center text-xl font-bold tracking-tight text-foreground lg:hidden"
+                        >
+                            <span className="text-brand-700">Nex</span>Intern
                         </Link>
 
-                        <div className="mb-8">
-                            <h2 className="text-3xl font-extrabold text-[#0F172A] mb-2">{title}</h2>
-                            <p className="text-[#64748B]">{subtitle}</p>
+                        <div className="mb-7">
+                            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                                {title}
+                            </h2>
+                            {subtitle && (
+                                <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
+                            )}
                         </div>
 
                         {children}
                     </div>
-                </div>
+                </main>
             </div>
         </div>
-    );
+    )
 }

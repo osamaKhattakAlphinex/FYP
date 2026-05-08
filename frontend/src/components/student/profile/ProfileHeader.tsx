@@ -1,19 +1,26 @@
-"use client";
+'use client'
 
-import { Camera, MapPin, Pencil } from "lucide-react";
-import { useState } from "react";
-import AvatarUpload from "@/components/shared/AvatarUpload";
+import { useState } from 'react'
+import { Camera, MapPin, Pencil, Globe } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import AvatarUpload from '@/components/shared/AvatarUpload'
+import { cn, getInitials } from '@/lib/utils'
 
 interface ProfileHeaderProps {
-    fullName: string;
-    headline: string;
-    city: string;
-    country: string;
-    profilePicture: string | null;
-    isAvailable: boolean;
-    onToggleAvailability: () => void;
-    onUpdateAvatar: (file: File) => void;
-    onEditHeadline: () => void;
+    fullName: string
+    headline: string
+    city: string
+    country: string
+    profilePicture: string | null
+    isAvailable: boolean
+    onToggleAvailability: () => void
+    onUpdateAvatar: (file: File) => void
+    onEditHeadline: () => void
+    onEditProfile?: () => void
+    studentId?: string
 }
 
 export default function ProfileHeader({
@@ -26,83 +33,108 @@ export default function ProfileHeader({
     onToggleAvailability,
     onUpdateAvatar,
     onEditHeadline,
+    onEditProfile,
+    studentId,
 }: ProfileHeaderProps) {
-    const [showAvatarUpload, setShowAvatarUpload] = useState(false);
-    const [showToast, setShowToast] = useState(false);
-
-    const getInitials = (name: string) => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2);
-    };
-
-    const handleToggleAvailability = () => {
-        onToggleAvailability();
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-    };
+    const [showAvatarUpload, setShowAvatarUpload] = useState(false)
 
     return (
         <>
-            <div className="relative">
-                <div className="h-20 bg-gradient-to-r from-[#4F46E5] to-[#06B6D4] rounded-t-2xl" />
+            <Card className="overflow-hidden">
+                <div className="h-32 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-500 sm:h-40" />
+
                 <div className="px-6 pb-6">
-                    <div className="relative inline-block -mt-11 mb-4">
-                        <div className="w-[88px] h-[88px] rounded-full border-3 border-white bg-[#EEF2FF] flex items-center justify-center overflow-hidden">
-                            {profilePicture ? (
-                                <img
-                                    src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profilePicture}`}
-                                    alt={fullName}
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <span className="text-[28px] font-bold text-[#4F46E5]">
+                    <div className="-mt-12 flex items-end justify-between gap-3">
+                        <div className="relative">
+                            <Avatar className="h-24 w-24 ring-4 ring-card sm:h-28 sm:w-28">
+                                {profilePicture ? (
+                                    <AvatarImage
+                                        src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profilePicture}`}
+                                        alt={fullName}
+                                    />
+                                ) : null}
+                                <AvatarFallback className="text-2xl">
                                     {getInitials(fullName)}
-                                </span>
+                                </AvatarFallback>
+                            </Avatar>
+                            <button
+                                onClick={() => setShowAvatarUpload(true)}
+                                className="absolute bottom-1 right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-card bg-brand-600 text-white transition-colors hover:bg-brand-700"
+                                aria-label="Change profile picture"
+                            >
+                                <Camera className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {studentId && (
+                                <Button asChild variant="secondary" size="sm">
+                                    <a
+                                        href={`/profile/${studentId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        <Globe className="h-4 w-4" />
+                                        Public view
+                                    </a>
+                                </Button>
+                            )}
+                            <Button onClick={onEditProfile} size="sm">
+                                <Pencil className="h-4 w-4" />
+                                Edit profile
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="mt-4">
+                        <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
+                            {fullName}
+                        </h1>
+                        <div className="mt-1 flex items-start justify-between gap-3">
+                            <p className="text-sm leading-snug text-foreground/80">
+                                {headline || (
+                                    <button
+                                        onClick={onEditHeadline}
+                                        className="text-brand-700 hover:underline"
+                                    >
+                                        + Add a headline
+                                    </button>
+                                )}
+                            </p>
+                            {headline && (
+                                <button
+                                    onClick={onEditHeadline}
+                                    aria-label="Edit headline"
+                                    className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                </button>
                             )}
                         </div>
-                        <button
-                            onClick={() => setShowAvatarUpload(true)}
-                            className="absolute bottom-0 right-0 w-7 h-7 bg-[#4F46E5] rounded-full flex items-center justify-center border-2 border-white hover:bg-[#4338CA] transition-colors duration-200"
-                            aria-label="Change profile picture"
-                        >
-                            <Camera className="w-3.5 h-3.5 text-white" />
-                        </button>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            {(city || country) && (
+                                <span className="flex items-center gap-1">
+                                    <MapPin className="h-3.5 w-3.5" />
+                                    {[city, country].filter(Boolean).join(', ')}
+                                </span>
+                            )}
+                            <button
+                                onClick={onToggleAvailability}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                                    isAvailable
+                                        ? 'bg-success/10 text-success hover:bg-success/15'
+                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                )}
+                            >
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                {isAvailable ? 'Open to opportunities' : 'Not currently available'}
+                            </button>
+                        </div>
                     </div>
-                    <div className="group relative">
-                        <h1 className="text-lg font-bold text-[#0F172A]">{fullName}</h1>
-                        <p className="text-[13px] text-[#475569] leading-relaxed mt-1">
-                            {headline}
-                        </p>
-                        <button
-                            onClick={onEditHeadline}
-                            className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 p-1.5 bg-[#F8FAFC] rounded-lg hover:bg-[#EEF2FF] transition-all duration-200"
-                            aria-label="Edit headline"
-                        >
-                            <Pencil className="w-3.5 h-3.5 text-[#475569]" />
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#94A3B8]">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>
-                            {city}, {country}
-                        </span>
-                    </div>
-                    <button
-                        onClick={handleToggleAvailability}
-                        className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${isAvailable
-                            ? "bg-[#DCFCE7] text-[#16A34A]"
-                            : "bg-[#F1F5F9] text-[#64748B]"
-                            }`}
-                    >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {isAvailable ? "Open to Opportunities" : "Not Available"}
-                    </button>
                 </div>
-            </div>
+            </Card>
 
             {showAvatarUpload && (
                 <AvatarUpload
@@ -112,15 +144,6 @@ export default function ProfileHeader({
                     onClose={() => setShowAvatarUpload(false)}
                 />
             )}
-
-            {showToast && (
-                <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-[#10B981] rounded-lg shadow-lg p-3 flex items-center gap-3 animate-in slide-in-from-right duration-300">
-                    <div className="w-5 h-5 bg-[#10B981] rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs">✓</span>
-                    </div>
-                    <p className="text-sm text-[#0F172A]">Availability updated successfully</p>
-                </div>
-            )}
         </>
-    );
+    )
 }

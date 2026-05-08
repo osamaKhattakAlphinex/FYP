@@ -67,8 +67,8 @@ function EmailVerificationContent() {
 
     return (
         <AuthLayout
-            title="Verify Your Email"
-            subtitle="Enter the 6-digit code sent to your email"
+            title="Verify your email"
+            subtitle="One last step before you're in"
         >
             <EmailVerificationForm
                 onResend={handleResendEmail}

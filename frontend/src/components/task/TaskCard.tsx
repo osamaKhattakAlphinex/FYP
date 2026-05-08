@@ -1,214 +1,115 @@
-"use client";
+'use client'
 
-import { Task, taskService } from "@/services/taskService";
-import Link from "next/link";
-import Image from "next/image";
-import { useState } from "react";
-import {
-    ClockIcon,
-    MapPinIcon,
-    CurrencyDollarIcon,
-    BookmarkIcon,
-    EyeIcon,
-    CalendarIcon,
-    BuildingOfficeIcon,
-    CheckBadgeIcon
-} from "@heroicons/react/24/outline";
-import { BookmarkIcon as BookmarkSolidIcon } from "@heroicons/react/24/solid";
-import { getTextPreview } from "@/utils/textUtils";
+import { Task, taskService } from '@/services/taskService'
+import Link from 'next/link'
+import { useState } from 'react'
+import { Bookmark, BadgeCheck, MapPin, Clock } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 
 interface TaskCardProps {
-    task: Task;
-    showCompany?: boolean;
-    className?: string;
+    task: Task
+    showCompany?: boolean
+    className?: string
 }
 
-export default function TaskCard({ task, showCompany = true, className = "" }: TaskCardProps) {
-    const [isSaved, setIsSaved] = useState(false);
-    const [saveLoading, setSaveLoading] = useState(false);
-
-    const timeRemaining = taskService.getTimeRemaining(task.applicationDeadline);
-    const budgetDisplay = taskService.formatBudget(task.budget);
-    const durationDisplay = taskService.formatDuration(task.duration);
-
-    const handleSave = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        setSaveLoading(true);
-        try {
-            // TODO: Implement save/unsave functionality
-            setIsSaved(!isSaved);
-        } catch (error) {
-            console.error('Error saving task:', error);
-        } finally {
-            setSaveLoading(false);
-        }
-    };
-
-    const getUrgencyColor = () => {
-        if (timeRemaining.expired) return "text-red-600";
-        if (timeRemaining.days <= 2) return "text-orange-600";
-        if (timeRemaining.days <= 7) return "text-yellow-600";
-        return "text-green-600";
-    };
-
-    const getUrgencyText = () => {
-        if (timeRemaining.expired) return "Expired";
-        if (timeRemaining.days === 0) return `${timeRemaining.hours}h left`;
-        if (timeRemaining.days <= 7) return `${timeRemaining.days}d left`;
-        return `${timeRemaining.days} days left`;
-    };
+export default function TaskCard({ task, showCompany = true, className }: TaskCardProps) {
+    const [isSaved, setIsSaved] = useState(false)
+    const time = taskService.getTimeRemaining(task.applicationDeadline)
+    const budget = taskService.formatBudget(task.budget)
+    const company = task.companyId
+    const location =
+        task.workType === 'remote'
+            ? 'Remote'
+            : company?.location?.city
+            ? `${company.location.city}${company.location.country ? `, ${company.location.country}` : ''}`
+            : task.workType === 'hybrid'
+            ? 'Hybrid'
+            : 'On-site'
 
     return (
-        <Link href={`/tasks/${task._id}`}>
-            <div className={`bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200 cursor-pointer ${className}`}>
-                {/* Header */}
-                <div className="p-6 pb-4">
-                    <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                            {/* Task Type & Featured Badge */}
-                            <div className="flex items-center space-x-2 mb-2">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${task.type === 'internship'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : task.type === 'project'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-purple-100 text-purple-800'
-                                    }`}>
-                                    {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
-                                </span>
+        <Link
+            href={`/tasks/${task._id}`}
+            className={cn(
+                'group block rounded-md border border-border bg-card p-4 transition-all hover:border-muted-foreground/40 hover:shadow-card-hover',
+                className
+            )}
+        >
+            <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md border border-border bg-muted text-sm font-semibold text-foreground">
+                    {company?.logo ? (
+                        <img
+                            src={company.logo}
+                            alt={company.companyName}
+                            className="h-full w-full rounded-md object-cover"
+                        />
+                    ) : (
+                        getInitials(company?.companyName || 'CO')
+                    )}
+                </div>
 
-                                {task.isFeatured && (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                        ⭐ Featured
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Title */}
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
-                                {task.title}
-                            </h3>
-
-                            {/* Company Info */}
-                            {showCompany && task.companyId && (
-                                <div className="flex items-center space-x-2 mb-3">
-                                    <div className="flex items-center space-x-2">
-                                        {task.companyId.logo ? (
-                                            <Image
-                                                src={task.companyId.logo}
-                                                alt={task.companyId.companyName}
-                                                width={20}
-                                                height={20}
-                                                className="rounded"
-                                            />
-                                        ) : (
-                                            <BuildingOfficeIcon className="w-5 h-5 text-gray-400" />
-                                        )}
-                                        <span className="text-sm font-medium text-gray-700">
-                                            {task.companyId.companyName}
-                                        </span>
-                                        {task.companyId.isVerified && (
-                                            <CheckBadgeIcon className="w-4 h-4 text-blue-500" />
-                                        )}
-                                    </div>
-                                    {task.companyId.location && (
-                                        <span className="text-sm text-gray-500">
-                                            • {task.companyId.location.city}, {task.companyId.location.country}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Save Button */}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <h3 className="line-clamp-2 text-base font-semibold text-foreground group-hover:text-brand-700">
+                            {task.title}
+                        </h3>
                         <button
-                            onClick={handleSave}
-                            disabled={saveLoading}
-                            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            type="button"
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setIsSaved(!isSaved)
+                            }}
+                            className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            aria-label="Save task"
                         >
-                            {isSaved ? (
-                                <BookmarkSolidIcon className="w-5 h-5 text-blue-600" />
-                            ) : (
-                                <BookmarkIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-                            )}
+                            <Bookmark
+                                className={cn('h-4 w-4', isSaved && 'fill-foreground text-foreground')}
+                            />
                         </button>
                     </div>
 
-                    {/* Description */}
-                    <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-                        {getTextPreview(task.description, 120)}
-                    </p>
-
-                    {/* Skills */}
-                    <div className="flex flex-wrap gap-1 mb-4">
-                        {task.skillsRequired.slice(0, 4).map((skill, index) => (
-                            <span
-                                key={index}
-                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700"
-                            >
-                                {skill.name}
-                            </span>
-                        ))}
-                        {task.skillsRequired.length > 4 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-500">
-                                +{task.skillsRequired.length - 4} more
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-                    <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center space-x-4">
-                            {/* Budget */}
-                            <div className="flex items-center space-x-1 text-gray-600">
-                                <CurrencyDollarIcon className="w-4 h-4" />
-                                <span className="font-medium">{budgetDisplay}</span>
-                            </div>
-
-                            {/* Duration */}
-                            <div className="flex items-center space-x-1 text-gray-600">
-                                <ClockIcon className="w-4 h-4" />
-                                <span>{durationDisplay}</span>
-                            </div>
-
-                            {/* Work Type */}
-                            <div className="flex items-center space-x-1 text-gray-600">
-                                <MapPinIcon className="w-4 h-4" />
-                                <span className="capitalize">{task.workType}</span>
-                            </div>
+                    {showCompany && company && (
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{company.companyName}</span>
+                            {company.isVerified && (
+                                <BadgeCheck className="h-3.5 w-3.5 text-brand-600" />
+                            )}
                         </div>
+                    )}
 
-                        {/* Time Remaining */}
-                        <div className="flex items-center space-x-1">
-                            <CalendarIcon className="w-4 h-4 text-gray-400" />
-                            <span className={`font-medium ${getUrgencyColor()}`}>
-                                {getUrgencyText()}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <div className="flex items-center space-x-1">
-                                <EyeIcon className="w-4 h-4" />
-                                <span>{task.views} views</span>
-                            </div>
-                            <div>
-                                {task.applicationCount}/{task.maxApplications} applications
-                            </div>
-                        </div>
-
-                        {/* Experience Level */}
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${taskService.getExperienceLevelColor(task.experienceLevel)}`}>
-                            {task.experienceLevel.charAt(0).toUpperCase() + task.experienceLevel.slice(1)} level
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" /> {location}
                         </span>
+                        <span>{budget}</span>
+                        <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {taskService.formatDuration(task.duration)}
+                        </span>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                            Posted {formatRelativeTime(task.createdAt)}
+                        </span>
+                        {task.applicationCount > 0 && (
+                            <>
+                                <span className="text-muted-foreground">·</span>
+                                <span className="text-muted-foreground">
+                                    {task.applicationCount} applicant
+                                    {task.applicationCount === 1 ? '' : 's'}
+                                </span>
+                            </>
+                        )}
+                        {!time.expired && time.days <= 3 && (
+                            <Badge variant="warning" className="ml-auto">
+                                {time.days === 0 ? `${time.hours}h left` : `${time.days}d left`}
+                            </Badge>
+                        )}
                     </div>
                 </div>
             </div>
         </Link>
-    );
+    )
 }

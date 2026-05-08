@@ -1,57 +1,45 @@
-"use client";
+'use client'
 
-import { BadgeCheck, ShieldCheck } from 'lucide-react';
-import { useState } from 'react';
+import { BadgeCheck } from 'lucide-react'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 interface VerificationBadgeProps {
-    isVerified: boolean;
-    size?: 'sm' | 'md';
+    isVerified: boolean
+    size?: 'sm' | 'md'
 }
 
-export default function VerificationBadge({ isVerified, size = 'md' }: VerificationBadgeProps) {
-    const [showTooltip, setShowTooltip] = useState(false);
-
-    if (!isVerified) return null;
-
-    if (size === 'sm') {
-        return (
-            <div className="relative inline-flex">
-                <div
-                    className="inline-flex items-center gap-1 bg-[#DCFCE7] text-[#16A34A] text-[11px] font-medium px-2 py-0.5 rounded-full"
-                    onMouseEnter={() => setShowTooltip(true)}
-                    onMouseLeave={() => setShowTooltip(false)}
-                    aria-label="Verified company"
-                >
-                    <BadgeCheck className="w-3.5 h-3.5" />
-                    <span>Verified</span>
-                </div>
-                {showTooltip && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[#0F172A] text-white text-xs rounded-md whitespace-nowrap z-50">
-                        This company has been verified by NexIntern
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]" />
-                    </div>
-                )}
-            </div>
-        );
-    }
+export default function VerificationBadge({
+    isVerified,
+    size = 'md',
+}: VerificationBadgeProps) {
+    if (!isVerified) return null
 
     return (
-        <div className="relative inline-flex">
-            <div
-                className="inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#16A34A] border border-[#BBF7D0] text-xs font-medium px-3 py-1 rounded-full"
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
-                aria-label="Verified company"
-            >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Verified Company</span>
-            </div>
-            {showTooltip && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[#0F172A] text-white text-xs rounded-md whitespace-nowrap z-50">
-                    This company has been verified by NexIntern
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#0F172A]" />
-                </div>
-            )}
-        </div>
-    );
+        <TooltipProvider delayDuration={150}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <span
+                        className={cn(
+                            'inline-flex items-center gap-1 rounded-full bg-success/10 font-medium text-success',
+                            size === 'sm'
+                                ? 'px-2 py-0.5 text-[11px]'
+                                : 'px-2.5 py-0.5 text-xs'
+                        )}
+                    >
+                        <BadgeCheck
+                            className={cn(size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')}
+                        />
+                        Verified
+                    </span>
+                </TooltipTrigger>
+                <TooltipContent>Verified by NexIntern</TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    )
 }

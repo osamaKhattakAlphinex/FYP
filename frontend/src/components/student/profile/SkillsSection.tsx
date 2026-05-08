@@ -1,59 +1,63 @@
-"use client";
+'use client'
 
-import { Zap } from "lucide-react";
-import SectionCard from "@/components/shared/SectionCard";
-import EmptyState from "@/components/shared/EmptyState";
-import { Skill } from "@/types/student.types";
+import { Zap } from 'lucide-react'
+import SectionCard from '@/components/shared/SectionCard'
+import EmptyState from '@/components/shared/EmptyState'
+import { Skill } from '@/types/student.types'
+import { cn } from '@/lib/utils'
 
 interface SkillsSectionProps {
-    skills: Skill[];
-    isEditMode?: boolean;
-    onEdit?: () => void;
+    skills: Skill[]
+    isEditMode?: boolean
+    onEdit?: () => void
 }
 
-const SkillBadge = ({ skill }: { skill: Skill }) => {
-    const levelStyles = {
-        Expert: "bg-[#0F172A] text-white border-[#0F172A]",
-        Advanced: "bg-[#4F46E5] text-white border-[#4F46E5]",
-        Intermediate: "bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]",
-        Beginner: "bg-[#F8FAFC] text-[#475569] border-[#E2E8F0]",
-    };
+const levelStyles: Record<Skill['level'], string> = {
+    Expert: 'bg-brand-700 text-white',
+    Advanced: 'bg-brand-600 text-white',
+    Intermediate: 'bg-brand-50 text-brand-700 border border-brand-100',
+    Beginner: 'bg-muted text-muted-foreground border border-border',
+}
 
+export default function SkillsSection({
+    skills,
+    isEditMode = false,
+    onEdit,
+}: SkillsSectionProps) {
     return (
-        <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-[13px] font-medium border ${levelStyles[skill.level]
-                }`}
+        <SectionCard
+            title="Skills"
+            icon={Zap}
+            onEdit={isEditMode ? onEdit : undefined}
+            isEmpty={skills.length === 0}
         >
-            {skill.name}
-        </span>
-    );
-};
-
-export default function SkillsSection({ skills, isEditMode = false, onEdit }: SkillsSectionProps) {
-    return (
-        <SectionCard title="Skills" icon={Zap} onEdit={isEditMode ? onEdit : undefined} isEmpty={skills.length === 0}>
             {skills.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                     {skills.map((skill) => (
-                        <SkillBadge key={skill.id} skill={skill} />
+                        <span
+                            key={skill.id}
+                            className={cn(
+                                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+                                levelStyles[skill.level]
+                            )}
+                        >
+                            {skill.name}
+                        </span>
                     ))}
                 </div>
+            ) : isEditMode ? (
+                <EmptyState
+                    icon={Zap}
+                    title="Add your skills"
+                    description="Include technical skills, frameworks, and tools — we'll match you to relevant tasks."
+                    ctaLabel="Add skills"
+                    onCtaClick={onEdit}
+                />
             ) : (
-                isEditMode ? (
-                    <EmptyState
-                        icon={Zap}
-                        title="Add your skills to get AI-matched with relevant tasks"
-                        description="Include technical skills, tools, and frameworks you know"
-                        ctaLabel="Add Skills"
-                        onCtaClick={onEdit}
-                    />
-                ) : (
-                    <div className="text-center py-8">
-                        <Zap className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
-                        <p className="text-[#64748B] text-sm">No skills information available</p>
-                    </div>
-                )
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                    No skills listed.
+                </p>
             )}
         </SectionCard>
-    );
+    )
 }

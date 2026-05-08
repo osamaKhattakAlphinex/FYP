@@ -1,18 +1,25 @@
-"use client";
+'use client'
 
-import { Award, Calendar, ExternalLink, MoreVertical } from "lucide-react";
-import { useState } from "react";
-import SectionCard from "@/components/shared/SectionCard";
-import EmptyState from "@/components/shared/EmptyState";
-import { Certificate } from "@/types/student.types";
+import { Award, Calendar, ExternalLink, MoreVertical, Trash2 } from 'lucide-react'
+import SectionCard from '@/components/shared/SectionCard'
+import EmptyState from '@/components/shared/EmptyState'
+import { Certificate } from '@/types/student.types'
+import { Badge } from '@/components/ui/badge'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 
 interface CertificatesSectionProps {
-    certificates: Certificate[];
-    isEditMode?: boolean;
-    onEdit?: (cert: Certificate) => void;
-    onDelete?: (id: string) => void;
-    onAdd?: () => void;
-    onDeleteImage?: (certId: string) => void;
+    certificates: Certificate[]
+    isEditMode?: boolean
+    onEdit?: (cert: Certificate) => void
+    onDelete?: (id: string) => void
+    onAdd?: () => void
+    onDeleteImage?: (certId: string) => void
 }
 
 export default function CertificatesSection({
@@ -23,203 +30,141 @@ export default function CertificatesSection({
     onAdd,
     onDeleteImage,
 }: CertificatesSectionProps) {
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
-            month: "short",
-            year: "numeric",
-        });
-    };
+    const fmt = (s: string) =>
+        new Date(s).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 
     return (
         <SectionCard
-            title="Certificates & Achievements"
+            title="Licenses & certifications"
             icon={Award}
             onEdit={isEditMode ? onAdd : undefined}
             isEmpty={certificates.length === 0}
         >
             {certificates.length > 0 ? (
-                <div className="space-y-5">
-                    {certificates.map((cert, index) => (
-                        <div key={cert.id}>
-                            <div className="flex gap-4">
-                                <div className="relative flex-shrink-0">
-                                    <div
-                                        className={`w-12 h-12 rounded-lg flex items-center justify-center ${cert.isNexInternCertificate
-                                            ? "bg-gradient-to-br from-[#4F46E5] to-[#06B6D4]"
-                                            : "bg-[#F8FAFC] border border-[#E2E8F0]"
-                                            }`}
-                                    >
-                                        <Award
-                                            className={`w-5 h-5 ${cert.isNexInternCertificate ? "text-white" : "text-[#94A3B8]"
-                                                }`}
-                                        />
-                                    </div>
-                                    {cert.isNexInternCertificate && (
-                                        <p className="text-[10px] font-semibold text-[#4F46E5] text-center mt-1">
-                                            NexIntern
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="text-[15px] font-semibold text-[#0F172A]">
-                                                    {cert.title}
-                                                </h3>
-                                                {cert.isNexInternCertificate && (
-                                                    <span className="px-2 py-0.5 bg-[#DCFCE7] text-[#16A34A] text-[11px] font-medium rounded-full">
-                                                        Verified by NexIntern ✓
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-[13px] text-[#475569] mt-0.5">{cert.issuer}</p>
-                                        </div>
-                                        {isEditMode && (onEdit || onDelete || (onDeleteImage && cert.certificateImage)) && (
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() =>
-                                                        setOpenMenuId(openMenuId === cert.id ? null : cert.id)
-                                                    }
-                                                    className="p-1.5 hover:bg-[#F8FAFC] rounded-lg transition-colors duration-200"
-                                                    aria-label="Options"
-                                                >
-                                                    <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
-                                                </button>
-                                                {openMenuId === cert.id && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-10"
-                                                            onClick={() => setOpenMenuId(null)}
-                                                        />
-                                                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E2E8F0] rounded-lg shadow-md py-1 min-w-[140px]">
-                                                            {onEdit && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        onEdit(cert);
-                                                                        setOpenMenuId(null);
-                                                                    }}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                            )}
-                                                            {onDeleteImage && cert.certificateImage && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        if (confirm("Delete certificate image?")) {
-                                                                            onDeleteImage(cert.id);
-                                                                        }
-                                                                        setOpenMenuId(null);
-                                                                    }}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-[#F59E0B] hover:bg-[#FEF3C7] transition-colors duration-150"
-                                                                >
-                                                                    Delete Image
-                                                                </button>
-                                                            )}
-                                                            {onDelete && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        onDelete(cert.id);
-                                                                        setOpenMenuId(null);
-                                                                    }}
-                                                                    className="w-full px-4 py-2 text-left text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors duration-150"
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 mt-2 text-xs text-[#94A3B8]">
-                                        <Calendar className="w-3 h-3" />
-                                        <span>Issued: {formatDate(cert.issueDate)}</span>
-                                        {cert.expiryDate && (
-                                            <>
-                                                <span>·</span>
-                                                <span>Expires: {formatDate(cert.expiryDate)}</span>
-                                            </>
-                                        )}
-                                        {!cert.expiryDate && (
-                                            <>
-                                                <span>·</span>
-                                                <span>No Expiry</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    {cert.credentialId && (
-                                        <p className="mt-1.5 text-xs text-[#94A3B8]">
-                                            ID: {cert.credentialId}
-                                        </p>
-                                    )}
-                                    {cert.certificateImage && (
-                                        <div className="mt-3 relative group">
-                                            <img
-                                                src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${cert.certificateImage}`}
-                                                alt={cert.title}
-                                                className="w-full max-w-[300px] h-auto rounded-lg border border-[#E2E8F0] object-cover"
-                                            />
-                                            {onDeleteImage && (
-                                                <button
-                                                    onClick={() => {
-                                                        if (confirm("Delete certificate image?")) {
-                                                            onDeleteImage(cert.id);
-                                                        }
-                                                    }}
-                                                    className="absolute top-2 right-2 p-2 bg-[#EF4444] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-[#DC2626] shadow-lg"
-                                                    title="Delete image"
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M3 6h18"></path>
-                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                                                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                                                    </svg>
-                                                </button>
+                <ul className="divide-y divide-border">
+                    {certificates.map((cert) => (
+                        <li key={cert.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                            <div
+                                className={cn(
+                                    'grid h-10 w-10 flex-shrink-0 place-items-center rounded-md',
+                                    cert.isNexInternCertificate
+                                        ? 'bg-gradient-to-br from-brand-600 to-brand-500 text-white'
+                                        : 'bg-muted text-muted-foreground border border-border'
+                                )}
+                            >
+                                <Award className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <p className="text-sm font-semibold text-foreground">
+                                                {cert.title}
+                                            </p>
+                                            {cert.isNexInternCertificate && (
+                                                <Badge variant="success">NexIntern verified ✓</Badge>
                                             )}
                                         </div>
-                                    )}
-                                    {cert.credentialUrl && (
-                                        <a
-                                            href={cert.credentialUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 mt-2 text-xs text-[#4F46E5] hover:underline"
-                                        >
-                                            <ExternalLink className="w-3 h-3" />
-                                            Show Credential
-                                        </a>
+                                        <p className="text-xs text-foreground/80">{cert.issuer}</p>
+                                    </div>
+                                    {isEditMode && (onEdit || onDelete) && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger
+                                                aria-label="Options"
+                                                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                {onEdit && (
+                                                    <DropdownMenuItem onClick={() => onEdit(cert)}>
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {onDeleteImage && cert.certificateImage && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            if (confirm('Delete certificate image?'))
+                                                                onDeleteImage(cert.id)
+                                                        }}
+                                                    >
+                                                        Delete image
+                                                    </DropdownMenuItem>
+                                                )}
+                                                {onDelete && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => onDelete(cert.id)}
+                                                        className="text-destructive focus:text-destructive"
+                                                    >
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     )}
                                 </div>
+                                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        Issued {fmt(cert.issueDate)}
+                                    </span>
+                                    <span>·</span>
+                                    <span>
+                                        {cert.expiryDate ? `Expires ${fmt(cert.expiryDate)}` : 'No expiry'}
+                                    </span>
+                                </p>
+                                {cert.credentialId && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        ID: {cert.credentialId}
+                                    </p>
+                                )}
+                                {cert.certificateImage && (
+                                    <div className="group relative mt-2">
+                                        <img
+                                            src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${cert.certificateImage}`}
+                                            alt={cert.title}
+                                            className="h-auto w-full max-w-xs rounded-md border border-border object-cover"
+                                        />
+                                        {isEditMode && onDeleteImage && (
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm('Delete certificate image?'))
+                                                        onDeleteImage(cert.id)
+                                                }}
+                                                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-md bg-destructive text-destructive-foreground opacity-0 shadow-pop transition-opacity hover:bg-destructive/90 group-hover:opacity-100"
+                                                aria-label="Delete image"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {cert.credentialUrl && (
+                                    <a
+                                        href={cert.credentialUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline"
+                                    >
+                                        <ExternalLink className="h-3 w-3" />
+                                        Show credential
+                                    </a>
+                                )}
                             </div>
-                            {index < certificates.length - 1 && (
-                                <div className="mt-5 h-px border-t border-dashed border-[#E2E8F0]" />
-                            )}
-                        </div>
+                        </li>
                     ))}
-                </div>
+                </ul>
+            ) : isEditMode ? (
+                <EmptyState
+                    icon={Award}
+                    title="Add a credential"
+                    description="Show off course completions, certifications, and the NexIntern credentials you'll earn for completed tasks."
+                    ctaLabel="Add credential"
+                    onCtaClick={onAdd}
+                />
             ) : (
-                isEditMode ? (
-                    <EmptyState
-                        icon={Award}
-                        title="Add certifications or complete tasks to earn NexIntern certificates"
-                        description="Showcase your achievements and verified skills"
-                        ctaLabel="Add Certificate"
-                        onCtaClick={onAdd}
-                    />
-                ) : (
-                    <div className="text-center py-8">
-                        <Award className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
-                        <p className="text-[#64748B] text-sm">No certificates available</p>
-                    </div>
-                )
+                <p className="py-6 text-center text-sm text-muted-foreground">No credentials yet.</p>
             )}
         </SectionCard>
-    );
+    )
 }

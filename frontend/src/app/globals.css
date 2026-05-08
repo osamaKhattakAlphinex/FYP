@@ -2,73 +2,130 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Animations */
-@keyframes fade-in-up {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+@layer base {
+    :root {
+        /* LinkedIn-inspired navy brand */
+        --brand-50: 213 100% 97%;
+        --brand-100: 213 95% 93%;
+        --brand-200: 213 92% 86%;
+        --brand-300: 212 88% 75%;
+        --brand-400: 211 80% 60%;
+        --brand-500: 210 88% 40%;
+        --brand-600: 211 100% 25%;
+        --brand-700: 213 100% 18%;
+        --brand-800: 215 90% 13%;
+        --brand-900: 217 80% 9%;
+        --brand-foreground: 0 0% 100%;
+
+        /* Warm amber accent (CTAs, highlights, premium) */
+        --accent-50: 48 100% 96%;
+        --accent-100: 48 96% 89%;
+        --accent-400: 38 92% 60%;
+        --accent-500: 35 92% 50%;
+        --accent-600: 27 90% 47%;
+        --accent-700: 22 84% 41%;
+        --accent-foreground: 26 83% 14%;
+
+        /* Surfaces */
+        --background: 0 0% 100%;
+        --foreground: 215 28% 14%;
+        --canvas: 36 22% 95%;          /* warm gray feed background */
+        --card: 0 0% 100%;
+        --card-foreground: 215 28% 14%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 215 28% 14%;
+
+        /* Primary maps to brand */
+        --primary: 211 100% 25%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 215 20% 96%;
+        --secondary-foreground: 215 28% 14%;
+
+        --muted: 215 16% 96%;
+        --muted-foreground: 215 14% 42%;
+
+        --destructive: 358 78% 44%;
+        --destructive-foreground: 0 0% 100%;
+
+        --success: 152 92% 24%;
+        --success-foreground: 0 0% 100%;
+
+        --warning: 22 84% 41%;
+        --warning-foreground: 0 0% 100%;
+
+        --border: 215 16% 89%;
+        --input: 215 16% 89%;
+        --ring: 211 100% 25%;
+
+        --radius: 0.5rem;
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    * {
+        @apply border-border;
+    }
+
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        @apply bg-background text-foreground font-sans;
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply tracking-tight;
     }
 }
 
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translateY(0px);
+@layer components {
+    .surface-canvas {
+        background-color: hsl(var(--canvas));
     }
 
-    50% {
-        transform: translateY(-10px);
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .focus-ring {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    }
+
+    /* Hairline-style card (LinkedIn signature) */
+    .card-hairline {
+        @apply rounded-lg border border-border bg-card;
     }
 }
 
+@layer utilities {
+    .scrollbar-thin {
+        scrollbar-width: thin;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--border));
+        border-radius: 3px;
+    }
+}
+
+/* Legacy animation helpers retained for landing page */
 @keyframes underline {
-    from {
-        transform: scaleX(0);
-    }
-
-    to {
-        transform: scaleX(1);
-    }
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
 }
-
-.animate-fade-in-up {
-    animation: fade-in-up 0.6s ease-out forwards;
-}
-
-.animate-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-.animate-underline {
-    animation: underline 0.8s ease-out forwards;
-}
-
-.animation-delay-200 {
-    animation-delay: 200ms;
-}
-
-.animation-delay-400 {
-    animation-delay: 400ms;
-}
-
-.animation-delay-500 {
-    animation-delay: 500ms;
-}
-
-.animation-delay-600 {
-    animation-delay: 600ms;
-}
-
-.animation-delay-800 {
-    animation-delay: 800ms;
-}
-
-.animation-delay-1000 {
-    animation-delay: 1000ms;
-}
+.animate-underline { animation: underline 0.8s ease-out forwards; }
+.animation-delay-200  { animation-delay: 200ms;  }
+.animation-delay-400  { animation-delay: 400ms;  }
+.animation-delay-500  { animation-delay: 500ms;  }
+.animation-delay-600  { animation-delay: 600ms;  }
+.animation-delay-800  { animation-delay: 800ms;  }
+.animation-delay-1000 { animation-delay: 1000ms; }

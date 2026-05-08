@@ -85,19 +85,19 @@ export default function AboutSection({
                         />
                     ) : (
                         <div className="text-center py-8">
-                            <Building2 className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
-                            <p className="text-[#64748B] text-sm">No company description available</p>
+                            <Building2 className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                            <p className="text-muted-foreground text-sm">No company description available</p>
                         </div>
                     )
                 ) : (
                     <div>
-                        <p className="text-[15px] text-[#475569] leading-relaxed whitespace-pre-wrap">
+                        <p className="text-[15px] text-foreground/85 leading-relaxed whitespace-pre-wrap">
                             {showFullAbout ? about : truncateText(about)}
                         </p>
                         {shouldShowMore && (
                             <button
                                 onClick={() => setShowFullAbout(!showFullAbout)}
-                                className="mt-3 text-sm font-medium text-[#4F46E5] hover:text-[#4338CA] transition-colors duration-200"
+                                className="mt-3 text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors duration-200"
                             >
                                 {showFullAbout ? 'Show less' : 'Show more'}
                             </button>
@@ -123,8 +123,8 @@ export default function AboutSection({
                         />
                     ) : (
                         <div className="text-center py-8">
-                            <Cpu className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
-                            <p className="text-[#64748B] text-sm">No technology information available</p>
+                            <Cpu className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+                            <p className="text-muted-foreground text-sm">No technology information available</p>
                         </div>
                     )
                 ) : (
@@ -132,7 +132,7 @@ export default function AboutSection({
                         {techStack.map((tech, index) => (
                             <span
                                 key={index}
-                                className="inline-flex items-center bg-[#0F172A] text-white text-[13px] font-medium px-3.5 py-1.5 rounded-full"
+                                className="inline-flex items-center bg-foreground text-background text-[13px] font-medium px-3.5 py-1.5 rounded-full"
                             >
                                 {tech}
                             </span>
@@ -155,8 +155,8 @@ export default function AboutSection({
                 >
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Tagline <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Tagline <span className="text-destructive">*</span>
                             </label>
                             <input
                                 type="text"
@@ -164,25 +164,25 @@ export default function AboutSection({
                                 onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                                 placeholder="A short punchy tagline for your company"
                                 maxLength={100}
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
                             />
                             <div className="flex items-center justify-between mt-1">
                                 {errors.tagline ? (
-                                    <p className="text-xs text-[#EF4444] flex items-center gap-1">
+                                    <p className="text-xs text-destructive flex items-center gap-1">
                                         <span>⚠</span> {errors.tagline}
                                     </p>
                                 ) : (
                                     <span />
                                 )}
-                                <span className="text-xs text-[#94A3B8]">
+                                <span className="text-xs text-muted-foreground">
                                     {formData.tagline.length}/100
                                 </span>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Company Description <span className="text-[#EF4444]">*</span>
+                            <label className="block text-sm font-medium text-foreground mb-1.5">
+                                Company Description <span className="text-destructive">*</span>
                             </label>
                             <textarea
                                 value={formData.about}
@@ -190,17 +190,17 @@ export default function AboutSection({
                                 placeholder="Describe your company, mission, values, and what makes you unique..."
                                 rows={6}
                                 maxLength={1200}
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"
+                                className="w-full px-4 py-2.5 border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring resize-none"
                             />
                             <div className="flex items-center justify-between mt-1">
                                 {errors.about ? (
-                                    <p className="text-xs text-[#EF4444] flex items-center gap-1">
+                                    <p className="text-xs text-destructive flex items-center gap-1">
                                         <span>⚠</span> {errors.about}
                                     </p>
                                 ) : (
                                     <span />
                                 )}
-                                <span className="text-xs text-[#94A3B8]">
+                                <span className="text-xs text-muted-foreground">
                                     {formData.about.length}/1200
                                 </span>
                             </div>
@@ -220,7 +220,7 @@ export default function AboutSection({
                     onClose={() => setShowTechModal(false)}
                 >
                     <div className="space-y-4">
-                        <p className="text-sm text-[#475569]">
+                        <p className="text-sm text-foreground/85">
                             Add up to 20 technologies your team uses. Students will be matched based on these skills.
                         </p>
                         <TagInput

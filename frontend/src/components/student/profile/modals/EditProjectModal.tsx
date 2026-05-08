@@ -1,90 +1,264 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import Modal from "@/components/shared/Modal";
-import { Loader2, Plus, X } from "lucide-react";
-import { Project } from "@/types/student.types";
+import { useEffect, useState } from 'react'
+import { Loader2, Plus, X } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Project } from '@/types/student.types'
 
 interface EditProjectModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    project: Project | null;
-    onSave: (data: Omit<Project, "id">) => Promise<void>;
+    isOpen: boolean
+    onClose: () => void
+    project: Project | null
+    onSave: (data: Omit<Project, 'id'>) => Promise<void>
 }
 
-export default function EditProjectModal({ isOpen, onClose, project, onSave }: EditProjectModalProps) {
+export default function EditProjectModal({
+    isOpen,
+    onClose,
+    project,
+    onSave,
+}: EditProjectModalProps) {
     const [formData, setFormData] = useState({
-        title: "",
-        description: "",
+        title: '',
+        description: '',
         techStack: [] as string[],
         projectUrl: null as string | null,
         githubUrl: null as string | null,
         thumbnailUrl: null as string | null,
-        startDate: "",
-        endDate: null as string | null
-    });
-    const [newTech, setNewTech] = useState("");
-    const [loading, setLoading] = useState(false);
+        startDate: '',
+        endDate: null as string | null,
+    })
+    const [newTech, setNewTech] = useState('')
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
-        if (project) setFormData(project);
-    }, [project, isOpen]);
+        if (isOpen) {
+            if (project) setFormData(project)
+            else
+                setFormData({
+                    title: '',
+                    description: '',
+                    techStack: [],
+                    projectUrl: null,
+                    githubUrl: null,
+                    thumbnailUrl: null,
+                    startDate: '',
+                    endDate: null,
+                })
+            setNewTech('')
+        }
+    }, [isOpen, project])
+
+    const addTech = () => {
+        if (!newTech.trim()) return
+        setFormData({ ...formData, techStack: [...formData.techStack, newTech.trim()] })
+        setNewTech('')
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault()
+        setLoading(true)
         try {
-            await onSave(formData);
-            onClose();
+            await onSave(formData)
+            onClose()
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={project ? "Edit Project" : "Add Project"} size="md">
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="Project Title" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
+        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent size="md">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader>
+                        <DialogTitle>{project ? 'Edit project' : 'Add project'}</DialogTitle>
+                        <DialogCloseButton type="button" />
+                    </DialogHeader>
+                    <DialogBody>
+                        <div className="space-y-4">
+                            <div>
+                                <Label htmlFor="title">Title *</Label>
+                                <Input
+                                    id="title"
+                                    required
+                                    value={formData.title}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, title: e.target.value })
+                                    }
+                                    placeholder="Project title"
+                                    className="mt-1.5"
+                                />
+                            </div>
 
-                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} placeholder="Project description..." className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5] resize-none" />
+                            <div>
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea
+                                    id="description"
+                                    value={formData.description}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, description: e.target.value })
+                                    }
+                                    rows={4}
+                                    placeholder="What does this project do? What did you build?"
+                                    className="mt-1.5"
+                                />
+                            </div>
 
-                <div>
-                    <label className="block text-sm font-semibold text-[#0F172A] mb-2">Tech Stack</label>
-                    <div className="flex gap-2 mb-2">
-                        <input type="text" value={newTech} onChange={(e) => setNewTech(e.target.value)} placeholder="Add technology" className="flex-1 px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                        <button type="button" onClick={() => { if (newTech.trim()) { setFormData({ ...formData, techStack: [...formData.techStack, newTech.trim()] }); setNewTech(""); } }} className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA]">
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {formData.techStack.map((tech, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-[#EEF2FF] text-[#4F46E5] rounded-full text-sm">
-                                {tech}
-                                <button type="button" onClick={() => setFormData({ ...formData, techStack: formData.techStack.filter((_, i) => i !== idx) })} className="hover:bg-[#DDD6FE] rounded-full p-0.5">
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </span>
-                        ))}
-                    </div>
-                </div>
+                            <div>
+                                <Label>Tech stack</Label>
+                                <div className="mt-1.5 flex gap-2">
+                                    <Input
+                                        value={newTech}
+                                        onChange={(e) => setNewTech(e.target.value)}
+                                        placeholder="Add a technology"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                addTech()
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        onClick={addTech}
+                                        aria-label="Add"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                                {formData.techStack.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-1">
+                                        {formData.techStack.map((t, i) => (
+                                            <Badge
+                                                key={i}
+                                                variant="soft"
+                                                className="inline-flex items-center gap-1"
+                                            >
+                                                {t}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            techStack: formData.techStack.filter(
+                                                                (_, j) => j !== i
+                                                            ),
+                                                        })
+                                                    }
+                                                    className="rounded-full hover:bg-brand-200/60"
+                                                    aria-label="Remove"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="url" value={formData.projectUrl || ""} onChange={(e) => setFormData({ ...formData, projectUrl: e.target.value || null })} placeholder="Project URL" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                    <input type="url" value={formData.githubUrl || ""} onChange={(e) => setFormData({ ...formData, githubUrl: e.target.value || null })} placeholder="GitHub URL" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="projectUrl">Live URL</Label>
+                                    <Input
+                                        id="projectUrl"
+                                        type="url"
+                                        value={formData.projectUrl || ''}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                projectUrl: e.target.value || null,
+                                            })
+                                        }
+                                        placeholder="https://example.com"
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="githubUrl">GitHub URL</Label>
+                                    <Input
+                                        id="githubUrl"
+                                        type="url"
+                                        value={formData.githubUrl || ''}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                githubUrl: e.target.value || null,
+                                            })
+                                        }
+                                        placeholder="https://github.com/…"
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="month" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} placeholder="Start Date" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                    <input type="month" value={formData.endDate || ""} onChange={(e) => setFormData({ ...formData, endDate: e.target.value || null })} placeholder="End Date (optional)" className="w-full px-4 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4F46E5]" />
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                    <button type="button" onClick={onClose} className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC]">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-4 py-2.5 bg-[#4F46E5] text-white font-medium rounded-lg hover:bg-[#4338CA] disabled:opacity-50 flex items-center justify-center gap-2">
-                        {loading ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</> : project ? "Update" : "Add"}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label htmlFor="startDate">Start</Label>
+                                    <Input
+                                        id="startDate"
+                                        type="month"
+                                        value={formData.startDate}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, startDate: e.target.value })
+                                        }
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="endDate">End (optional)</Label>
+                                    <Input
+                                        id="endDate"
+                                        type="month"
+                                        value={formData.endDate || ''}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                endDate: e.target.value || null,
+                                            })
+                                        }
+                                        className="mt-1.5"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : project ? (
+                                'Update'
+                            ) : (
+                                'Add'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }

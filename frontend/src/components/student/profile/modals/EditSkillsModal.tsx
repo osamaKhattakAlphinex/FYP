@@ -1,122 +1,172 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import Modal from "@/components/shared/Modal";
-import { Loader2, Plus, X } from "lucide-react";
-import { Skill } from "@/types/student.types";
+import { useEffect, useState } from 'react'
+import { Loader2, Plus, X } from 'lucide-react'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Skill } from '@/types/student.types'
 
 interface EditSkillsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    currentSkills: Skill[];
-    onSave: (skills: Omit<Skill, "id">[]) => Promise<void>;
+    isOpen: boolean
+    onClose: () => void
+    currentSkills: Skill[]
+    onSave: (skills: Omit<Skill, 'id'>[]) => Promise<void>
 }
 
-export default function EditSkillsModal({ isOpen, onClose, currentSkills, onSave }: EditSkillsModalProps) {
-    const [skills, setSkills] = useState<Array<{ name: string; level: Skill["level"] }>>(
-        currentSkills.map(s => ({ name: s.name, level: s.level }))
-    );
-    const [newSkill, setNewSkill] = useState({ name: "", level: "Intermediate" as Skill["level"] });
-    const [loading, setLoading] = useState(false);
+export default function EditSkillsModal({
+    isOpen,
+    onClose,
+    currentSkills,
+    onSave,
+}: EditSkillsModalProps) {
+    const [skills, setSkills] = useState<Array<{ name: string; level: Skill['level'] }>>([])
+    const [newSkill, setNewSkill] = useState({ name: '', level: 'Intermediate' as Skill['level'] })
+    const [loading, setLoading] = useState(false)
 
-    const handleAddSkill = () => {
-        if (newSkill.name.trim()) {
-            setSkills([...skills, newSkill]);
-            setNewSkill({ name: "", level: "Intermediate" });
+    useEffect(() => {
+        if (isOpen) {
+            setSkills(currentSkills.map((s) => ({ name: s.name, level: s.level })))
+            setNewSkill({ name: '', level: 'Intermediate' })
         }
-    };
+    }, [isOpen, currentSkills])
 
-    const handleRemoveSkill = (index: number) => {
-        setSkills(skills.filter((_, i) => i !== index));
-    };
+    const handleAdd = () => {
+        if (!newSkill.name.trim()) return
+        setSkills([...skills, { ...newSkill, name: newSkill.name.trim() }])
+        setNewSkill({ name: '', level: 'Intermediate' })
+    }
+
+    const handleRemove = (index: number) =>
+        setSkills(skills.filter((_, i) => i !== index))
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
+        e.preventDefault()
+        setLoading(true)
         try {
-            await onSave(skills);
-            onClose();
-        } catch (error) {
-            console.error("Failed to update skills:", error);
+            await onSave(skills)
+            onClose()
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Edit Skills" size="md">
-            <form onSubmit={handleSubmit} className="p-6">
-                <div className="space-y-4">
-                    <div className="flex gap-2">
-                        <input
-                            type="text"
-                            value={newSkill.name}
-                            onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                            placeholder="Skill name (e.g., React)"
-                            className="flex-1 px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
-                        />
-                        <select
-                            value={newSkill.level}
-                            onChange={(e) => setNewSkill({ ...newSkill, level: e.target.value as Skill["level"] })}
-                            className="px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
-                        >
-                            <option value="Beginner">Beginner</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Advanced">Advanced</option>
-                            <option value="Expert">Expert</option>
-                        </select>
-                        <button
-                            type="button"
-                            onClick={handleAddSkill}
-                            className="px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA] transition-colors duration-200"
-                        >
-                            <Plus className="w-5 h-5" />
-                        </button>
-                    </div>
+        <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent size="md">
+                <form onSubmit={handleSubmit} className="contents">
+                    <DialogHeader>
+                        <DialogTitle>Edit skills</DialogTitle>
+                        <DialogCloseButton type="button" />
+                    </DialogHeader>
+                    <DialogBody>
+                        <div className="flex gap-2">
+                            <Input
+                                value={newSkill.name}
+                                onChange={(e) =>
+                                    setNewSkill({ ...newSkill, name: e.target.value })
+                                }
+                                placeholder="Skill name (e.g. React)"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        handleAdd()
+                                    }
+                                }}
+                            />
+                            <Select
+                                value={newSkill.level}
+                                onValueChange={(v) =>
+                                    setNewSkill({ ...newSkill, level: v as Skill['level'] })
+                                }
+                            >
+                                <SelectTrigger className="w-36">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Beginner">Beginner</SelectItem>
+                                    <SelectItem value="Intermediate">Intermediate</SelectItem>
+                                    <SelectItem value="Advanced">Advanced</SelectItem>
+                                    <SelectItem value="Expert">Expert</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                type="button"
+                                onClick={handleAdd}
+                                size="icon"
+                                aria-label="Add skill"
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
 
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {skills.map((skill, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-[#F8FAFC] rounded-lg">
-                                <div>
-                                    <span className="font-medium text-[#0F172A]">{skill.name}</span>
-                                    <span className="ml-2 text-sm text-[#64748B]">• {skill.level}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveSkill(index)}
-                                    className="p-1 hover:bg-[#FEE2E2] rounded transition-colors duration-200"
+                        <ul className="mt-4 max-h-72 space-y-1.5 overflow-y-auto scrollbar-thin">
+                            {skills.length === 0 && (
+                                <li className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-6 text-center text-sm text-muted-foreground">
+                                    No skills yet — add a few above.
+                                </li>
+                            )}
+                            {skills.map((skill, i) => (
+                                <li
+                                    key={`${skill.name}-${i}`}
+                                    className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2"
                                 >
-                                    <X className="w-4 h-4 text-[#EF4444]" />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2.5 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC] transition-colors duration-200"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-1 px-4 py-2.5 bg-[#4F46E5] text-white font-medium rounded-lg hover:bg-[#4338CA] transition-colors duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            "Save Changes"
-                        )}
-                    </button>
-                </div>
-            </form>
-        </Modal>
-    );
+                                    <div className="text-sm">
+                                        <span className="font-medium text-foreground">
+                                            {skill.name}
+                                        </span>
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                            · {skill.level}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemove(i)}
+                                        className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                        aria-label="Remove"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : (
+                                'Save'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
 }

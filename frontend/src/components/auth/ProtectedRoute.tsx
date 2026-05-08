@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -46,7 +46,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-[#4F46E5]" />
+                <Loader2 className="w-8 h-8 animate-spin text-brand-700" />
             </div>
         );
     }

@@ -62,8 +62,8 @@ export default function LoginPage() {
 
     return (
         <AuthLayout
-            title="Welcome Back"
-            subtitle="Sign in to continue your journey"
+            title="Sign in"
+            subtitle="Stay updated on your professional world"
         >
             <LoginForm onSubmit={handleLogin} />
         </AuthLayout>

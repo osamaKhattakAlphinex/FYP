@@ -1,146 +1,110 @@
-"use client";
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useState } from 'react'
+import Link from 'next/link'
+import { Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 
 interface ForgotPasswordFormProps {
-    onSubmit: (email: string) => Promise<void>;
+    onSubmit: (email: string) => Promise<void>
 }
 
 export default function ForgotPasswordForm({ onSubmit }: ForgotPasswordFormProps) {
-    const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [error, setError] = useState('');
+    const [email, setEmail] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const [isSuccess, setIsSuccess] = useState(false)
+    const [error, setError] = useState('')
 
-    const validateEmail = (email: string): boolean => {
-        if (!email) {
-            setError('Email is required');
-            return false;
-        }
-        if (!/\S+@\S+\.\S+/.test(email)) {
-            setError('Email is invalid');
-            return false;
-        }
-        setError('');
-        return true;
-    };
+    const validate = (): boolean => {
+        if (!email) return setError('Email is required'), false
+        if (!/\S+@\S+\.\S+/.test(email)) return setError('Email is invalid'), false
+        setError('')
+        return true
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!validateEmail(email)) return;
-
-        setIsLoading(true);
+        e.preventDefault()
+        if (!validate()) return
+        setIsLoading(true)
         try {
-            await onSubmit(email);
-            setIsSuccess(true);
-        } catch (error) {
-            setError('Failed to send reset email. Please try again.');
-            console.error('Forgot password error:', error);
+            await onSubmit(email)
+            setIsSuccess(true)
+        } catch {
+            setError('Failed to send reset email. Please try again.')
         } finally {
-            setIsLoading(false);
+            setIsLoading(false)
         }
-    };
+    }
 
     if (isSuccess) {
         return (
-            <div className="text-center space-y-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#DCFCE7] rounded-full">
-                    <CheckCircle className="w-8 h-8 text-[#16A34A]" />
+            <div className="space-y-6 text-center">
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-success/10 text-success">
+                    <CheckCircle2 className="h-7 w-7" />
                 </div>
                 <div>
-                    <h3 className="text-xl font-bold text-[#0F172A] mb-2">
-                        Check Your Email
-                    </h3>
-                    <p className="text-[#64748B] leading-relaxed">
-                        We've sent a password reset link to <span className="font-semibold text-[#0F172A]">{email}</span>
-                    </p>
-                    <p className="text-sm text-[#94A3B8] mt-2">
-                        Didn't receive the email? Check your spam folder or try again.
+                    <h3 className="text-xl font-semibold text-foreground">Check your email</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        We sent a password reset link to{' '}
+                        <span className="font-semibold text-foreground">{email}</span>
                     </p>
                 </div>
-                <div className="space-y-3">
-                    <button
+                <div className="space-y-2">
+                    <Button
+                        variant="secondary"
+                        className="w-full"
                         onClick={() => {
-                            setIsSuccess(false);
-                            setEmail('');
+                            setIsSuccess(false)
+                            setEmail('')
                         }}
-                        className="w-full py-3 bg-[#F8FAFC] border border-[#E2E8F0] text-[#475569] font-semibold rounded-lg hover:bg-[#F1F5F9] transition-all duration-200"
                     >
-                        Try Another Email
-                    </button>
-                    <Link
-                        href="/login"
-                        className="block w-full py-3 bg-gradient-to-r from-[#4F46E5] to-[#06B6D4] text-white font-semibold rounded-lg hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-center"
-                    >
-                        Back to Sign In
-                    </Link>
+                        Try another email
+                    </Button>
+                    <Button asChild className="w-full">
+                        <Link href="/login">Back to sign in</Link>
+                    </Button>
                 </div>
             </div>
-        );
+        )
     }
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="text-center mb-6">
-                <p className="text-[#64748B] leading-relaxed">
-                    Enter your email address and we'll send you a link to reset your password.
-                </p>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+            <p className="text-sm text-muted-foreground">
+                Enter your email address and we'll send you a link to reset your password.
+            </p>
 
-            {/* Email Input */}
             <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-[#0F172A] mb-2">
-                    Email Address
-                </label>
-                <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94A3B8]" />
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={`
-                            w-full pl-12 pr-4 py-3 bg-[#F8FAFC] border rounded-lg
-                            text-[#0F172A] placeholder:text-[#94A3B8]
-                            focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent
-                            transition-all duration-200
-                            ${error ? 'border-[#EF4444]' : 'border-[#E2E8F0]'}
-                        `}
-                        placeholder="you@example.com"
-                    />
-                </div>
-                {error && (
-                    <p className="mt-1.5 text-xs text-[#EF4444]">{error}</p>
-                )}
+                <Label htmlFor="email">Email</Label>
+                <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className={error ? 'mt-1.5 border-destructive' : 'mt-1.5'}
+                />
+                {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
             </div>
 
-            {/* Submit Button */}
-            <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 bg-gradient-to-r from-[#4F46E5] to-[#06B6D4] text-white font-semibold rounded-lg hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
+            <Button type="submit" disabled={isLoading} className="w-full" size="lg">
                 {isLoading ? (
                     <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Sending...
+                        <Loader2 className="h-4 w-4 animate-spin" /> Sending…
                     </>
                 ) : (
-                    'Send Reset Link'
+                    'Send reset link'
                 )}
-            </button>
+            </Button>
 
-            {/* Back to Login */}
             <Link
                 href="/login"
-                className="flex items-center justify-center gap-2 text-sm font-medium text-[#4F46E5] hover:text-[#4338CA] transition-colors duration-200"
+                className="flex items-center justify-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
             >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Sign In
+                <ArrowLeft className="h-4 w-4" /> Back to sign in
             </Link>
         </form>
-    );
+    )
 }

@@ -1,53 +1,53 @@
-"use client";
+'use client'
 
-import { Sparkles, X } from "lucide-react";
-import { useState } from "react";
-import ProgressBar from "@/components/shared/ProgressBar";
+import { useState } from 'react'
+import { Sparkles, X } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Button } from '@/components/ui/button'
 
 interface ProfileCompletionBannerProps {
-    score: number;
-    onWhatsMissing: () => void;
+    score: number
+    onWhatsMissing: () => void
 }
 
 export default function ProfileCompletionBanner({
     score,
     onWhatsMissing,
 }: ProfileCompletionBannerProps) {
-    const [isDismissed, setIsDismissed] = useState(false);
-
-    if (isDismissed || score >= 100) return null;
+    const [dismissed, setDismissed] = useState(false)
+    if (dismissed || score >= 100) return null
 
     return (
-        <div className="relative bg-gradient-to-r from-[#EEF2FF] to-[#E0E7FF] border border-[#C7D2FE] rounded-xl p-5 mb-6">
-            <div className="flex items-center justify-between gap-6">
-                <div className="flex items-center gap-3">
-                    <Sparkles className="w-5 h-5 text-[#4F46E5] flex-shrink-0" />
+        <Card className="relative bg-accent-50 border-accent-100 p-5">
+            <div className="flex flex-col gap-4 pr-8 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                    <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-md bg-accent-500 text-accent-foreground">
+                        <Sparkles className="h-4 w-4" />
+                    </span>
                     <div>
-                        <h3 className="text-[15px] font-semibold text-[#0F172A]">
+                        <h3 className="text-sm font-semibold text-foreground">
                             Complete your profile to get better matches
                         </h3>
-                        <p className="text-[13px] text-[#475569] mt-0.5">
-                            You're {score}% there! Complete your profile to unlock AI matching and apply for tasks.
+                        <p className="mt-0.5 text-xs text-foreground/70">
+                            You're {score}% there. Finish up to unlock AI matching and apply to tasks.
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
-                    <ProgressBar value={score} className="hidden sm:flex" />
-                    <button
-                        onClick={onWhatsMissing}
-                        className="px-4 py-2 bg-white border border-[#C7D2FE] text-[#4F46E5] text-[13px] font-medium rounded-lg hover:bg-[#EEF2FF] transition-colors duration-200 whitespace-nowrap"
-                    >
+                <div className="flex items-center gap-3 sm:flex-shrink-0">
+                    <Progress value={score} className="hidden w-32 sm:block" />
+                    <Button onClick={onWhatsMissing} variant="secondary" size="sm">
                         What's missing?
-                    </button>
+                    </Button>
                 </div>
             </div>
             <button
-                onClick={() => setIsDismissed(true)}
-                className="absolute top-4 right-4 text-[#94A3B8] hover:text-[#475569] transition-colors duration-200"
+                onClick={() => setDismissed(true)}
+                className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label="Dismiss"
             >
-                <X className="w-4 h-4" />
+                <X className="h-3.5 w-3.5" />
             </button>
-        </div>
-    );
+        </Card>
+    )
 }

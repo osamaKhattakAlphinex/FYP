@@ -194,50 +194,50 @@ export default function EditTaskPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+            <div className="min-h-screen surface-canvas flex items-center justify-center">
                 <LoadingSpinner size="lg" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] py-8">
+        <div className="min-h-screen surface-canvas py-8">
             <div className="max-w-[900px] mx-auto px-8">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-extrabold text-[#0F172A] mb-2">Edit Task</h1>
-                    <p className="text-[#475569]">Update your task details and requirements</p>
+                    <h1 className="text-3xl font-bold text-foreground mb-2">Edit Task</h1>
+                    <p className="text-foreground/85">Update your task details and requirements</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Task Title */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                    <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-[#EEF2FF] rounded-full flex items-center justify-center">
-                                <Briefcase className="w-5 h-5 text-[#4F46E5]" />
+                            <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center">
+                                <Briefcase className="w-5 h-5 text-brand-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-[#0F172A]">Task Title</h2>
+                            <h2 className="text-lg font-semibold text-foreground">Task Title</h2>
                         </div>
                         <input
                             type="text"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                             placeholder="e.g. Build a React Dashboard Component"
-                            className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
+                            className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent"
                         />
                         {errors.title && (
-                            <p className="text-xs text-[#EF4444] mt-2">⚠ {errors.title}</p>
+                            <p className="text-xs text-destructive mt-2">⚠ {errors.title}</p>
                         )}
                     </div>
 
                     {/* Category & Type */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Category</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Category</h3>
                             <select
                                 value={formData.category}
                                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                             >
                                 {CATEGORIES.map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
@@ -245,12 +245,12 @@ export default function EditTaskPage() {
                             </select>
                         </div>
 
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Task Type</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Task Type</h3>
                             <select
                                 value={formData.type}
                                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] capitalize"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 capitalize"
                             >
                                 {TASK_TYPES.map(type => (
                                     <option key={type} value={type} className="capitalize">{type}</option>
@@ -260,12 +260,12 @@ export default function EditTaskPage() {
                     </div>
 
                     {/* Task Description */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                    <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-[#EEF2FF] rounded-full flex items-center justify-center">
-                                <FileText className="w-5 h-5 text-[#4F46E5]" />
+                            <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center">
+                                <FileText className="w-5 h-5 text-brand-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-[#0F172A]">Task Description</h2>
+                            <h2 className="text-lg font-semibold text-foreground">Task Description</h2>
                         </div>
                         <RichTextEditor
                             value={formData.description}
@@ -277,12 +277,12 @@ export default function EditTaskPage() {
                     </div>
 
                     {/* Required Skills */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                    <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-[#EEF2FF] rounded-full flex items-center justify-center">
-                                <Target className="w-5 h-5 text-[#4F46E5]" />
+                            <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center">
+                                <Target className="w-5 h-5 text-brand-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-[#0F172A]">Required Skills</h2>
+                            <h2 className="text-lg font-semibold text-foreground">Required Skills</h2>
                         </div>
                         <TagInput
                             tags={formData.skillsRequired.map((s: any) => s.name)}
@@ -294,18 +294,18 @@ export default function EditTaskPage() {
                             maxTags={15}
                         />
                         {errors.skillsRequired && (
-                            <p className="text-xs text-[#EF4444] mt-2">⚠ {errors.skillsRequired}</p>
+                            <p className="text-xs text-destructive mt-2">⚠ {errors.skillsRequired}</p>
                         )}
                     </div>
 
                     {/* Work Details Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Experience Level</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Experience Level</h3>
                             <select
                                 value={formData.experienceLevel}
                                 onChange={(e) => setFormData({ ...formData, experienceLevel: e.target.value })}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] capitalize"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 capitalize"
                             >
                                 {EXPERIENCE_LEVELS.map(level => (
                                     <option key={level} value={level} className="capitalize">{level}</option>
@@ -313,12 +313,12 @@ export default function EditTaskPage() {
                             </select>
                         </div>
 
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Work Type</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Work Type</h3>
                             <select
                                 value={formData.workType}
                                 onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] capitalize"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 capitalize"
                             >
                                 {WORK_TYPES.map(type => (
                                     <option key={type} value={type} className="capitalize">{type}</option>
@@ -326,8 +326,8 @@ export default function EditTaskPage() {
                             </select>
                         </div>
 
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Duration</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Duration</h3>
                             <div className="flex gap-2">
                                 <input
                                     type="number"
@@ -337,7 +337,7 @@ export default function EditTaskPage() {
                                         duration: { ...formData.duration, value: parseInt(e.target.value) || 1 }
                                     })}
                                     min="1"
-                                    className="w-20 px-3 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                    className="w-20 px-3 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                                 />
                                 <select
                                     value={formData.duration.unit}
@@ -345,7 +345,7 @@ export default function EditTaskPage() {
                                         ...formData,
                                         duration: { ...formData.duration, unit: e.target.value }
                                     })}
-                                    className="flex-1 px-3 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                    className="flex-1 px-3 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                                 >
                                     <option value="days">Days</option>
                                     <option value="weeks">Weeks</option>
@@ -357,42 +357,42 @@ export default function EditTaskPage() {
 
                     {/* Dates */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Application Deadline</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Application Deadline</h3>
                             <input
                                 type="date"
                                 value={formData.applicationDeadline}
                                 onChange={(e) => setFormData({ ...formData, applicationDeadline: e.target.value })}
                                 min={new Date().toISOString().split('T')[0]}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                             />
                             {errors.applicationDeadline && (
-                                <p className="text-xs text-[#EF4444] mt-2">⚠ {errors.applicationDeadline}</p>
+                                <p className="text-xs text-destructive mt-2">⚠ {errors.applicationDeadline}</p>
                             )}
                         </div>
 
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Start Date</h3>
+                        <div className="bg-card border border-border rounded-lg p-6">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">Start Date</h3>
                             <input
                                 type="date"
                                 value={formData.startDate}
                                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                                 min={new Date().toISOString().split('T')[0]}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                             />
                             {errors.startDate && (
-                                <p className="text-xs text-[#EF4444] mt-2">⚠ {errors.startDate}</p>
+                                <p className="text-xs text-destructive mt-2">⚠ {errors.startDate}</p>
                             )}
                         </div>
                     </div>
 
                     {/* Budget */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                    <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 bg-[#EEF2FF] rounded-full flex items-center justify-center">
-                                <DollarSign className="w-5 h-5 text-[#4F46E5]" />
+                            <div className="w-10 h-10 bg-brand-50 rounded-full flex items-center justify-center">
+                                <DollarSign className="w-5 h-5 text-brand-600" />
                             </div>
-                            <h2 className="text-lg font-semibold text-[#0F172A]">Budget</h2>
+                            <h2 className="text-lg font-semibold text-foreground">Budget</h2>
                         </div>
                         <div className="space-y-4">
                             <select
@@ -401,7 +401,7 @@ export default function EditTaskPage() {
                                     ...formData,
                                     budget: { ...formData.budget, type: e.target.value }
                                 })}
-                                className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] capitalize"
+                                className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 capitalize"
                             >
                                 {BUDGET_TYPES.map(type => (
                                     <option key={type} value={type} className="capitalize">{type}</option>
@@ -423,7 +423,7 @@ export default function EditTaskPage() {
                                                 }
                                             })}
                                             placeholder="Min"
-                                            className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                            className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                                         />
                                     </div>
                                     <div>
@@ -439,25 +439,25 @@ export default function EditTaskPage() {
                                                 }
                                             })}
                                             placeholder="Max"
-                                            className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                            className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                                         />
                                     </div>
                                 </div>
                             )}
                             {errors.budget && (
-                                <p className="text-xs text-[#EF4444]">⚠ {errors.budget}</p>
+                                <p className="text-xs text-destructive">⚠ {errors.budget}</p>
                             )}
                         </div>
                     </div>
 
                     {/* Deliverables */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
+                    <div className="bg-card border border-border rounded-lg p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold text-[#0F172A]">Deliverables</h3>
+                            <h3 className="text-sm font-semibold text-foreground">Deliverables</h3>
                             <button
                                 type="button"
                                 onClick={() => handleAddItem('deliverables')}
-                                className="text-sm text-[#4F46E5] hover:text-[#4338CA]"
+                                className="text-sm text-brand-600 hover:text-[#4338CA]"
                             >
                                 + Add
                             </button>
@@ -470,7 +470,7 @@ export default function EditTaskPage() {
                                         value={item}
                                         onChange={(e) => handleItemChange('deliverables', index, e.target.value)}
                                         placeholder={`Deliverable ${index + 1}`}
-                                        className="flex-1 px-4 py-2 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                                        className="flex-1 px-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600"
                                     />
                                     {formData.deliverables.length > 1 && (
                                         <button
@@ -485,17 +485,17 @@ export default function EditTaskPage() {
                             ))}
                         </div>
                         {errors.deliverables && (
-                            <p className="text-xs text-[#EF4444] mt-2">⚠ {errors.deliverables}</p>
+                            <p className="text-xs text-destructive mt-2">⚠ {errors.deliverables}</p>
                         )}
                     </div>
 
                     {/* Status */}
-                    <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                        <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Task Status</h3>
+                    <div className="bg-card border border-border rounded-lg p-6">
+                        <h3 className="text-sm font-semibold text-foreground mb-3">Task Status</h3>
                         <select
                             value={formData.status}
                             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                            className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] capitalize"
+                            className="w-full px-4 py-3 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 capitalize"
                         >
                             <option value="draft">Draft</option>
                             <option value="active">Active</option>
@@ -510,14 +510,14 @@ export default function EditTaskPage() {
                             type="button"
                             onClick={() => router.back()}
                             disabled={submitting}
-                            className="flex-1 px-6 py-3 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
+                            className="flex-1 px-6 py-3 border border-border text-foreground/85 font-medium rounded-lg hover:surface-canvas disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={submitting}
-                            className="flex-1 px-6 py-3 bg-[#4F46E5] text-white font-semibold rounded-lg hover:bg-[#4338CA] disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-3 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {submitting ? (
                                 <>
@@ -539,20 +539,20 @@ export default function EditTaskPage() {
                         <div className="w-16 h-16 bg-[#DCFCE7] rounded-full flex items-center justify-center mx-auto mb-4">
                             <CheckCircle className="w-8 h-8 text-[#10B981]" />
                         </div>
-                        <h3 className="text-2xl font-bold text-[#0F172A] mb-2">Task Updated!</h3>
-                        <p className="text-[#475569] mb-6">
+                        <h3 className="text-2xl font-bold text-foreground mb-2">Task Updated!</h3>
+                        <p className="text-foreground/85 mb-6">
                             Your task has been updated successfully.
                         </p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => router.push('/company/tasks')}
-                                className="flex-1 px-6 py-3 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC]"
+                                className="flex-1 px-6 py-3 border border-border text-foreground/85 font-medium rounded-lg hover:surface-canvas"
                             >
                                 View All Tasks
                             </button>
                             <button
                                 onClick={() => router.push(`/tasks/${params.taskId}`)}
-                                className="flex-1 px-6 py-3 bg-[#4F46E5] text-white font-semibold rounded-lg hover:bg-[#4338CA]"
+                                className="flex-1 px-6 py-3 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700"
                             >
                                 View Task
                             </button>

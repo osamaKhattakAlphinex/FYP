@@ -35,8 +35,8 @@ export default function ForgotPasswordPage() {
 
     return (
         <AuthLayout
-            title="Forgot Password?"
-            subtitle="No worries, we'll help you reset it"
+            title="Forgot password?"
+            subtitle="We'll email you a reset link"
         >
             <ForgotPasswordForm onSubmit={handleForgotPassword} />
         </AuthLayout>

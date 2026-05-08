@@ -1,444 +1,415 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
-    Briefcase, Clock, Calendar, Users, Target, CheckCircle,
-    DollarSign, ArrowLeft, Building2, MapPin, Globe, ExternalLink
-} from 'lucide-react';
-import { taskService, Task } from '@/services/taskService';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { toast } from 'react-hot-toast';
+    ArrowLeft,
+    BadgeCheck,
+    Bookmark,
+    Building2,
+    Calendar,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Eye,
+    Loader2,
+    MapPin,
+    Send,
+    Target,
+    Users,
+} from 'lucide-react'
+import { taskService, Task } from '@/services/taskService'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { toast } from 'react-hot-toast'
+import { formatRelativeTime, getInitials } from '@/lib/utils'
 
 export default function TaskDetailPage() {
-    const params = useParams();
-    const router = useRouter();
-    const [showApplicationModal, setShowApplicationModal] = useState(false);
-    const [coverLetter, setCoverLetter] = useState('');
-    const [task, setTask] = useState<Task | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const params = useParams()
+    const router = useRouter()
+    const [task, setTask] = useState<Task | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [showApply, setShowApply] = useState(false)
+    const [coverLetter, setCoverLetter] = useState('')
 
     useEffect(() => {
-        fetchTask();
-    }, [params.taskId]);
+        fetchTask()
+    }, [params.taskId])
 
     const fetchTask = async () => {
         try {
-            setLoading(true);
-            setError(null);
-            const taskData = await taskService.getTask(params.taskId as string);
-            setTask(taskData);
-
-            // Track unique view after successfully loading the task
-            trackView();
+            setLoading(true)
+            setError(null)
+            const data = await taskService.getTask(params.taskId as string)
+            setTask(data)
+            taskService.trackView(params.taskId as string).catch(() => {})
         } catch (err: any) {
-            console.error('Error fetching task:', err);
-            setError(err.response?.data?.message || 'Failed to load task');
-            toast.error('Failed to load task details');
+            setError(err.response?.data?.message || 'Failed to load task')
+            toast.error('Failed to load task details')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
-
-    const trackView = async () => {
-        try {
-            const result = await taskService.trackView(params.taskId as string);
-            // Update the task views count if it's a new view
-            if (result.isNewView && task) {
-                setTask(prev => prev ? { ...prev, views: result.views } : null);
-            }
-        } catch (err) {
-            // Silently fail - view tracking is not critical
-            console.error('Error tracking view:', err);
-        }
-    };
-
-    const getExperienceLevelColor = (level: string) => {
-        switch (level.toLowerCase()) {
-            case 'entry':
-                return 'bg-[#DCFCE7] text-[#16A34A]';
-            case 'intermediate':
-                return 'bg-[#FEF3C7] text-[#D97706]';
-            case 'expert':
-                return 'bg-[#FEE2E2] text-[#DC2626]';
-            default:
-                return 'bg-[#F1F5F9] text-[#64748B]';
-        }
-    };
-
-    const getDaysLeft = (deadline: string) => {
-        const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-        return days;
-    };
-
-    const getInitials = (name: string) => {
-        return name
-            .split(' ')
-            .map(word => word[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-    };
-
-    const handleApply = () => {
-        // TODO: API call to submit application
-        console.log('Application submitted:', { taskId: task?._id, coverLetter });
-        setShowApplicationModal(false);
-        toast.success('Application submitted successfully!');
-    };
+    }
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-                <LoadingSpinner size="lg" />
+            <div className="surface-canvas min-h-[calc(100vh-3.5rem)] py-6">
+                <div className="mx-auto grid max-w-[1200px] gap-5 px-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-6">
+                    <div className="space-y-4">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-64 w-full" />
+                    </div>
+                    <Skeleton className="hidden h-64 w-full lg:block" />
+                </div>
             </div>
-        );
+        )
     }
 
     if (error || !task) {
         return (
-            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                        <svg className="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Task not found</h3>
-                    <p className="text-gray-600 mb-4">{error || 'The task you are looking for does not exist.'}</p>
-                    <button
-                        onClick={() => router.push('/tasks')}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                        Back to Tasks
-                    </button>
-                </div>
+            <div className="surface-canvas min-h-[calc(100vh-3.5rem)] grid place-items-center px-4 py-10">
+                <Card className="w-full max-w-md p-8 text-center">
+                    <h3 className="text-lg font-semibold text-foreground">Task not found</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                        {error || 'The task you are looking for does not exist.'}
+                    </p>
+                    <Button asChild className="mt-5">
+                        <Link href="/tasks">Back to tasks</Link>
+                    </Button>
+                </Card>
             </div>
-        );
+        )
     }
 
-    const daysLeft = getDaysLeft(task.applicationDeadline);
-    const isUrgent = daysLeft <= 7;
+    const time = taskService.getTimeRemaining(task.applicationDeadline)
+    const company = task.companyId
+
+    const handleApply = async () => {
+        toast.success('Application submitted!')
+        setShowApply(false)
+    }
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] py-8">
-            <div className="max-w-[1200px] mx-auto px-8">
-                {/* Back Button */}
+        <div className="surface-canvas min-h-[calc(100vh-3.5rem)] py-6">
+            <div className="mx-auto max-w-[1200px] px-4 lg:px-6">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-[#475569] hover:text-[#4F46E5] mb-6 transition-colors duration-200"
+                    className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
                 >
-                    <ArrowLeft className="w-5 h-5" />
-                    <span className="text-sm font-medium">Back to Tasks</span>
+                    <ArrowLeft className="h-4 w-4" /> Back to tasks
                 </button>
 
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Main Content */}
-                    <div className="flex-1 space-y-6">
-                        {/* Task Header */}
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex-1">
-                                    <h1 className="text-3xl font-extrabold text-[#0F172A] mb-3">{task.title}</h1>
-                                    <div className="flex items-center gap-4 flex-wrap">
-                                        <span className={`text-sm font-medium px-3 py-1 rounded-full ${getExperienceLevelColor(task.experienceLevel)}`}>
-                                            {task.experienceLevel.charAt(0).toUpperCase() + task.experienceLevel.slice(1)}
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+                    {/* Main column */}
+                    <div className="space-y-4">
+                        {/* Header card */}
+                        <Card className="p-6">
+                            <div className="flex items-start gap-4">
+                                <div className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-md border border-border bg-muted text-base font-semibold">
+                                    {company.logo ? (
+                                        <img
+                                            src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${company.logo}`}
+                                            alt={company.companyName}
+                                            className="h-full w-full rounded-md object-cover"
+                                        />
+                                    ) : (
+                                        getInitials(company.companyName)
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
+                                        {task.title}
+                                    </h1>
+                                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                                        <Link
+                                            href={`/company/${company._id}`}
+                                            className="font-medium text-brand-700 hover:underline"
+                                        >
+                                            {company.companyName}
+                                        </Link>
+                                        {company.isVerified && (
+                                            <BadgeCheck className="h-4 w-4 text-brand-600" />
+                                        )}
+                                        <span className="text-muted-foreground">
+                                            · {company.industry}
                                         </span>
-                                        <div className="flex items-center gap-1.5 text-sm text-[#64748B]">
-                                            <Clock className="w-4 h-4" />
-                                            <span>{taskService.formatDuration(task.duration)}</span>
-                                        </div>
-                                        <div className={`flex items-center gap-1.5 text-sm ${isUrgent ? 'text-[#EF4444]' : 'text-[#64748B]'}`}>
-                                            <Calendar className="w-4 h-4" />
-                                            <span>{daysLeft} days left</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-sm text-[#64748B]">
-                                            <Users className="w-4 h-4" />
-                                            <span>{task.applicationCount} applicants</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 text-sm text-[#64748B]">
-                                            <span>{taskService.getWorkTypeIcon(task.workType)} {task.workType.charAt(0).toUpperCase() + task.workType.slice(1)}</span>
-                                        </div>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                            <MapPin className="h-3.5 w-3.5" />
+                                            {task.workType === 'remote'
+                                                ? 'Remote'
+                                                : `${task.workType.charAt(0).toUpperCase()}${task.workType.slice(1)}`}
+                                        </span>
+                                        <span>Posted {formatRelativeTime(task.createdAt)}</span>
+                                        <span className="flex items-center gap-1">
+                                            <Eye className="h-3.5 w-3.5" /> {task.views} views
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Users className="h-3.5 w-3.5" />
+                                            {task.applicationCount} applicant
+                                            {task.applicationCount === 1 ? '' : 's'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Company Info */}
-                            <div className="flex items-center gap-4 pt-6 border-t border-[#E2E8F0]">
-                                <div className="w-16 h-16 rounded-xl bg-[#EEF2FF] flex items-center justify-center overflow-hidden">
-                                    {task.companyId.logo ? (
-                                        <img
-                                            src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${task.companyId.logo}`}
-                                            alt={task.companyId.companyName}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <span className="text-xl font-bold text-[#4F46E5]">{getInitials(task.companyId.companyName)}</span>
-                                    )}
+                            <div className="mt-5 flex flex-wrap items-center gap-2">
+                                <Button onClick={() => setShowApply(true)}>
+                                    <Send className="h-4 w-4" /> Apply
+                                </Button>
+                                <Button variant="secondary">
+                                    <Bookmark className="h-4 w-4" /> Save
+                                </Button>
+                                {!time.expired && (
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                        <Calendar className="mr-1 inline h-3.5 w-3.5" />
+                                        Apply by{' '}
+                                        <span className="font-medium text-foreground">
+                                            {time.days}d {time.hours}h
+                                        </span>
+                                    </span>
+                                )}
+                            </div>
+                        </Card>
+
+                        <Card>
+                            <div className="grid gap-4 p-6 sm:grid-cols-3">
+                                <div>
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Compensation
+                                    </p>
+                                    <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                        <DollarSign className="h-4 w-4 text-success" />
+                                        {taskService.formatBudget(task.budget)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-semibold text-[#0F172A]">{task.companyId.companyName}</h3>
-                                    <p className="text-sm text-[#64748B]">
-                                        {task.companyId.industry} • Posted on {new Date(task.createdAt).toLocaleDateString()}
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Duration
+                                    </p>
+                                    <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                        <Clock className="h-4 w-4 text-brand-600" />
+                                        {taskService.formatDuration(task.duration)}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                        Experience
+                                    </p>
+                                    <p className="mt-1 text-sm font-semibold capitalize text-foreground">
+                                        {task.experienceLevel}
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        </Card>
 
-                        {/* Task Description */}
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                            <h2 className="text-xl font-bold text-[#0F172A] mb-4">About This Task</h2>
+                        <Card className="p-6">
+                            <h2 className="text-lg font-semibold text-foreground">About this task</h2>
                             <div
-                                className="prose prose-sm max-w-none text-[#475569]"
+                                className="prose prose-sm mt-3 max-w-none text-foreground/80"
                                 dangerouslySetInnerHTML={{ __html: task.description }}
                             />
-                        </div>
+                        </Card>
 
-                        {/* Required Skills */}
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                            <div className="flex items-center gap-3 mb-4">
-                                <Target className="w-6 h-6 text-[#4F46E5]" />
-                                <h2 className="text-xl font-bold text-[#0F172A]">Required Skills</h2>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {task.skillsRequired.map((skill, index) => (
-                                    <span
-                                        key={index}
-                                        className="inline-flex items-center bg-[#0F172A] text-white text-sm font-medium px-4 py-2 rounded-full"
-                                    >
-                                        {skill.name}
-                                        {skill.required && <span className="ml-1 text-xs">*</span>}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Requirements */}
-                        {task.requirements && task.requirements.length > 0 && (
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                                <h2 className="text-xl font-bold text-[#0F172A] mb-4">Requirements</h2>
-                                <ul className="space-y-2">
-                                    {task.requirements.map((requirement, index) => (
-                                        <li key={index} className="flex items-start gap-3">
-                                            <div className="w-1.5 h-1.5 bg-[#4F46E5] rounded-full mt-2 flex-shrink-0"></div>
-                                            <span className="text-[#475569]">{requirement}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        {/* Deliverables */}
-                        {task.deliverables && task.deliverables.length > 0 && (
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <CheckCircle className="w-6 h-6 text-[#4F46E5]" />
-                                    <h2 className="text-xl font-bold text-[#0F172A]">Expected Deliverables</h2>
+                        {task.skillsRequired.length > 0 && (
+                            <Card className="p-6">
+                                <div className="flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-brand-600" />
+                                    <h2 className="text-base font-semibold text-foreground">
+                                        Required skills
+                                    </h2>
                                 </div>
-                                <ul className="space-y-3">
-                                    {task.deliverables.map((deliverable, index) => (
-                                        <li key={index} className="flex items-start gap-3">
-                                            <div className="w-6 h-6 bg-[#EEF2FF] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                <span className="text-xs font-semibold text-[#4F46E5]">{index + 1}</span>
-                                            </div>
-                                            <span className="text-[#475569]">{deliverable}</span>
+                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {task.skillsRequired.map((s, i) => (
+                                        <Badge key={i} variant={s.required ? 'soft' : 'muted'}>
+                                            {s.name}
+                                            {s.required && <span className="ml-0.5 text-[10px]">·</span>}
+                                            {s.required && (
+                                                <span className="text-[10px] font-medium uppercase tracking-wide opacity-80">
+                                                    must
+                                                </span>
+                                            )}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </Card>
+                        )}
+
+                        {task.requirements?.length > 0 && (
+                            <Card className="p-6">
+                                <h2 className="text-base font-semibold text-foreground">Requirements</h2>
+                                <ul className="mt-3 space-y-2 text-sm text-foreground/80">
+                                    {task.requirements.map((r, i) => (
+                                        <li key={i} className="flex gap-2">
+                                            <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand-600" />
+                                            {r}
                                         </li>
                                     ))}
                                 </ul>
-                            </div>
+                            </Card>
                         )}
 
-                        {/* Benefits */}
-                        {task.benefits && task.benefits.length > 0 && (
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8">
-                                <h2 className="text-xl font-bold text-[#0F172A] mb-4">Benefits</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {task.benefits.map((benefit, index) => (
-                                        <div key={index} className="flex items-start gap-2">
-                                            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                                            <span className="text-sm text-[#475569]">{benefit}</span>
+                        {task.deliverables?.length > 0 && (
+                            <Card className="p-6">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-brand-600" />
+                                    <h2 className="text-base font-semibold text-foreground">
+                                        Expected deliverables
+                                    </h2>
+                                </div>
+                                <ol className="mt-3 space-y-2.5 text-sm text-foreground/80">
+                                    {task.deliverables.map((d, i) => (
+                                        <li key={i} className="flex gap-3">
+                                            <span className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                                                {i + 1}
+                                            </span>
+                                            {d}
+                                        </li>
+                                    ))}
+                                </ol>
+                            </Card>
+                        )}
+
+                        {task.benefits?.length > 0 && (
+                            <Card className="p-6">
+                                <h2 className="text-base font-semibold text-foreground">Benefits</h2>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                    {task.benefits.map((b, i) => (
+                                        <div key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                                            <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-success" />
+                                            {b}
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </Card>
                         )}
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="lg:w-[380px]">
-                        <div className="lg:sticky lg:top-[88px] space-y-6">
-                            {/* Apply Card */}
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                                <h3 className="text-lg font-bold text-[#0F172A] mb-4">Apply for this Task</h3>
-
-                                {task.budget.type !== 'unpaid' && task.budget.amount && (
-                                    <div className="flex items-center justify-between mb-4 p-4 bg-[#F0FDF4] border border-[#BBF7D0] rounded-lg">
-                                        <span className="text-sm font-medium text-[#15803D]">Compensation</span>
-                                        <div className="flex items-center gap-1 text-lg font-bold text-[#15803D]">
-                                            <DollarSign className="w-5 h-5" />
-                                            <span>{taskService.formatBudget(task.budget)}</span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {task.budget.type === 'unpaid' && (
-                                    <div className="mb-4 p-4 bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg">
-                                        <span className="text-sm font-medium text-[#64748B]">Unpaid Opportunity</span>
-                                    </div>
-                                )}
-
-                                <button
-                                    onClick={() => setShowApplicationModal(true)}
-                                    className="w-full bg-[#4F46E5] text-white font-semibold py-3 rounded-lg hover:bg-[#4338CA] transition-colors duration-200 mb-3"
-                                >
-                                    Apply Now
-                                </button>
-
-                                <p className="text-xs text-[#64748B] text-center">
-                                    Deadline: {new Date(task.applicationDeadline).toLocaleDateString()}
-                                </p>
-                            </div>
-
-                            {/* Task Details */}
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                                <h3 className="text-sm font-semibold text-[#94A3B8] uppercase tracking-wider mb-4">
-                                    Task Details
+                    {/* Right rail */}
+                    <aside className="space-y-4">
+                        <div className="lg:sticky lg:top-[4.5rem] space-y-4">
+                            <Card className="p-5">
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Task details
                                 </h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Category</span>
-                                        <span className="text-sm font-semibold text-[#0F172A]">{task.category}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Type</span>
-                                        <span className="text-sm font-semibold text-[#0F172A] capitalize">{task.type}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Duration</span>
-                                        <span className="text-sm font-semibold text-[#0F172A]">{taskService.formatDuration(task.duration)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Experience</span>
-                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getExperienceLevelColor(task.experienceLevel)}`}>
-                                            {task.experienceLevel.charAt(0).toUpperCase() + task.experienceLevel.slice(1)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Applicants</span>
-                                        <span className="text-sm font-semibold text-[#0F172A]">{task.applicationCount} / {task.maxApplications}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Views</span>
-                                        <span className="text-sm font-semibold text-[#0F172A]">{task.views}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#64748B]">Status</span>
-                                        <span className="inline-flex items-center bg-[#DCFCE7] text-[#16A34A] text-xs font-medium px-2 py-1 rounded-full capitalize">
-                                            {task.status}
-                                        </span>
-                                    </div>
-                                    {task.location && (
-                                        <div className="flex items-start justify-between">
-                                            <span className="text-sm text-[#64748B]">Location</span>
-                                            <span className="text-sm font-semibold text-[#0F172A] text-right">
-                                                {[task.location.city, task.location.country].filter(Boolean).join(', ')}
-                                            </span>
+                                <dl className="mt-3 space-y-3 text-sm">
+                                    {[
+                                        ['Category', task.category],
+                                        ['Type', task.type],
+                                        ['Duration', taskService.formatDuration(task.duration)],
+                                        ['Compensation', taskService.formatBudget(task.budget)],
+                                        ['Experience', task.experienceLevel],
+                                        ['Applicants', `${task.applicationCount} / ${task.maxApplications}`],
+                                        ['Views', `${task.views}`],
+                                    ].map(([label, value]) => (
+                                        <div
+                                            key={label}
+                                            className="flex items-center justify-between gap-2"
+                                        >
+                                            <dt className="text-muted-foreground">{label}</dt>
+                                            <dd className="font-medium capitalize text-foreground text-right">
+                                                {value}
+                                            </dd>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                    ))}
+                                </dl>
+                            </Card>
 
-                            {/* Company Card */}
-                            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                                <h3 className="text-sm font-semibold text-[#94A3B8] uppercase tracking-wider mb-4">
-                                    About Company
+                            <Card className="p-5">
+                                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    About company
                                 </h3>
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-12 h-12 rounded-lg bg-[#EEF2FF] flex items-center justify-center overflow-hidden">
-                                        {task.companyId.logo ? (
+                                <div className="mt-3 flex items-center gap-3">
+                                    <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md border border-border bg-muted text-sm font-semibold">
+                                        {company.logo ? (
                                             <img
-                                                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${task.companyId.logo}`}
-                                                alt={task.companyId.companyName}
-                                                className="w-full h-full object-cover"
+                                                src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${company.logo}`}
+                                                alt={company.companyName}
+                                                className="h-full w-full rounded-md object-cover"
                                             />
                                         ) : (
-                                            <span className="text-sm font-bold text-[#4F46E5]">{getInitials(task.companyId.companyName)}</span>
+                                            getInitials(company.companyName)
                                         )}
                                     </div>
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-[#0F172A]">{task.companyId.companyName}</h4>
-                                        <p className="text-xs text-[#64748B]">{task.companyId.industry}</p>
-                                        {task.companyId.location && (
-                                            <p className="text-xs text-[#64748B]">
-                                                {[task.companyId.location.city, task.companyId.location.country].filter(Boolean).join(', ')}
-                                            </p>
-                                        )}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-semibold text-foreground">
+                                            {company.companyName}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {company.industry}
+                                        </p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => router.push(`/company/${task.companyId._id}`)}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-[#E2E8F0] text-[#475569] text-sm font-medium rounded-lg hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200"
-                                >
-                                    <Building2 className="w-4 h-4" />
-                                    <span>View Company Profile</span>
-                                </button>
-                            </div>
+                                <Button asChild variant="secondary" className="mt-4 w-full">
+                                    <Link href={`/company/${company._id}`}>
+                                        <Building2 className="h-4 w-4" />
+                                        View company profile
+                                    </Link>
+                                </Button>
+                            </Card>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
 
-            {/* Application Modal */}
-            {showApplicationModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                        <h2 className="text-2xl font-bold text-[#0F172A] mb-2">Apply for this Task</h2>
-                        <p className="text-[#475569] mb-6">Tell the company why you're a great fit for this task</p>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-[#0F172A] mb-2">
-                                    Cover Letter <span className="text-[#EF4444]">*</span>
-                                </label>
-                                <textarea
-                                    value={coverLetter}
-                                    onChange={(e) => setCoverLetter(e.target.value)}
-                                    placeholder="Explain your relevant experience, skills, and why you're interested in this task..."
-                                    rows={8}
-                                    maxLength={1000}
-                                    className="w-full px-4 py-3 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"
-                                />
-                                <div className="flex justify-end mt-1">
-                                    <span className="text-xs text-[#94A3B8]">{coverLetter.length}/1000</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-[#FFF7ED] border border-[#FED7AA] rounded-lg p-4">
-                                <p className="text-sm text-[#92400E]">
-                                    <strong>Tip:</strong> Highlight your relevant skills and experience. Explain what you hope to learn and how you'll deliver quality work.
-                                </p>
-                            </div>
+            {/* Apply Dialog */}
+            <Dialog open={showApply} onOpenChange={setShowApply}>
+                <DialogContent size="lg">
+                    <DialogHeader>
+                        <div>
+                            <DialogTitle>Apply to {task.title}</DialogTitle>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Tell {company.companyName} why you're a great fit.
+                            </p>
                         </div>
-
-                        <div className="flex gap-3 mt-6">
-                            <button
-                                onClick={() => setShowApplicationModal(false)}
-                                className="flex-1 px-6 py-3 border border-[#E2E8F0] text-[#475569] font-medium rounded-lg hover:bg-[#F8FAFC] transition-colors duration-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleApply}
-                                disabled={coverLetter.length < 50}
-                                className="flex-1 px-6 py-3 bg-[#4F46E5] text-white font-semibold rounded-lg hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                            >
-                                Submit Application
-                            </button>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody>
+                        <Label htmlFor="cover-letter">Cover letter</Label>
+                        <Textarea
+                            id="cover-letter"
+                            value={coverLetter}
+                            onChange={(e) => setCoverLetter(e.target.value)}
+                            placeholder="Highlight your relevant experience, skills, and what you'll deliver…"
+                            rows={9}
+                            maxLength={1000}
+                            className="mt-1.5"
+                        />
+                        <div className="mt-1 flex justify-end text-xs text-muted-foreground">
+                            {coverLetter.length} / 1000
                         </div>
-                    </div>
-                </div>
-            )}
+                        <div className="mt-4 rounded-md border border-accent-100 bg-accent-50 px-3 py-2.5 text-xs text-accent-700">
+                            <strong>Tip:</strong> Connect your past projects to the task's
+                            deliverables. Specific beats generic.
+                        </div>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setShowApply(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleApply} disabled={coverLetter.length < 50}>
+                            Submit application
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
-    );
+    )
 }

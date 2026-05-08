@@ -1,16 +1,22 @@
 export default function TrustBar() {
-    const companies = ['SZABIST', 'NUST', 'FAST', 'Arbisoft', 'Systems Limited', '10Pearls', 'Teradata', 'NetSol']
+    const companies = [
+        'SZABIST', 'NUST', 'FAST', 'Arbisoft',
+        'Systems Limited', '10Pearls', 'Teradata', 'NetSol',
+    ]
 
     return (
-        <section className="bg-slate-50 py-8 border-t border-b border-slate-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <p className="text-center text-sm text-slate-500 uppercase tracking-wider mb-6">
-                    Trusted by students and companies across Pakistan and beyond
+        <section className="border-b border-border bg-card">
+            <div className="mx-auto max-w-[1280px] px-4 py-10 lg:px-6">
+                <p className="text-center text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    Trusted by students &amp; companies across Pakistan
                 </p>
-                <div className="flex justify-center items-center space-x-8 lg:space-x-12 opacity-50 hover:opacity-100 transition-opacity">
-                    {companies.map((company) => (
-                        <span key={company} className="text-slate-600 font-semibold text-sm lg:text-base hover:text-slate-900 transition-colors">
-                            {company}
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
+                    {companies.map((c) => (
+                        <span
+                            key={c}
+                            className="text-sm font-semibold tracking-tight text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                            {c}
                         </span>
                     ))}
                 </div>

@@ -1,126 +1,120 @@
-import { CheckCircle } from 'lucide-react'
 import Link from 'next/link'
-import Badge from '../ui/Badge'
-import Button from '../ui/Button'
+import { Sparkles, ShieldCheck, ArrowRight, Bookmark, Building2, MapPin } from 'lucide-react'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
 
 export default function HeroSection() {
     return (
-        <section className="pt-16 min-h-screen flex items-center bg-white relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-96 h-96 bg-indigo-50 rounded-full blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2"></div>
+        <section className="surface-canvas border-b border-border">
+            <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-12 px-4 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:px-6 lg:py-24">
+                {/* Left — copy */}
+                <div className="space-y-6">
+                    <Badge variant="soft" className="px-3 py-1 text-xs">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        AI-matched micro-internships
+                    </Badge>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-                <div className="grid lg:grid-cols-5 gap-12 items-center">
-                    {/* Left Column - Text */}
-                    <div className="lg:col-span-3 space-y-8">
-                        {/* Badge */}
-                        <Badge>
-                            <span className="mr-2">✦</span>
-                            AI-Powered Micro-Internships
-                        </Badge>
+                    <h1 className="text-balance text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-[3.5rem]">
+                        Find work that <span className="text-brand-700">moves your career</span> forward.
+                    </h1>
 
-                        {/* Main Heading */}
-                        <div className="space-y-2">
-                            <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                                <div className="animate-fade-in-up">Bridge the Gap Between</div>
-                                <div className="animate-fade-in-up animation-delay-200">Learning and</div>
-                                <div className="animate-fade-in-up animation-delay-400 text-indigo-600 relative">
-                                    Industry
-                                    <span className="absolute bottom-2 left-0 w-full h-1 bg-indigo-600 transform scale-x-0 animate-underline animation-delay-800"></span>
-                                </div>
-                            </h1>
-                        </div>
+                    <p className="max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+                        NexIntern connects students with short, paid micro-internships from real companies.
+                        Build a portfolio, earn verified credentials, and get hired — without the year-long commitment.
+                    </p>
 
-                        {/* Subtext */}
-                        <p className="text-lg text-slate-600 max-w-lg leading-relaxed animate-fade-in-up animation-delay-600">
-                            Connect with top companies, complete real-world tasks, build your portfolio, and earn verified certificates — all in one intelligent platform.
-                        </p>
-
-                        {/* CTA Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up animation-delay-800">
+                    <div className="flex flex-wrap gap-3 pt-2">
+                        <Button asChild size="lg">
                             <Link href="/register">
-                                <Button size="lg">Start as a Student</Button>
+                                Join as a student
+                                <ArrowRight className="h-4 w-4" />
                             </Link>
-                            <Link href="/register">
-                                <Button variant="secondary" size="lg">Post a Task</Button>
-                            </Link>
-                        </div>
-
-                        {/* Social Proof */}
-                        <div className="flex items-center space-x-4 pt-8 animate-fade-in-up animation-delay-1000">
-                            <div className="flex -space-x-2">
-                                {['SA', 'MK', 'AR', 'FH', 'ZA'].map((initials, i) => (
-                                    <div key={i} className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-semibold border-2 border-white">
-                                        {initials}
-                                    </div>
-                                ))}
-                            </div>
-                            <p className="text-slate-600 text-sm">
-                                Join 12,000+ students already building their careers
-                            </p>
-                        </div>
+                        </Button>
+                        <Button asChild variant="outline" size="lg">
+                            <Link href="/register">Post a task</Link>
+                        </Button>
                     </div>
 
-                    {/* Right Column - Visual */}
-                    <div className="lg:col-span-2 relative">
-                        {/* Main Dashboard Card */}
-                        <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 animate-float">
-                            <div className="flex items-center justify-between mb-4">
-                                <Badge variant="success" className="text-xs">
-                                    AI Match Found!
-                                </Badge>
-                                <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                                    SA
-                                </div>
-                            </div>
-
-                            <h3 className="font-semibold text-slate-900 mb-3">
-                                UI/UX Design Audit — FinTech Startup
-                            </h3>
-
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                {['Figma', 'UX Research', 'Prototyping'].map((skill) => (
-                                    <span key={skill} className="px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-md text-xs font-medium">
-                                        {skill}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 text-success" />
+                            Free for students, forever
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex -space-x-1.5">
+                                {['SA', 'MK', 'AR', 'FH'].map((i) => (
+                                    <span
+                                        key={i}
+                                        className="grid h-6 w-6 place-items-center rounded-full border-2 border-canvas bg-brand-100 text-[10px] font-semibold text-brand-700"
+                                    >
+                                        {i}
                                     </span>
                                 ))}
                             </div>
+                            12,000+ students enrolled
+                        </div>
+                    </div>
+                </div>
 
-                            <div className="mb-4">
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="text-slate-600">Progress</span>
-                                    <span className="text-slate-900 font-medium">70%</span>
+                {/* Right — task card preview */}
+                <div className="relative">
+                    <div className="rounded-lg border border-border bg-card p-5 shadow-pop">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="grid h-10 w-10 place-items-center rounded-md bg-brand-50 font-bold text-brand-700">
+                                    F
                                 </div>
-                                <div className="w-full bg-slate-200 rounded-full h-2">
-                                    <div className="bg-indigo-600 h-2 rounded-full w-3/4"></div>
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-foreground">
+                                        UI/UX Audit · Mobile Banking
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        FinTech Co · Remote · Posted 2h ago
+                                    </p>
                                 </div>
                             </div>
+                            <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
+                                <Bookmark className="h-4 w-4" />
+                            </button>
+                        </div>
 
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-slate-900">Match Score: 94%</span>
-                                <Button size="sm">Apply Now</Button>
+                        <div className="mb-4 flex flex-wrap gap-1.5">
+                            {['Figma', 'UX Research', 'Prototyping'].map((s) => (
+                                <Badge key={s} variant="muted" className="font-normal">
+                                    {s}
+                                </Badge>
+                            ))}
+                        </div>
+
+                        <div className="mb-4 flex items-center justify-between rounded-md border border-success/20 bg-success/5 px-3 py-2 text-sm">
+                            <div className="flex items-center gap-2 text-success">
+                                <Sparkles className="h-4 w-4" />
+                                <span className="font-medium">94% match for your skills</span>
                             </div>
                         </div>
 
-                        {/* Certificate Card */}
-                        <div className="absolute -bottom-4 -left-8 bg-white rounded-xl p-4 shadow-lg border border-slate-200 animate-float animation-delay-500">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-lg">🎓</span>
-                                <div>
-                                    <p className="text-sm font-semibold text-slate-900">Certificate Earned</p>
-                                    <div className="flex items-center space-x-1">
-                                        <CheckCircle size={12} className="text-emerald-500" />
-                                        <span className="text-xs text-slate-600">Verified</span>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">$450 · 2 weeks</span>
+                            <Button size="sm">Apply</Button>
                         </div>
+                    </div>
 
-                        {/* Notification Card */}
-                        <div className="absolute -top-4 -right-4 bg-white rounded-xl p-3 shadow-lg border border-slate-200 animate-float animation-delay-1000">
-                            <div className="flex items-center space-x-2">
-                                <span className="text-sm">🔔</span>
-                                <span className="text-xs font-medium text-slate-900">New Task Match</span>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-border bg-card p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                <span className="grid h-5 w-5 place-items-center rounded-full bg-success/15 text-success">
+                                    ✓
+                                </span>
+                                Certificate verified
                             </div>
+                            <p className="mt-1 text-xs text-muted-foreground">React Development</p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-card p-3">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                <Building2 className="h-3.5 w-3.5 text-brand-600" />
+                                3 new matches
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">Based on your profile</p>
                         </div>
                     </div>
                 </div>

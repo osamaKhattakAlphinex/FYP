@@ -1,38 +1,44 @@
-"use client";
+'use client'
 
-import { TrendingUp, TrendingDown, LucideIcon } from 'lucide-react';
-import { DashboardStats } from '@/types/dashboard.types';
+import { ArrowUpRight, ArrowDownRight, type LucideIcon } from 'lucide-react'
+import { DashboardStats } from '@/types/dashboard.types'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface StatsCardProps {
-    stat: DashboardStats;
-    icon: LucideIcon;
+    stat: DashboardStats
+    icon: LucideIcon
 }
 
 export default function StatsCard({ stat, icon: Icon }: StatsCardProps) {
     return (
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 hover:shadow-lg transition-all duration-200">
-            <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#EEF2FF] to-[#E0F2FE] rounded-xl flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-[#4F46E5]" />
+        <Card className="p-5">
+            <div className="flex items-start justify-between">
+                <div className="grid h-9 w-9 place-items-center rounded-md bg-brand-50 text-brand-700">
+                    <Icon className="h-4 w-4" />
                 </div>
                 {stat.change && (
-                    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold ${stat.trend === 'up'
-                        ? 'bg-[#DCFCE7] text-[#16A34A]'
-                        : 'bg-[#FEE2E2] text-[#DC2626]'
-                        }`}>
+                    <span
+                        className={cn(
+                            'inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold',
+                            stat.trend === 'up'
+                                ? 'bg-success/10 text-success'
+                                : 'bg-destructive/10 text-destructive'
+                        )}
+                    >
                         {stat.trend === 'up' ? (
-                            <TrendingUp className="w-3 h-3" />
+                            <ArrowUpRight className="h-3 w-3" />
                         ) : (
-                            <TrendingDown className="w-3 h-3" />
+                            <ArrowDownRight className="h-3 w-3" />
                         )}
                         {stat.change}
-                    </div>
+                    </span>
                 )}
             </div>
-            <div>
-                <p className="text-[#64748B] text-sm font-medium mb-1">{stat.label}</p>
-                <p className="text-3xl font-extrabold text-[#0F172A]">{stat.value}</p>
-            </div>
-        </div>
-    );
+            <p className="mt-4 text-3xl font-bold tracking-tight text-foreground">
+                {stat.value}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
+        </Card>
+    )
 }

@@ -1,290 +1,264 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from 'react';
-import { Users, Eye, Clock, Plus, Edit2, Trash2, MoreVertical } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { taskService, Task } from '@/services/taskService';
-import LoadingSpinner from '@/components/shared/LoadingSpinner';
-import { toast } from 'react-hot-toast';
-import { getTextPreview } from '@/utils/textUtils';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Users, Eye, Clock, Plus, Pencil, Trash2, MoreVertical, Loader2 } from 'lucide-react'
+import { taskService, Task } from '@/services/taskService'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogBody,
+    DialogFooter,
+    DialogTitle,
+    DialogCloseButton,
+} from '@/components/ui/dialog'
+import { toast } from 'react-hot-toast'
+import { cn } from '@/lib/utils'
+
+const statusVariants: Record<string, 'success' | 'muted' | 'warning' | 'destructive' | 'soft'> = {
+    active: 'success',
+    closed: 'muted',
+    draft: 'warning',
+    paused: 'destructive',
+    completed: 'soft',
+}
+
+const STATUSES: Array<Task['status']> = ['active', 'draft', 'paused', 'closed', 'completed']
 
 export default function ActiveTasksCard() {
-    const router = useRouter();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-    const [deleting, setDeleting] = useState(false);
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
-    const [changingStatus, setChangingStatus] = useState<string | null>(null);
-
-    useEffect(() => {
-        fetchMyTasks();
-    }, []);
+    const router = useRouter()
+    const [tasks, setTasks] = useState<Task[]>([])
+    const [loading, setLoading] = useState(true)
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
+    const [deleting, setDeleting] = useState(false)
+    const [changingStatusId, setChangingStatusId] = useState<string | null>(null)
 
     const fetchMyTasks = async () => {
         try {
-            setLoading(true);
-            const response = await taskService.getMyTasks(1, 4, 'active');
-            setTasks(response.tasks);
-        } catch (error) {
-            console.error('Error fetching tasks:', error);
-            toast.error('Failed to load tasks');
+            setLoading(true)
+            const response = await taskService.getMyTasks(1, 4, 'active')
+            setTasks(response.tasks)
+        } catch {
+            toast.error('Failed to load tasks')
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
+
+    useEffect(() => {
+        fetchMyTasks()
+    }, [])
 
     const handleDelete = async () => {
-        if (!taskToDelete) return;
-
+        if (!taskToDelete) return
         try {
-            setDeleting(true);
-            await taskService.deleteTask(taskToDelete._id);
-            toast.success('Task deleted successfully');
-            setDeleteModalOpen(false);
-            setTaskToDelete(null);
-            fetchMyTasks();
+            setDeleting(true)
+            await taskService.deleteTask(taskToDelete._id)
+            toast.success('Task deleted')
+            setTaskToDelete(null)
+            fetchMyTasks()
         } catch (error: any) {
-            console.error('Error deleting task:', error);
-            toast.error(error.response?.data?.message || 'Failed to delete task');
+            toast.error(error.response?.data?.message || 'Failed to delete')
         } finally {
-            setDeleting(false);
+            setDeleting(false)
         }
-    };
-
-    const handleStatusChange = async (taskId: string, newStatus: string) => {
-        try {
-            setChangingStatus(taskId);
-            await taskService.updateTask(taskId, { status: newStatus as any });
-            toast.success(`Task status changed to ${newStatus}`);
-            setStatusMenuId(null);
-            setOpenMenuId(null);
-            fetchMyTasks();
-        } catch (error: any) {
-            console.error('Error changing status:', error);
-            toast.error(error.response?.data?.message || 'Failed to change status');
-        } finally {
-            setChangingStatus(null);
-        }
-    };
-
-    const getStatusColor = (status: string) => {
-        const colors = {
-            active: 'bg-[#DCFCE7] text-[#16A34A] border-[#86EFAC]',
-            closed: 'bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]',
-            draft: 'bg-[#FEF3C7] text-[#D97706] border-[#FCD34D]',
-            paused: 'bg-[#FEE2E2] text-[#DC2626] border-[#FCA5A5]',
-            completed: 'bg-[#DBEAFE] text-[#2563EB] border-[#93C5FD]',
-        };
-        return colors[status as keyof typeof colors] || colors.draft;
-    };
-
-    const formatDeadline = (deadline: string) => {
-        const date = new Date(deadline);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    if (loading) {
-        return (
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                <div className="flex items-center justify-center py-8">
-                    <LoadingSpinner size="md" />
-                </div>
-            </div>
-        );
     }
+
+    const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+        try {
+            setChangingStatusId(taskId)
+            await taskService.updateTask(taskId, { status: newStatus as any })
+            toast.success(`Task ${newStatus}`)
+            fetchMyTasks()
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to update')
+        } finally {
+            setChangingStatusId(null)
+        }
+    }
+
+    const formatDeadline = (deadline: string) =>
+        new Date(deadline).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        })
 
     return (
         <>
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-[#0F172A]">Active Tasks</h3>
-                    <div className="flex items-center gap-2">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-base">Active tasks</CardTitle>
+                    <div className="flex items-center gap-3 text-xs">
                         <Link
                             href="/company/tasks"
-                            className="text-sm font-semibold text-[#4F46E5] hover:text-[#4338CA] transition-colors"
+                            className="font-semibold text-brand-700 hover:underline"
                         >
-                            View All
+                            View all
                         </Link>
                         <Link
                             href="/company/post-task"
-                            className="flex items-center gap-1 text-sm font-semibold text-[#4F46E5] hover:text-[#4338CA] transition-colors"
+                            className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline"
                         >
-                            <Plus className="w-4 h-4" />
-                            Post New
+                            <Plus className="h-3.5 w-3.5" /> Post new
                         </Link>
                     </div>
-                </div>
-
-                {tasks.length === 0 ? (
-                    <div className="text-center py-8">
-                        <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Clock className="w-8 h-8 text-gray-400" />
+                </CardHeader>
+                <CardContent className="p-0">
+                    {loading ? (
+                        <div className="space-y-2 px-6 pb-6">
+                            <Skeleton className="h-16" />
+                            <Skeleton className="h-16" />
+                            <Skeleton className="h-16" />
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">No active tasks yet</p>
-                        <Link
-                            href="/company/post-task"
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white text-sm font-medium rounded-lg hover:bg-[#4338CA] transition-colors"
-                        >
-                            <Plus className="w-4 h-4" />
-                            Post Your First Task
-                        </Link>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {tasks.map((task) => (
-                            <div
-                                key={task._id}
-                                className="border border-[#E2E8F0] rounded-xl p-4 hover:border-[#4F46E5] transition-all duration-200 relative"
-                            >
-                                <div className="flex items-start justify-between mb-3">
-                                    <Link href={`/tasks/${task._id}`} className="flex-1 pr-2">
-                                        <p className="text-sm font-bold text-[#0F172A] line-clamp-2 hover:text-[#4F46E5] transition-colors">
+                    ) : tasks.length === 0 ? (
+                        <div className="px-6 pb-6 text-center">
+                            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground">
+                                <Clock className="h-5 w-5" />
+                            </div>
+                            <p className="mt-3 text-sm text-muted-foreground">
+                                No active tasks yet
+                            </p>
+                            <Button asChild size="sm" className="mt-3">
+                                <Link href="/company/post-task">
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Post your first task
+                                </Link>
+                            </Button>
+                        </div>
+                    ) : (
+                        <ul className="divide-y divide-border">
+                            {tasks.map((task) => (
+                                <li
+                                    key={task._id}
+                                    className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-muted/40"
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <Link
+                                            href={`/tasks/${task._id}`}
+                                            className="line-clamp-1 text-sm font-semibold text-foreground hover:text-brand-700"
+                                        >
                                             {task.title}
-                                        </p>
-                                    </Link>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`px-2 py-1 rounded-md text-xs font-semibold border capitalize whitespace-nowrap ${getStatusColor(task.status)}`}>
-                                            {task.status}
-                                        </span>
-
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setOpenMenuId(openMenuId === task._id ? null : task._id)}
-                                                className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                            >
-                                                <MoreVertical className="w-4 h-4 text-gray-600" />
-                                            </button>
-
-                                            {openMenuId === task._id && (
-                                                <>
-                                                    <div
-                                                        className="fixed inset-0 z-10"
-                                                        onClick={() => setOpenMenuId(null)}
-                                                    />
-                                                    <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                                                        {/* Status Change Submenu */}
-                                                        <div className="relative">
-                                                            <button
-                                                                onClick={() => setStatusMenuId(statusMenuId === task._id ? null : task._id)}
-                                                                className="w-full flex items-center justify-between px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
-                                                            >
-                                                                <span className="flex items-center gap-2">
-                                                                    <span className="w-3 h-3 flex items-center justify-center text-[10px]">⚡</span>
-                                                                    Status
-                                                                </span>
-                                                                <span className="text-[10px]">›</span>
-                                                            </button>
-
-                                                            {statusMenuId === task._id && (
-                                                                <div className="absolute left-full top-0 ml-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
-                                                                    {['active', 'draft', 'paused', 'closed', 'completed'].map((status) => (
-                                                                        <button
-                                                                            key={status}
-                                                                            onClick={() => handleStatusChange(task._id, status)}
-                                                                            disabled={task.status === status || changingStatus === task._id}
-                                                                            className={`w-full text-left px-3 py-2 text-xs capitalize ${task.status === status
-                                                                                ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                                                                                : 'text-gray-700 hover:bg-gray-100'
-                                                                                } ${changingStatus === task._id ? 'opacity-50' : ''}`}
-                                                                        >
-                                                                            {status}
-                                                                            {task.status === status && ' ✓'}
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        <button
-                                                            onClick={() => {
-                                                                router.push(`/company/tasks/${task._id}/edit`);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-100"
-                                                        >
-                                                            <Edit2 className="w-3 h-3" />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setTaskToDelete(task);
-                                                                setDeleteModalOpen(true);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="w-3 h-3" />
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
+                                        </Link>
+                                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <Users className="h-3 w-3" />
+                                                {task.applicationCount} applicant
+                                                {task.applicationCount === 1 ? '' : 's'}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Eye className="h-3 w-3" /> {task.views}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="h-3 w-3" />
+                                                {formatDeadline(task.applicationDeadline)}
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-4 text-xs text-[#64748B] flex-wrap">
-                                    <div className="flex items-center gap-1">
-                                        <Users className="w-3.5 h-3.5" />
-                                        {task.applicationCount} applicants
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Eye className="w-3.5 h-3.5" />
-                                        {task.views} views
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-3.5 h-3.5" />
-                                        {formatDeadline(task.applicationDeadline)}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                                    <Badge variant={statusVariants[task.status] ?? 'muted'}>
+                                        {task.status}
+                                    </Badge>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger
+                                            aria-label="Options"
+                                            className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        >
+                                            <MoreVertical className="h-4 w-4" />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Change status</DropdownMenuLabel>
+                                            {STATUSES.map((s) => (
+                                                <DropdownMenuItem
+                                                    key={s}
+                                                    disabled={
+                                                        task.status === s ||
+                                                        changingStatusId === task._id
+                                                    }
+                                                    onClick={() => handleStatusChange(task._id, s)}
+                                                    className={cn(task.status === s && 'opacity-50')}
+                                                >
+                                                    <span className="capitalize">{s}</span>
+                                                    {task.status === s && (
+                                                        <span className="ml-auto text-xs">✓</span>
+                                                    )}
+                                                </DropdownMenuItem>
+                                            ))}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() =>
+                                                    router.push(`/company/tasks/${task._id}/edit`)
+                                                }
+                                            >
+                                                <Pencil className="h-4 w-4" /> Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onClick={() => setTaskToDelete(task)}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" /> Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CardContent>
+            </Card>
 
-            {deleteModalOpen && taskToDelete && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Task</h3>
-                        <p className="text-gray-600 mb-4">
-                            Are you sure you want to delete "{taskToDelete.title}"? This action cannot be undone.
+            <Dialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete task?</DialogTitle>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody>
+                        <p className="text-sm text-foreground/80">
+                            "<span className="font-semibold">{taskToDelete?.title}</span>" will be
+                            permanently removed and applicants will be notified. This can't be undone.
                         </p>
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={() => {
-                                    setDeleteModalOpen(false);
-                                    setTaskToDelete(null);
-                                }}
-                                disabled={deleting}
-                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                            >
-                                {deleting ? (
-                                    <>
-                                        <LoadingSpinner size="sm" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setTaskToDelete(null)}
+                            disabled={deleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDelete}
+                            disabled={deleting}
+                        >
+                            {deleting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Deleting…
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4" /> Delete task
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
-    );
+    )
 }
