@@ -25,6 +25,9 @@ app.use(express.urlencoded({
     extended: true
 }));
 
+// Serve static files (uploads)
+app.use('/uploads', express.static('uploads'));
+
 // Cookie parser
 app.use(cookieParser());
 
@@ -71,6 +74,9 @@ app.use(passport.session());
 
 // Mount routers
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/students', require('./routes/studentRoutes'));
+app.use('/api/companies', require('./routes/companyRoutes'));
+app.use('/api/tasks', require('./routes/taskRoutes'));
 
 // Health check route
 app.get('/health', (req, res) => {

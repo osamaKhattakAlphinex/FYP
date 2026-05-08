@@ -14,6 +14,7 @@ export interface StudentProfile {
   country: string;
   profileCompletionScore: number;
   isAvailable: boolean;
+  resumeUrl: string | null;
   skills: Skill[];
   education: Education[];
   experience: Experience[];
@@ -74,6 +75,7 @@ export interface Certificate {
   expiryDate: string | null;
   credentialId: string | null;
   credentialUrl: string | null;
+  certificateImage: string | null;
   isNexInternCertificate: boolean;
 }
 

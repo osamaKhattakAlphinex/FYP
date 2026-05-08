@@ -3,6 +3,7 @@
 import { Briefcase, Clock, Users, Calendar, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import type { Task } from '@/types/task.types';
+import { getTextPreview } from '@/utils/textUtils';
 
 interface TaskCardProps {
     task: Task;
@@ -67,7 +68,7 @@ export default function TaskCard({ task }: TaskCardProps) {
 
                 {/* Task Description */}
                 <p className="text-sm text-[#475569] mb-4 line-clamp-2">
-                    {task.description}
+                    {getTextPreview(task.description, 120)}
                 </p>
 
                 {/* Skills */}

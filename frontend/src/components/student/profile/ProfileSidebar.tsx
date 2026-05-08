@@ -129,20 +129,29 @@ export default function ProfileSidebar({
             <div className="h-px bg-[#E2E8F0]" />
 
             <div className="p-6">
-                <h3 className="text-[13px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-3">
-                    Connect
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[13px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                        Connect
+                    </h3>
+                    <button
+                        onClick={onEditSocialLinks}
+                        className="text-[13px] text-[#4F46E5] hover:underline font-medium"
+                    >
+                        Edit
+                    </button>
+                </div>
                 <div className="flex items-center gap-3">
                     {socialIcons.map(({ icon: Icon, url, color, name }) => (
                         <button
                             key={name}
                             onClick={() => (url ? window.open(url, "_blank") : onEditSocialLinks())}
                             className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all duration-200 ${url
-                                    ? "bg-[#F8FAFC] border-[#E2E8F0] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
-                                    : "bg-[#F8FAFC] border-[#E2E8F0]"
+                                ? "bg-[#F8FAFC] border-[#E2E8F0] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                : "bg-[#F8FAFC] border-[#E2E8F0] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
                                 }`}
                             style={url ? {} : { opacity: 0.5 }}
                             aria-label={name}
+                            title={url ? `Visit ${name}` : `Add ${name}`}
                         >
                             <Icon
                                 className="w-4 h-4 transition-colors duration-200"

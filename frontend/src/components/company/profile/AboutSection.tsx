@@ -75,13 +75,20 @@ export default function AboutSection({
                 onEdit={isEditMode ? () => setShowAboutModal(true) : undefined}
             >
                 {!about ? (
-                    <EmptyState
-                        icon={Building2}
-                        title="No description yet"
-                        description="Tell students about your company, mission, and culture"
-                        ctaLabel="Add Company Description"
-                        onCtaClick={() => setShowAboutModal(true)}
-                    />
+                    isEditMode ? (
+                        <EmptyState
+                            icon={Building2}
+                            title="No description yet"
+                            description="Tell students about your company, mission, and culture"
+                            ctaLabel="Add Company Description"
+                            onCtaClick={() => setShowAboutModal(true)}
+                        />
+                    ) : (
+                        <div className="text-center py-8">
+                            <Building2 className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                            <p className="text-[#64748B] text-sm">No company description available</p>
+                        </div>
+                    )
                 ) : (
                     <div>
                         <p className="text-[15px] text-[#475569] leading-relaxed whitespace-pre-wrap">
@@ -114,7 +121,12 @@ export default function AboutSection({
                             ctaLabel="Add Tech Stack"
                             onCtaClick={() => setShowTechModal(true)}
                         />
-                    ) : null
+                    ) : (
+                        <div className="text-center py-8">
+                            <Cpu className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                            <p className="text-[#64748B] text-sm">No technology information available</p>
+                        </div>
+                    )
                 ) : (
                     <div className="flex flex-wrap gap-2">
                         {techStack.map((tech, index) => (

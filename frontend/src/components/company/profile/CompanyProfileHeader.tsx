@@ -9,8 +9,8 @@ import type { CompanyProfile } from '@/types/company.types';
 interface CompanyProfileHeaderProps {
     profile: CompanyProfile;
     isEditMode?: boolean;
-    onEditCover?: () => void;
-    onEditLogo?: (url: string) => void;
+    onEditCover?: (file: File) => void;
+    onEditLogo?: (file: File) => void;
     onEditInfo?: () => void;
 }
 
@@ -32,13 +32,20 @@ export default function CompanyProfileHeader({
             .slice(0, 2);
     };
 
+    const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && onEditCover) {
+            onEditCover(file);
+        }
+    };
+
     return (
         <div className="w-full">
             {/* Cover Image */}
             <div className="relative w-full h-[220px] md:h-[220px] sm:h-[140px]">
                 {profile.coverImage ? (
                     <img
-                        src={profile.coverImage}
+                        src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profile.coverImage}`}
                         alt={`${profile.companyName} cover image`}
                         className="w-full h-full object-cover"
                     />
@@ -46,13 +53,22 @@ export default function CompanyProfileHeader({
                     <div className="w-full h-full bg-gradient-to-r from-[#4F46E5] to-[#06B6D4]" />
                 )}
                 {isEditMode && onEditCover && (
-                    <button
-                        onClick={onEditCover}
-                        className="absolute top-4 right-4 flex items-center gap-2 bg-[rgba(15,23,42,0.5)] backdrop-blur-sm text-white text-[13px] font-medium px-3.5 py-2 rounded-lg hover:bg-[rgba(15,23,42,0.7)] transition-all duration-200"
-                    >
-                        <Camera className="w-4 h-4" />
-                        <span>Edit Cover</span>
-                    </button>
+                    <>
+                        <input
+                            type="file"
+                            id="cover-upload"
+                            accept="image/*"
+                            onChange={handleCoverChange}
+                            className="hidden"
+                        />
+                        <label
+                            htmlFor="cover-upload"
+                            className="absolute top-4 right-4 flex items-center gap-2 bg-[rgba(15,23,42,0.5)] backdrop-blur-sm text-white text-[13px] font-medium px-3.5 py-2 rounded-lg hover:bg-[rgba(15,23,42,0.7)] transition-all duration-200 cursor-pointer"
+                        >
+                            <Camera className="w-4 h-4" />
+                            <span>Edit Cover</span>
+                        </label>
+                    </>
                 )}
             </div>
 
@@ -64,7 +80,7 @@ export default function CompanyProfileHeader({
                         <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-lg overflow-hidden">
                             {profile.logo ? (
                                 <img
-                                    src={profile.logo}
+                                    src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profile.logo}`}
                                     alt={`${profile.companyName} logo`}
                                     className="w-full h-full object-contain bg-white"
                                 />
@@ -150,8 +166,8 @@ export default function CompanyProfileHeader({
             {showLogoUpload && onEditLogo && (
                 <AvatarUpload
                     currentAvatar={profile.logo}
-                    onSave={(url) => {
-                        onEditLogo(url);
+                    onUpload={(file) => {
+                        onEditLogo(file);
                         setShowLogoUpload(false);
                     }}
                     onClose={() => setShowLogoUpload(false)}

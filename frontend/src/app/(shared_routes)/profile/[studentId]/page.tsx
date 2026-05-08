@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { MapPin, GraduationCap, MessageCircle, UserPlus, Briefcase } from "lucide-react";
 import AboutSection from "@/components/student/profile/AboutSection";
 import SkillsSection from "@/components/student/profile/SkillsSection";
@@ -10,97 +11,109 @@ import ProjectsSection from "@/components/student/profile/ProjectsSection";
 import CertificatesSection from "@/components/student/profile/CertificatesSection";
 import ProgressBar from "@/components/shared/ProgressBar";
 import { StudentProfile } from "@/types/student.types";
-
-// Mock data - replace with actual API calls based on studentId
-const mockProfile: StudentProfile = {
-    id: "student-1",
-    userId: "user-1",
-    fullName: "Sarah Johnson",
-    profilePicture: null,
-    headline: "Final Year CS Student | React Developer | AI Enthusiast",
-    about: "Passionate computer science student with a strong foundation in full-stack development and machine learning. I love building user-centric applications and exploring cutting-edge technologies.",
-    university: "Stanford University",
-    degree: "Bachelor of Science",
-    major: "Computer Science",
-    graduationYear: 2025,
-    cgpa: 3.8,
-    city: "San Francisco",
-    country: "USA",
-    profileCompletionScore: 72,
-    isAvailable: true,
-    skills: [
-        { id: "1", name: "React", level: "Advanced" },
-        { id: "2", name: "TypeScript", level: "Advanced" },
-        { id: "3", name: "Node.js", level: "Intermediate" },
-        { id: "4", name: "Python", level: "Advanced" },
-        { id: "5", name: "Machine Learning", level: "Intermediate" },
-    ],
-    education: [
-        {
-            id: "1",
-            institution: "Stanford University",
-            degree: "Bachelor of Science",
-            fieldOfStudy: "Computer Science",
-            startYear: 2021,
-            endYear: null,
-            isCurrentlyStudying: true,
-            grade: "3.8",
-            description: "Focus on AI and Software Engineering",
-        },
-    ],
-    experience: [
-        {
-            id: "1",
-            title: "Software Engineering Intern",
-            company: "Google",
-            employmentType: "Internship",
-            startDate: "2024-06-01",
-            endDate: "2024-08-31",
-            isCurrentlyWorking: false,
-            description:
-                "Worked on the Chrome team to improve performance metrics.\nImplemented new features using React and TypeScript.\nCollaborated with cross-functional teams.",
-            skills: ["React", "TypeScript", "Performance Optimization"],
-        },
-    ],
-    projects: [
-        {
-            id: "1",
-            title: "AI Study Buddy",
-            description:
-                "An AI-powered study assistant that helps students learn more effectively using personalized recommendations.",
-            techStack: ["React", "Python", "OpenAI API", "Firebase"],
-            projectUrl: "https://example.com",
-            githubUrl: "https://github.com/example",
-            thumbnailUrl: null,
-            startDate: "2024-01-01",
-            endDate: null,
-        },
-    ],
-    certificates: [
-        {
-            id: "1",
-            title: "React Development Micro-Internship",
-            issuer: "NexIntern",
-            issueDate: "2024-03-15",
-            expiryDate: null,
-            credentialId: "NI-2024-001234",
-            credentialUrl: "https://nexintern.com/verify/001234",
-            isNexInternCertificate: true,
-        },
-    ],
-    socialLinks: {
-        linkedin: "https://linkedin.com/in/sarahjohnson",
-        github: "https://github.com/sarahjohnson",
-        portfolio: "https://sarahjohnson.dev",
-        twitter: null,
-    },
-    createdAt: "2024-01-01T00:00:00Z",
-    updatedAt: "2024-03-20T00:00:00Z",
-};
+import { studentService } from "@/services/studentService";
 
 export default function PublicProfilePage({ params }: { params: { studentId: string } }) {
-    const [profile] = useState<StudentProfile>(mockProfile);
-    const aiMatchScore = 87; // Mock AI match score
+    const router = useRouter();
+    const [profile, setProfile] = useState<StudentProfile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const aiMatchScore = 87; // Mock AI match score - can be calculated later
+
+    useEffect(() => {
+        loadPublicProfile();
+    }, [params.studentId]);
+
+    const loadPublicProfile = async () => {
+        try {
+            setLoading(true);
+            const data = await studentService.getPublicProfile(params.studentId);
+
+            // Transform backend data to frontend format
+            const transformedProfile: StudentProfile = {
+                id: data._id,
+                userId: data.userId || "",
+                fullName: `${data.firstName} ${data.lastName}`,
+                profilePicture: data.profilePicture || null,
+                headline: data.headline || "",
+                about: data.bio || "",
+                university: data.education?.[0]?.institution || "",
+                degree: data.education?.[0]?.degree || "",
+                major: data.education?.[0]?.fieldOfStudy || "",
+                graduationYear: data.education?.[0]?.endYear || new Date().getFullYear(),
+                cgpa: data.education?.[0]?.grade ? parseFloat(data.education[0].grade) : null,
+                city: data.location?.city || "",
+                country: data.location?.country || "",
+                profileCompletionScore: data.profileCompletion || 0,
+                isAvailable: data.isProfilePublic,
+                resumeUrl: null,
+                skills: data.skills?.map((skill: any) => ({
+                    id: skill._id,
+                    name: skill.name,
+                    level: skill.level
+                })) || [],
+                education: data.education?.map((edu: any) => ({
+                    id: edu._id,
+                    institution: edu.institution,
+                    degree: edu.degree,
+                    fieldOfStudy: edu.fieldOfStudy || "",
+                    startYear: edu.startYear || 0,
+                    endYear: edu.endYear || null,
+                    isCurrentlyStudying: edu.isCurrentlyStudying || false,
+                    grade: edu.grade || null,
+                    description: edu.description || null
+                })) || [],
+                experience: data.experience?.map((exp: any) => ({
+                    id: exp._id,
+                    title: exp.title,
+                    company: exp.company || "",
+                    employmentType: exp.employmentType || "Internship",
+                    startDate: exp.startDate || "",
+                    endDate: exp.endDate || null,
+                    isCurrentlyWorking: exp.isCurrentlyWorking || false,
+                    description: exp.description || "",
+                    skills: exp.skills || []
+                })) || [],
+                projects: data.projects?.map((proj: any) => ({
+                    id: proj._id,
+                    title: proj.title,
+                    description: proj.description || "",
+                    techStack: proj.techStack || [],
+                    projectUrl: proj.projectUrl || null,
+                    githubUrl: proj.githubUrl || null,
+                    thumbnailUrl: proj.thumbnailUrl || null,
+                    startDate: proj.startDate || "",
+                    endDate: proj.endDate || null
+                })) || [],
+                certificates: data.certificates?.map((cert: any) => ({
+                    id: cert._id,
+                    title: cert.title,
+                    issuer: cert.issuer || "",
+                    issueDate: cert.issueDate || "",
+                    expiryDate: cert.expiryDate || null,
+                    credentialId: cert.credentialId || null,
+                    credentialUrl: cert.credentialUrl || null,
+                    certificateImage: cert.certificateImage || null,
+                    isNexInternCertificate: cert.isNexInternCertificate || false
+                })) || [],
+                socialLinks: data.socialLinks || {
+                    linkedin: null,
+                    github: null,
+                    portfolio: null,
+                    twitter: null
+                },
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt
+            };
+
+            setProfile(transformedProfile);
+        } catch (err: any) {
+            console.error("Failed to load public profile:", err);
+            setError(err.response?.data?.message || "Failed to load profile");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const getInitials = (name: string) => {
         return name
@@ -110,6 +123,30 @@ export default function PublicProfilePage({ params }: { params: { studentId: str
             .toUpperCase()
             .slice(0, 2);
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4F46E5] mx-auto"></div>
+                    <p className="mt-4 text-[#64748B]">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !profile) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-[#EF4444]">{error || "Profile not found"}</p>
+                    <button onClick={() => router.back()} className="mt-4 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA]">
+                        Go Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-8">
@@ -124,7 +161,7 @@ export default function PublicProfilePage({ params }: { params: { studentId: str
                                     <div className="w-[88px] h-[88px] rounded-full border-3 border-white bg-[#EEF2FF] flex items-center justify-center overflow-hidden">
                                         {profile.profilePicture ? (
                                             <img
-                                                src={profile.profilePicture}
+                                                src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profile.profilePicture}`}
                                                 alt={profile.fullName}
                                                 className="w-full h-full object-cover"
                                             />
@@ -216,36 +253,24 @@ export default function PublicProfilePage({ params }: { params: { studentId: str
 
                     {/* Right Content */}
                     <div className="space-y-4">
-                        <AboutSection about={profile.about} onEdit={() => { }} />
+                        <AboutSection about={profile.about} />
 
-                        <SkillsSection skills={profile.skills} onEdit={() => { }} />
+                        <SkillsSection skills={profile.skills} />
 
                         <EducationSection
                             education={profile.education}
-                            onEdit={() => { }}
-                            onDelete={() => { }}
-                            onAdd={() => { }}
                         />
 
                         <ExperienceSection
                             experience={profile.experience}
-                            onEdit={() => { }}
-                            onDelete={() => { }}
-                            onAdd={() => { }}
                         />
 
                         <ProjectsSection
                             projects={profile.projects}
-                            onEdit={() => { }}
-                            onDelete={() => { }}
-                            onAdd={() => { }}
                         />
 
                         <CertificatesSection
                             certificates={profile.certificates}
-                            onEdit={() => { }}
-                            onDelete={() => { }}
-                            onAdd={() => { }}
                         />
                     </div>
                 </div>

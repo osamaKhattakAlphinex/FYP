@@ -17,6 +17,15 @@ const studentSchema = new mongoose.Schema({
         required: [true, 'Please provide last name'],
         trim: true
     },
+    profilePicture: {
+        type: String,
+        default: null
+    },
+    headline: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Headline cannot exceed 100 characters']
+    },
     phone: {
         type: String,
         trim: true
@@ -43,9 +52,9 @@ const studentSchema = new mongoose.Schema({
             required: true
         },
         fieldOfStudy: String,
-        startDate: Date,
-        endDate: Date,
-        current: {
+        startYear: Number,
+        endYear: Number,
+        isCurrentlyStudying: {
             type: Boolean,
             default: false
         },
@@ -59,8 +68,8 @@ const studentSchema = new mongoose.Schema({
         },
         level: {
             type: String,
-            enum: ['beginner', 'intermediate', 'advanced', 'expert'],
-            default: 'intermediate'
+            enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+            default: 'Intermediate'
         }
     }],
     experience: [{
@@ -69,14 +78,19 @@ const studentSchema = new mongoose.Schema({
             required: true
         },
         company: String,
+        employmentType: {
+            type: String,
+            enum: ['Full-time', 'Part-time', 'Internship', 'Freelance']
+        },
         location: String,
-        startDate: Date,
-        endDate: Date,
-        current: {
+        startDate: String,
+        endDate: String,
+        isCurrentlyWorking: {
             type: Boolean,
             default: false
         },
-        description: String
+        description: String,
+        skills: [String]
     }],
     projects: [{
         title: {
@@ -84,15 +98,12 @@ const studentSchema = new mongoose.Schema({
             required: true
         },
         description: String,
-        technologies: [String],
-        link: String,
-        githubLink: String,
-        startDate: Date,
-        endDate: Date,
-        current: {
-            type: Boolean,
-            default: false
-        }
+        techStack: [String],
+        projectUrl: String,
+        githubUrl: String,
+        thumbnailUrl: String,
+        startDate: String,
+        endDate: String
     }],
     certificates: [{
         title: {
@@ -100,10 +111,15 @@ const studentSchema = new mongoose.Schema({
             required: true
         },
         issuer: String,
-        issueDate: Date,
-        expiryDate: Date,
+        issueDate: String,
+        expiryDate: String,
         credentialId: String,
-        credentialUrl: String
+        credentialUrl: String,
+        certificateImage: String,
+        isNexInternCertificate: {
+            type: Boolean,
+            default: false
+        }
     }],
     socialLinks: {
         linkedin: String,
@@ -186,7 +202,10 @@ studentSchema.methods.calculateProfileCompletion = function() {
         resume: 10
     };
 
-    if (this.firstName && this.lastName && this.phone) completion += weights.basicInfo;
+    // Basic info: firstName, lastName, and location (city or country)
+    const hasLocation = (this.location && (this.location.city || this.location.country));
+    if (this.firstName && this.lastName && hasLocation) completion += weights.basicInfo;
+
     if (this.education && this.education.length > 0) completion += weights.education;
     if (this.skills && this.skills.length >= 3) completion += weights.skills;
     if (this.experience && this.experience.length > 0) completion += weights.experience;

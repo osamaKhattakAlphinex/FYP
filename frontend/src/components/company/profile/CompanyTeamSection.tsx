@@ -10,7 +10,7 @@ import type { TeamMember } from '@/types/company.types';
 interface CompanyTeamSectionProps {
     teamMembers: TeamMember[];
     isEditMode?: boolean;
-    onUpdate?: (members: TeamMember[]) => void;
+    onUpdate?: (members: TeamMember[], avatarFile?: File | null) => void;
 }
 
 export default function CompanyTeamSection({ teamMembers, isEditMode = false, onUpdate }: CompanyTeamSectionProps) {
@@ -23,11 +23,15 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
         avatar: '',
         linkedinUrl: ''
     });
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleAddMember = () => {
         setEditingMember(null);
         setFormData({ name: '', role: '', avatar: '', linkedinUrl: '' });
+        setAvatarFile(null);
+        setAvatarPreview(null);
         setErrors({});
         setShowEditModal(true);
     };
@@ -40,9 +44,38 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
             avatar: member.avatar || '',
             linkedinUrl: member.linkedinUrl || ''
         });
+        setAvatarFile(null);
+        setAvatarPreview(member.avatar);
         setErrors({});
         setShowEditModal(true);
         setShowMenu(null);
+    };
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                setErrors({ ...errors, avatar: 'File size must be less than 5MB' });
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                setErrors({ ...errors, avatar: 'Please select an image file' });
+                return;
+            }
+            setAvatarFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatarPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+            setErrors({ ...errors, avatar: '' });
+        }
+    };
+
+    const handleRemoveAvatar = () => {
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        setFormData({ ...formData, avatar: '' });
     };
 
     const handleDeleteMember = (memberId: string) => {
@@ -53,10 +86,10 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
 
-        if (!formData.name.trim() || formData.name.length < 2) {
+        if (!formData.name?.trim() || (formData.name?.trim().length || 0) < 2) {
             newErrors.name = 'Name must be at least 2 characters';
         }
-        if (!formData.role.trim() || formData.role.length < 2) {
+        if (!formData.role?.trim() || (formData.role?.trim().length || 0) < 2) {
             newErrors.role = 'Role must be at least 2 characters';
         }
         if (formData.linkedinUrl && !formData.linkedinUrl.match(/^https?:\/\/.+/)) {
@@ -74,14 +107,14 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
             id: editingMember?.id || Date.now().toString(),
             name: formData.name,
             role: formData.role,
-            avatar: formData.avatar || null,
+            avatar: avatarFile ? 'uploading' : (formData.avatar || null), // Temporary value
             linkedinUrl: formData.linkedinUrl || null
         };
 
         if (editingMember) {
-            onUpdate?.(teamMembers.map(m => m.id === editingMember.id ? newMember : m));
+            onUpdate?.(teamMembers.map(m => m.id === editingMember.id ? newMember : m), avatarFile);
         } else {
-            onUpdate?.([...teamMembers, newMember]);
+            onUpdate?.([...teamMembers, newMember], avatarFile);
         }
 
         setShowEditModal(false);
@@ -97,7 +130,17 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
     };
 
     if (!isEditMode && teamMembers.length === 0) {
-        return null;
+        return (
+            <SectionCard
+                icon={Users}
+                title="Meet the Team"
+            >
+                <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                    <p className="text-[#64748B] text-sm">No team information available</p>
+                </div>
+            </SectionCard>
+        );
     }
 
     return (
@@ -245,15 +288,58 @@ export default function CompanyTeamSection({ teamMembers, isEditMode = false, on
 
                         <div>
                             <label className="block text-sm font-medium text-[#0F172A] mb-1.5">
-                                Avatar URL
+                                Profile Picture
                             </label>
-                            <input
-                                type="url"
-                                value={formData.avatar}
-                                onChange={(e) => setFormData({ ...formData, avatar: e.target.value })}
-                                placeholder="https://example.com/avatar.jpg"
-                                className="w-full px-4 py-2.5 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"
-                            />
+                            {avatarPreview ? (
+                                <div className="flex items-center gap-4">
+                                    <img
+                                        src={avatarPreview}
+                                        alt="Avatar preview"
+                                        className="w-20 h-20 rounded-full object-cover border-2 border-[#E2E8F0]"
+                                    />
+                                    <div className="flex flex-col gap-2">
+                                        <label className="px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] text-[#475569] text-sm font-medium rounded-lg hover:bg-[#EEF2FF] hover:border-[#4F46E5] hover:text-[#4F46E5] transition-all duration-200 cursor-pointer">
+                                            Change Photo
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleAvatarChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveAvatar}
+                                            className="px-4 py-2 bg-[#F8FAFC] border border-[#E2E8F0] text-[#EF4444] text-sm font-medium rounded-lg hover:bg-[#FEF2F2] hover:border-[#EF4444] transition-all duration-200"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#E2E8F0] rounded-lg cursor-pointer hover:border-[#4F46E5] hover:bg-[#F8FAFC] transition-all duration-200">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg className="w-8 h-8 mb-2 text-[#94A3B8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p className="text-sm text-[#64748B]">
+                                            <span className="font-semibold text-[#4F46E5]">Click to upload</span> or drag and drop
+                                        </p>
+                                        <p className="text-xs text-[#94A3B8] mt-1">PNG, JPG up to 5MB</p>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleAvatarChange}
+                                        className="hidden"
+                                    />
+                                </label>
+                            )}
+                            {errors.avatar && (
+                                <p className="text-xs text-[#EF4444] mt-1 flex items-center gap-1">
+                                    <span>⚠</span> {errors.avatar}
+                                </p>
+                            )}
                         </div>
 
                         <div>

@@ -57,7 +57,17 @@ export default function CompanyCultureSection({ perks, isEditMode = false, onUpd
     };
 
     if (!isEditMode && perks.length === 0) {
-        return null;
+        return (
+            <SectionCard
+                icon={Heart}
+                title="Culture & Perks"
+            >
+                <div className="text-center py-8">
+                    <Heart className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                    <p className="text-[#64748B] text-sm">No culture or perks information available</p>
+                </div>
+            </SectionCard>
+        );
     }
 
     return (

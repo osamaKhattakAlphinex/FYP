@@ -8,13 +8,15 @@ import { Experience } from "@/types/student.types";
 
 interface ExperienceSectionProps {
     experience: Experience[];
-    onEdit: (exp: Experience) => void;
-    onDelete: (id: string) => void;
-    onAdd: () => void;
+    isEditMode?: boolean;
+    onEdit?: (exp: Experience) => void;
+    onDelete?: (id: string) => void;
+    onAdd?: () => void;
 }
 
 export default function ExperienceSection({
     experience,
+    isEditMode = false,
     onEdit,
     onDelete,
     onAdd,
@@ -62,7 +64,7 @@ export default function ExperienceSection({
         <SectionCard
             title="Work Experience"
             icon={Briefcase}
-            onEdit={onAdd}
+            onEdit={isEditMode ? onAdd : undefined}
             isEmpty={experience.length === 0}
         >
             {experience.length > 0 ? (
@@ -98,45 +100,51 @@ export default function ExperienceSection({
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() =>
-                                                        setOpenMenuId(openMenuId === exp.id ? null : exp.id)
-                                                    }
-                                                    className="p-1.5 hover:bg-[#F8FAFC] rounded-lg transition-colors duration-200"
-                                                    aria-label="Options"
-                                                >
-                                                    <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
-                                                </button>
-                                                {openMenuId === exp.id && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-10"
-                                                            onClick={() => setOpenMenuId(null)}
-                                                        />
-                                                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E2E8F0] rounded-lg shadow-md py-1 min-w-[120px]">
-                                                            <button
-                                                                onClick={() => {
-                                                                    onEdit(exp);
-                                                                    setOpenMenuId(null);
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    onDelete(exp.id);
-                                                                    setOpenMenuId(null);
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors duration-150"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                            {isEditMode && (onEdit || onDelete) && (
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={() =>
+                                                            setOpenMenuId(openMenuId === exp.id ? null : exp.id)
+                                                        }
+                                                        className="p-1.5 hover:bg-[#F8FAFC] rounded-lg transition-colors duration-200"
+                                                        aria-label="Options"
+                                                    >
+                                                        <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
+                                                    </button>
+                                                    {openMenuId === exp.id && (
+                                                        <>
+                                                            <div
+                                                                className="fixed inset-0 z-10"
+                                                                onClick={() => setOpenMenuId(null)}
+                                                            />
+                                                            <div className="absolute right-0 top-8 z-20 bg-white border border-[#E2E8F0] rounded-lg shadow-md py-1 min-w-[120px]">
+                                                                {onEdit && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            onEdit(exp);
+                                                                            setOpenMenuId(null);
+                                                                        }}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                )}
+                                                                {onDelete && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            onDelete(exp.id);
+                                                                            setOpenMenuId(null);
+                                                                        }}
+                                                                        className="w-full px-4 py-2 text-left text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors duration-150"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#94A3B8]">
                                             <Calendar className="w-3 h-3" />
@@ -175,13 +183,20 @@ export default function ExperienceSection({
                     })}
                 </div>
             ) : (
-                <EmptyState
-                    icon={Briefcase}
-                    title="Add internships, jobs or freelance work"
-                    description="Showcase your professional experience and achievements"
-                    ctaLabel="Add Experience"
-                    onCtaClick={onAdd}
-                />
+                isEditMode ? (
+                    <EmptyState
+                        icon={Briefcase}
+                        title="Add internships, jobs or freelance work"
+                        description="Showcase your professional experience and achievements"
+                        ctaLabel="Add Experience"
+                        onCtaClick={onAdd}
+                    />
+                ) : (
+                    <div className="text-center py-8">
+                        <Briefcase className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                        <p className="text-[#64748B] text-sm">No work experience available</p>
+                    </div>
+                )
             )}
         </SectionCard>
     );

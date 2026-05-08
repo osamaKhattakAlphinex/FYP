@@ -39,13 +39,20 @@ export default function ActiveTasksPreview({ tasks, activeTasks, isEditMode = fa
             </div>
 
             {displayTasks.length === 0 ? (
-                <EmptyState
-                    icon={Briefcase}
-                    title="No active tasks"
-                    description="Post your first task to start receiving applications from talented students"
-                    ctaLabel="Post Your First Task"
-                    onCtaClick={() => window.location.href = '/company/post-task'}
-                />
+                isEditMode ? (
+                    <EmptyState
+                        icon={Briefcase}
+                        title="No active tasks"
+                        description="Post your first task to start receiving applications from talented students"
+                        ctaLabel="Post Your First Task"
+                        onCtaClick={() => window.location.href = '/company/post-task'}
+                    />
+                ) : (
+                    <div className="text-center py-8">
+                        <Briefcase className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                        <p className="text-[#64748B] text-sm">No active tasks available</p>
+                    </div>
+                )
             ) : (
                 <>
                     <div className="space-y-3">
@@ -78,20 +85,24 @@ export default function ActiveTasksPreview({ tasks, activeTasks, isEditMode = fa
                         })}
                     </div>
 
-                    <Link
-                        href="/company/post-task"
-                        className="flex items-center justify-center gap-2 w-full mt-5 bg-[#4F46E5] text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-[#4338CA] transition-colors duration-200"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Post New Task</span>
-                    </Link>
+                    {isEditMode && (
+                        <>
+                            <Link
+                                href="/company/post-task"
+                                className="flex items-center justify-center gap-2 w-full mt-5 bg-[#4F46E5] text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-[#4338CA] transition-colors duration-200"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Post New Task</span>
+                            </Link>
 
-                    <Link
-                        href="/company/tasks"
-                        className="block text-center text-[13px] text-[#4F46E5] hover:underline mt-3"
-                    >
-                        View All Tasks
-                    </Link>
+                            <Link
+                                href="/company/tasks"
+                                className="block text-center text-[13px] text-[#4F46E5] hover:underline mt-3"
+                            >
+                                View All Tasks
+                            </Link>
+                        </>
+                    )}
                 </>
             )}
         </div>

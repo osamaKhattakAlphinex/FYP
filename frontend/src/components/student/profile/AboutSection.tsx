@@ -7,10 +7,11 @@ import EmptyState from "@/components/shared/EmptyState";
 
 interface AboutSectionProps {
     about: string;
-    onEdit: () => void;
+    isEditMode?: boolean;
+    onEdit?: () => void;
 }
 
-export default function AboutSection({ about, onEdit }: AboutSectionProps) {
+export default function AboutSection({ about, isEditMode = false, onEdit }: AboutSectionProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const maxLines = 4;
     const lines = about.split("\n");
@@ -20,7 +21,7 @@ export default function AboutSection({ about, onEdit }: AboutSectionProps) {
         : lines.slice(0, maxLines).join("\n");
 
     return (
-        <SectionCard title="About" icon={User} onEdit={onEdit} isEmpty={!about}>
+        <SectionCard title="About" icon={User} onEdit={isEditMode ? onEdit : undefined} isEmpty={!about}>
             {about ? (
                 <div>
                     <p className="text-[15px] text-[#475569] leading-relaxed whitespace-pre-wrap">
@@ -36,13 +37,20 @@ export default function AboutSection({ about, onEdit }: AboutSectionProps) {
                     )}
                 </div>
             ) : (
-                <EmptyState
-                    icon={User}
-                    title="Tell companies and mentors about yourself"
-                    description="Share your background, interests, and career goals"
-                    ctaLabel="Add Bio"
-                    onCtaClick={onEdit}
-                />
+                isEditMode ? (
+                    <EmptyState
+                        icon={User}
+                        title="Tell companies and mentors about yourself"
+                        description="Share your background, interests, and career goals"
+                        ctaLabel="Add Bio"
+                        onCtaClick={onEdit}
+                    />
+                ) : (
+                    <div className="text-center py-8">
+                        <User className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                        <p className="text-[#64748B] text-sm">No bio available</p>
+                    </div>
+                )
             )}
         </SectionCard>
     );

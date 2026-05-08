@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from 'formik';
 import * as Yup from 'yup';
-import { LoginCredentials, UserRole } from '@/types/auth.types';
-import RoleSelector from './RoleSelector';
+import { LoginCredentials } from '@/types/auth.types';
 import SocialAuthButtons from './SocialAuthButtons';
 
 interface LoginFormProps {
@@ -19,28 +18,24 @@ const loginSchema = Yup.object().shape({
         .required('Email is required'),
     password: Yup.string()
         .min(6, 'Password must be at least 6 characters')
-        .required('Password is required'),
-    role: Yup.string()
-        .oneOf(['student', 'company', 'admin'], 'Invalid role')
-        .required('Role is required')
+        .required('Password is required')
 });
 
 export default function LoginForm({ onSubmit }: LoginFormProps) {
     const [showPassword, setShowPassword] = React.useState(false);
 
-    const initialValues: LoginCredentials = {
+    const initialValues: Omit<LoginCredentials, 'role'> = {
         email: '',
-        password: '',
-        role: 'student'
+        password: ''
     };
 
     // Handler for form submission
     const handleFormSubmit = async (
-        values: LoginCredentials,
-        { setSubmitting, setErrors }: FormikHelpers<LoginCredentials>
+        values: Omit<LoginCredentials, 'role'>,
+        { setSubmitting, setErrors }: FormikHelpers<Omit<LoginCredentials, 'role'>>
     ): Promise<void> => {
         try {
-            await onSubmit(values);
+            await onSubmit(values as LoginCredentials);
         } catch (error: any) {
             console.error('Login error:', error);
             if (error.message) {
@@ -57,20 +52,8 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
             validationSchema={loginSchema}
             onSubmit={handleFormSubmit}
         >
-            {({ values, setFieldValue, isSubmitting, errors, touched }) => (
+            {({ isSubmitting, errors, touched }) => (
                 <Form className="space-y-6">
-                    {/* Role Selection */}
-                    <div>
-                        <label className="block text-sm font-semibold text-[#0F172A] mb-3">
-                            Select Your Role
-                        </label>
-                        <RoleSelector
-                            selectedRole={values.role}
-                            onRoleSelect={(role: UserRole) => setFieldValue('role', role)}
-                        />
-                        <ErrorMessage name="role" component="p" className="mt-1.5 text-xs text-[#EF4444]" />
-                    </div>
-
                     {/* Email Input */}
                     <div>
                         <label htmlFor="email" className="block text-sm font-semibold text-[#0F172A] mb-2">
@@ -152,8 +135,8 @@ export default function LoginForm({ onSubmit }: LoginFormProps) {
                         )}
                     </button>
 
-                    {/* Social Auth Buttons */}
-                    <SocialAuthButtons mode="login" />
+                    {/* Social Auth Buttons
+                    <SocialAuthButtons mode="login" /> */}
 
                     {/* Sign Up Link */}
                     <p className="text-center text-sm text-[#64748B]">

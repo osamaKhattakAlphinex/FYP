@@ -54,7 +54,7 @@ export default function ProfileHeader({
                         <div className="w-[88px] h-[88px] rounded-full border-3 border-white bg-[#EEF2FF] flex items-center justify-center overflow-hidden">
                             {profilePicture ? (
                                 <img
-                                    src={profilePicture}
+                                    src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${profilePicture}`}
                                     alt={fullName}
                                     className="w-full h-full object-cover"
                                 />
@@ -94,8 +94,8 @@ export default function ProfileHeader({
                     <button
                         onClick={handleToggleAvailability}
                         className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 ${isAvailable
-                                ? "bg-[#DCFCE7] text-[#16A34A]"
-                                : "bg-[#F1F5F9] text-[#64748B]"
+                            ? "bg-[#DCFCE7] text-[#16A34A]"
+                            : "bg-[#F1F5F9] text-[#64748B]"
                             }`}
                     >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />

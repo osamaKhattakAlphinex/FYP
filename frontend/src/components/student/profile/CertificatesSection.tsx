@@ -8,16 +8,20 @@ import { Certificate } from "@/types/student.types";
 
 interface CertificatesSectionProps {
     certificates: Certificate[];
-    onEdit: (cert: Certificate) => void;
-    onDelete: (id: string) => void;
-    onAdd: () => void;
+    isEditMode?: boolean;
+    onEdit?: (cert: Certificate) => void;
+    onDelete?: (id: string) => void;
+    onAdd?: () => void;
+    onDeleteImage?: (certId: string) => void;
 }
 
 export default function CertificatesSection({
     certificates,
+    isEditMode = false,
     onEdit,
     onDelete,
     onAdd,
+    onDeleteImage,
 }: CertificatesSectionProps) {
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -32,7 +36,7 @@ export default function CertificatesSection({
         <SectionCard
             title="Certificates & Achievements"
             icon={Award}
-            onEdit={onAdd}
+            onEdit={isEditMode ? onAdd : undefined}
             isEmpty={certificates.length === 0}
         >
             {certificates.length > 0 ? (
@@ -43,8 +47,8 @@ export default function CertificatesSection({
                                 <div className="relative flex-shrink-0">
                                     <div
                                         className={`w-12 h-12 rounded-lg flex items-center justify-center ${cert.isNexInternCertificate
-                                                ? "bg-gradient-to-br from-[#4F46E5] to-[#06B6D4]"
-                                                : "bg-[#F8FAFC] border border-[#E2E8F0]"
+                                            ? "bg-gradient-to-br from-[#4F46E5] to-[#06B6D4]"
+                                            : "bg-[#F8FAFC] border border-[#E2E8F0]"
                                             }`}
                                     >
                                         <Award
@@ -73,45 +77,64 @@ export default function CertificatesSection({
                                             </div>
                                             <p className="text-[13px] text-[#475569] mt-0.5">{cert.issuer}</p>
                                         </div>
-                                        <div className="relative">
-                                            <button
-                                                onClick={() =>
-                                                    setOpenMenuId(openMenuId === cert.id ? null : cert.id)
-                                                }
-                                                className="p-1.5 hover:bg-[#F8FAFC] rounded-lg transition-colors duration-200"
-                                                aria-label="Options"
-                                            >
-                                                <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
-                                            </button>
-                                            {openMenuId === cert.id && (
-                                                <>
-                                                    <div
-                                                        className="fixed inset-0 z-10"
-                                                        onClick={() => setOpenMenuId(null)}
-                                                    />
-                                                    <div className="absolute right-0 top-8 z-20 bg-white border border-[#E2E8F0] rounded-lg shadow-md py-1 min-w-[120px]">
-                                                        <button
-                                                            onClick={() => {
-                                                                onEdit(cert);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
-                                                        >
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                onDelete(cert.id);
-                                                                setOpenMenuId(null);
-                                                            }}
-                                                            className="w-full px-4 py-2 text-left text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors duration-150"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
+                                        {isEditMode && (onEdit || onDelete || (onDeleteImage && cert.certificateImage)) && (
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() =>
+                                                        setOpenMenuId(openMenuId === cert.id ? null : cert.id)
+                                                    }
+                                                    className="p-1.5 hover:bg-[#F8FAFC] rounded-lg transition-colors duration-200"
+                                                    aria-label="Options"
+                                                >
+                                                    <MoreVertical className="w-4 h-4 text-[#94A3B8]" />
+                                                </button>
+                                                {openMenuId === cert.id && (
+                                                    <>
+                                                        <div
+                                                            className="fixed inset-0 z-10"
+                                                            onClick={() => setOpenMenuId(null)}
+                                                        />
+                                                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#E2E8F0] rounded-lg shadow-md py-1 min-w-[140px]">
+                                                            {onEdit && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        onEdit(cert);
+                                                                        setOpenMenuId(null);
+                                                                    }}
+                                                                    className="w-full px-4 py-2 text-left text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors duration-150"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                            )}
+                                                            {onDeleteImage && cert.certificateImage && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (confirm("Delete certificate image?")) {
+                                                                            onDeleteImage(cert.id);
+                                                                        }
+                                                                        setOpenMenuId(null);
+                                                                    }}
+                                                                    className="w-full px-4 py-2 text-left text-sm text-[#F59E0B] hover:bg-[#FEF3C7] transition-colors duration-150"
+                                                                >
+                                                                    Delete Image
+                                                                </button>
+                                                            )}
+                                                            {onDelete && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        onDelete(cert.id);
+                                                                        setOpenMenuId(null);
+                                                                    }}
+                                                                    className="w-full px-4 py-2 text-left text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors duration-150"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-1.5 mt-2 text-xs text-[#94A3B8]">
                                         <Calendar className="w-3 h-3" />
@@ -134,6 +157,34 @@ export default function CertificatesSection({
                                             ID: {cert.credentialId}
                                         </p>
                                     )}
+                                    {cert.certificateImage && (
+                                        <div className="mt-3 relative group">
+                                            <img
+                                                src={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${cert.certificateImage}`}
+                                                alt={cert.title}
+                                                className="w-full max-w-[300px] h-auto rounded-lg border border-[#E2E8F0] object-cover"
+                                            />
+                                            {onDeleteImage && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm("Delete certificate image?")) {
+                                                            onDeleteImage(cert.id);
+                                                        }
+                                                    }}
+                                                    className="absolute top-2 right-2 p-2 bg-[#EF4444] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-[#DC2626] shadow-lg"
+                                                    title="Delete image"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M3 6h18"></path>
+                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                     {cert.credentialUrl && (
                                         <a
                                             href={cert.credentialUrl}
@@ -154,13 +205,20 @@ export default function CertificatesSection({
                     ))}
                 </div>
             ) : (
-                <EmptyState
-                    icon={Award}
-                    title="Add certifications or complete tasks to earn NexIntern certificates"
-                    description="Showcase your achievements and verified skills"
-                    ctaLabel="Add Certificate"
-                    onCtaClick={onAdd}
-                />
+                isEditMode ? (
+                    <EmptyState
+                        icon={Award}
+                        title="Add certifications or complete tasks to earn NexIntern certificates"
+                        description="Showcase your achievements and verified skills"
+                        ctaLabel="Add Certificate"
+                        onCtaClick={onAdd}
+                    />
+                ) : (
+                    <div className="text-center py-8">
+                        <Award className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                        <p className="text-[#64748B] text-sm">No certificates available</p>
+                    </div>
+                )
             )}
         </SectionCard>
     );

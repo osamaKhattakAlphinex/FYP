@@ -431,7 +431,7 @@ export default function RegisterForm({ onSubmit }: RegisterFormProps) {
                         </button>
 
                         {/* Social Auth Buttons */}
-                        <SocialAuthButtons mode="register" />
+                        {/* <SocialAuthButtons mode="register" /> */}
 
                         {/* Sign In Link */}
                         <p className="text-center text-sm text-[#64748B]">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthLayout from '@/components/auth/AuthLayout';
 import EmailVerificationForm from '@/components/auth/EmailVerificationForm';
@@ -11,6 +11,22 @@ import toast from 'react-hot-toast';
 function EmailVerificationContent() {
     const router = useRouter();
     const { refreshUser } = useAuth();
+
+    // Redirect if already logged in and verified
+    useEffect(() => {
+        if (authService.isAuthenticated()) {
+            const user = authService.getStoredUser();
+            if (user && user.isEmailVerified) {
+                const roleRoutes: Record<string, string> = {
+                    student: '/student/dashboard',
+                    company: '/company/dashboard',
+                    mentor: '/mentor/students',
+                    admin: '/admin/analytics'
+                };
+                router.push(roleRoutes[user.role] || '/student/dashboard');
+            }
+        }
+    }, [router]);
 
     const handleResendEmail = async (email: string): Promise<void> => {
         try {

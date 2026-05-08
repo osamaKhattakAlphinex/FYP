@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Plus } from 'lucide-react';
+import { Briefcase, Plus, User } from 'lucide-react';
 import Link from 'next/link';
 
 interface CompanyWelcomeBannerProps {
@@ -33,6 +33,13 @@ export default function CompanyWelcomeBanner({ companyName, activeTasks }: Compa
                     >
                         <Plus className="w-5 h-5" />
                         Post New Task
+                    </Link>
+                    <Link
+                        href="/company/profile"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 font-semibold hover:bg-white/20 transition-all duration-200"
+                    >
+                        <User className="w-5 h-5" />
+                        View Profile
                     </Link>
                     <div className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
                         <span className="text-2xl font-bold">{activeTasks}</span>

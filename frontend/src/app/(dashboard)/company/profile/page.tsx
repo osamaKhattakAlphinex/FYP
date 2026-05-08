@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import CompanyProfileCompletionBanner from '@/components/company/profile/CompanyProfileCompletionBanner';
@@ -11,60 +12,10 @@ import CompanyCultureSection from '@/components/company/profile/CompanyCultureSe
 import CompanyTeamSection from '@/components/company/profile/CompanyTeamSection';
 import CompanySidebar from '@/components/company/profile/CompanySidebar';
 import type { CompanyProfile, CompanySocialLinks, TeamMember, CompanyTask } from '@/types/company.types';
+import { companyService } from '@/services/companyService';
+import { useRoleProtection } from '@/hooks/useRoleProtection';
 
-// Mock data - replace with actual API call
-const mockProfile: CompanyProfile = {
-    id: '1',
-    userId: 'user1',
-    companyName: 'TechVenture Pakistan',
-    logo: null,
-    coverImage: null,
-    tagline: 'Building Pakistan\'s Digital Future',
-    about: 'TechVenture Pakistan is a leading technology company focused on creating innovative solutions for local and international markets. We believe in empowering young talent and providing them with real-world experience through our micro-internship program.\n\nOur mission is to bridge the gap between education and industry by offering students hands-on projects that matter. We work with cutting-edge technologies and foster a culture of continuous learning and innovation.',
-    industry: 'Technology',
-    companySize: '51-200',
-    founded: 2018,
-    headquarters: 'Karachi, Pakistan',
-    website: 'https://techventure.pk',
-    email: 'contact@techventure.pk',
-    phone: '+92 300 1234567',
-    isVerified: true,
-    verificationDate: '2024-01-15T00:00:00Z',
-    profileCompletionScore: 85,
-    status: 'Active',
-    techStack: ['React', 'Node.js', 'TypeScript', 'PostgreSQL', 'AWS', 'Docker'],
-    perks: ['Remote Friendly', 'Flexible Hours', 'Mentorship Program', 'Certificate Issued'],
-    socialLinks: {
-        linkedin: 'https://linkedin.com/company/techventure',
-        twitter: 'https://twitter.com/techventure',
-        github: 'https://github.com/techventure',
-        facebook: null
-    },
-    teamMembers: [
-        {
-            id: '1',
-            name: 'Ahmed Khan',
-            role: 'CTO',
-            avatar: null,
-            linkedinUrl: 'https://linkedin.com/in/ahmedkhan'
-        },
-        {
-            id: '2',
-            name: 'Sara Ali',
-            role: 'HR Manager',
-            avatar: null,
-            linkedinUrl: 'https://linkedin.com/in/saraali'
-        }
-    ],
-    activeTasks: 5,
-    totalTasksPosted: 24,
-    totalInterns: 48,
-    avgRating: 4.7,
-    totalReviews: 32,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-03-15T00:00:00Z'
-};
-
+// Mock tasks - will be replaced with actual API later
 const mockTasks: CompanyTask[] = [
     {
         id: '1',
@@ -93,9 +44,83 @@ const mockTasks: CompanyTask[] = [
 ];
 
 export default function CompanyProfilePage() {
-    const [profile, setProfile] = useState<CompanyProfile>(mockProfile);
+    // Protect this route - only companies can access
+    useRoleProtection({ allowedRoles: ['company'] });
+
+    const router = useRouter();
+    const [profile, setProfile] = useState<CompanyProfile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    const loadProfile = async () => {
+        try {
+            setLoading(true);
+            const data = await companyService.getProfile();
+
+            // Transform backend data to frontend format
+            const transformedProfile: CompanyProfile = {
+                id: data._id,
+                userId: data.userId,
+                companyName: data.companyName,
+                logo: data.logo || null,
+                coverImage: data.coverImage || null,
+                tagline: data.description?.substring(0, 100) || '',
+                about: data.description || '',
+                industry: data.industry,
+                companySize: data.companySize,
+                founded: data.foundedYear || null,
+                headquarters: data.location?.city && data.location?.country
+                    ? `${data.location.city}, ${data.location.country}`
+                    : '',
+                website: data.website || null,
+                email: data.contactInfo?.email || '',
+                phone: data.contactInfo?.phone || null,
+                isVerified: data.verification?.isVerified || false,
+                verificationDate: data.verification?.verifiedAt || null,
+                profileCompletionScore: data.profileCompletion || 0,
+                status: 'Active',
+                techStack: data.culture?.values || [],
+                perks: data.culture?.benefits || [],
+                socialLinks: {
+                    linkedin: data.socialLinks?.linkedin || null,
+                    twitter: data.socialLinks?.twitter || null,
+                    github: null,
+                    facebook: data.socialLinks?.facebook || null
+                },
+                teamMembers: data.team?.map((member: any) => ({
+                    id: member._id,
+                    name: member.name,
+                    role: member.designation,
+                    avatar: member.avatar || null,
+                    linkedinUrl: member.linkedIn || null
+                })) || [],
+                activeTasks: data.stats?.activeTasks || 0,
+                totalTasksPosted: data.stats?.completedTasks || 0,
+                totalInterns: data.stats?.hiredCandidates || 0,
+                avgRating: data.stats?.averageRating || 0,
+                totalReviews: data.stats?.totalRatings || 0,
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt
+            };
+
+            setProfile(transformedProfile);
+        } catch (err: any) {
+            console.error('Failed to load company profile:', err);
+            setError(err.response?.data?.message || 'Failed to load profile');
+
+            if (err.response?.status === 401) {
+                router.push('/login');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const showSuccessToast = (message: string) => {
         setToastMessage(message);
@@ -103,44 +128,175 @@ export default function CompanyProfilePage() {
         setTimeout(() => setShowToast(false), 3000);
     };
 
-    const handleUpdateProfile = (updates: Partial<CompanyProfile>) => {
-        setProfile({ ...profile, ...updates });
-        showSuccessToast('Company info updated successfully');
+    const handleUpdateProfile = async (updates: Partial<CompanyProfile>) => {
+        try {
+            // Map frontend fields to backend fields
+            const backendData: any = {};
+
+            if (updates.companyName) backendData.companyName = updates.companyName;
+            if (updates.companySize) backendData.companySize = updates.companySize;
+            if (updates.industry) backendData.industry = updates.industry;
+            if (updates.founded) backendData.foundedYear = updates.founded;
+            if (updates.website) backendData.website = updates.website;
+            if (updates.about) backendData.description = updates.about;
+
+            if (updates.headquarters) {
+                const [city, country] = updates.headquarters.split(', ');
+                backendData.location = { city, country };
+            }
+
+            await companyService.updateBasicInfo(backendData);
+            await loadProfile();
+            showSuccessToast('Company info updated successfully');
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            showSuccessToast('Failed to update profile');
+        }
     };
 
-    const handleUpdateAbout = (data: { about: string; tagline: string }) => {
-        setProfile({ ...profile, ...data });
-        showSuccessToast('Company info updated successfully');
+    const handleUpdateAbout = async (data: { about: string; tagline: string }) => {
+        try {
+            await companyService.updateBasicInfo({ description: data.about });
+            await loadProfile();
+            showSuccessToast('Company info updated successfully');
+        } catch (error) {
+            console.error('Failed to update about:', error);
+            showSuccessToast('Failed to update about');
+        }
     };
 
-    const handleUpdateTechStack = (techStack: string[]) => {
-        setProfile({ ...profile, techStack });
-        showSuccessToast('Tech stack updated successfully');
+    const handleUpdateTechStack = async (techStack: string[]) => {
+        try {
+            await companyService.updateCulture({ values: techStack });
+            await loadProfile();
+            showSuccessToast('Tech stack updated successfully');
+        } catch (error) {
+            console.error('Failed to update tech stack:', error);
+            showSuccessToast('Failed to update tech stack');
+        }
     };
 
-    const handleUpdatePerks = (perks: string[]) => {
-        setProfile({ ...profile, perks });
-        showSuccessToast('Company info updated successfully');
+    const handleUpdatePerks = async (perks: string[]) => {
+        try {
+            await companyService.updateCulture({ benefits: perks });
+            await loadProfile();
+            showSuccessToast('Company info updated successfully');
+        } catch (error) {
+            console.error('Failed to update perks:', error);
+            showSuccessToast('Failed to update perks');
+        }
     };
 
-    const handleUpdateTeam = (teamMembers: TeamMember[]) => {
-        setProfile({ ...profile, teamMembers });
-        showSuccessToast(teamMembers.length > profile.teamMembers.length ? 'Team member added' : 'Team member removed');
+    const handleUpdateTeam = async (teamMembers: TeamMember[], avatarFile?: File | null) => {
+        if (!profile) return;
+
+        try {
+            // Upload avatar if provided
+            let avatarUrl: string | null = null;
+            if (avatarFile) {
+                const uploadResult = await companyService.uploadTeamMemberAvatar(avatarFile);
+                avatarUrl = uploadResult.data.avatar;
+            }
+
+            // Update team members with the uploaded avatar URL
+            const updatedMembers = teamMembers.map(m => {
+                if (m.avatar === 'uploading' && avatarUrl) {
+                    return { ...m, avatar: avatarUrl };
+                }
+                return m;
+            });
+
+            // Determine what changed
+            const currentIds = profile.teamMembers.map(m => m.id);
+            const newIds = updatedMembers.map(m => m.id);
+
+            // Find added members (new IDs or IDs that look like timestamps)
+            const addedMembers = updatedMembers.filter(m =>
+                !currentIds.includes(m.id) || m.id.length > 20 // timestamp IDs are long
+            );
+
+            // Find deleted members
+            const deletedIds = currentIds.filter(id => !newIds.includes(id));
+
+            // Find updated members
+            const updatedMembersList = updatedMembers.filter(m => {
+                const original = profile.teamMembers.find(om => om.id === m.id);
+                return original && (
+                    original.name !== m.name ||
+                    original.role !== m.role ||
+                    original.avatar !== m.avatar ||
+                    original.linkedinUrl !== m.linkedinUrl
+                );
+            });
+
+            // Process deletions
+            for (const id of deletedIds) {
+                await companyService.deleteTeamMember(id);
+            }
+
+            // Process additions
+            for (const member of addedMembers) {
+                await companyService.addTeamMember({
+                    name: member.name,
+                    role: member.role,
+                    avatar: member.avatar,
+                    linkedinUrl: member.linkedinUrl
+                });
+            }
+
+            // Process updates
+            for (const member of updatedMembersList) {
+                await companyService.updateTeamMember(member.id, {
+                    name: member.name,
+                    role: member.role,
+                    avatar: member.avatar,
+                    linkedinUrl: member.linkedinUrl
+                });
+            }
+
+            await loadProfile();
+            showSuccessToast(
+                addedMembers.length > 0 ? 'Team member added' :
+                    deletedIds.length > 0 ? 'Team member removed' :
+                        'Team member updated'
+            );
+        } catch (error) {
+            console.error('Failed to update team:', error);
+            showSuccessToast('Failed to update team');
+        }
     };
 
-    const handleUpdateSocial = (socialLinks: CompanySocialLinks) => {
-        setProfile({ ...profile, socialLinks });
-        showSuccessToast('Social links updated successfully');
+    const handleUpdateSocial = async (socialLinks: CompanySocialLinks) => {
+        try {
+            await companyService.updateSocialLinks(socialLinks);
+            await loadProfile();
+            showSuccessToast('Social links updated successfully');
+        } catch (error) {
+            console.error('Failed to update social links:', error);
+            showSuccessToast('Failed to update social links');
+        }
     };
 
-    const handleUpdateLogo = (logo: string) => {
-        setProfile({ ...profile, logo });
-        showSuccessToast('Logo updated');
+    const handleUpdateLogo = async (file: File) => {
+        try {
+            await companyService.uploadLogo(file);
+            await loadProfile();
+            showSuccessToast('Logo updated');
+        } catch (error) {
+            console.error('Failed to upload logo:', error);
+            showSuccessToast('Failed to upload logo');
+        }
     };
 
-    const handleUpdateCover = () => {
-        // In real app, open file picker
-        showSuccessToast('Cover image updated');
+    const handleUpdateCover = async (file: File) => {
+        try {
+            await companyService.uploadCoverImage(file);
+            await loadProfile();
+            showSuccessToast('Cover image updated');
+        } catch (error) {
+            console.error('Failed to upload cover:', error);
+            showSuccessToast('Failed to upload cover');
+        }
     };
 
     const handleRequestVerification = () => {
@@ -148,9 +304,32 @@ export default function CompanyProfilePage() {
     };
 
     const handleCompleteProfile = () => {
-        // Scroll to first incomplete section or show modal
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4F46E5] mx-auto"></div>
+                    <p className="mt-4 text-[#64748B]">Loading profile...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !profile) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-[#EF4444]">{error || 'Profile not found'}</p>
+                    <button onClick={loadProfile} className="mt-4 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA]">
+                        Retry
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC]">

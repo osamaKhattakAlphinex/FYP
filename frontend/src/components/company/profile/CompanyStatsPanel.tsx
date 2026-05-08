@@ -8,13 +8,15 @@ interface CompanyStatsPanelProps {
     totalInterns: number;
     activeTasks: number;
     avgRating: number;
+    isEditMode?: boolean;
 }
 
 export default function CompanyStatsPanel({
     totalTasksPosted,
     totalInterns,
     activeTasks,
-    avgRating
+    avgRating,
+    isEditMode = false
 }: CompanyStatsPanelProps) {
     const stats = [
         { icon: Briefcase, label: 'Tasks Posted', value: totalTasksPosted },
@@ -47,13 +49,15 @@ export default function CompanyStatsPanel({
             </div>
 
             <div className="mt-5 pt-5 border-t border-[#E2E8F0]">
-                <Link
-                    href="/company/analytics"
-                    className="flex items-center justify-center gap-2 text-[13px] font-medium text-[#4F46E5] hover:text-[#4338CA] transition-colors duration-200"
-                >
-                    <BarChart2 className="w-4 h-4" />
-                    <span>View Full Analytics</span>
-                </Link>
+                {isEditMode && (
+                    <Link
+                        href="/company/analytics"
+                        className="flex items-center justify-center gap-2 text-[13px] font-medium text-[#4F46E5] hover:text-[#4338CA] transition-colors duration-200"
+                    >
+                        <BarChart2 className="w-4 h-4" />
+                        <span>View Full Analytics</span>
+                    </Link>
+                )}
             </div>
         </div>
     );

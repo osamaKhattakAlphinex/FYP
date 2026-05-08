@@ -96,7 +96,7 @@ export default function SocialAuthButtons({ mode, role = 'student' }: SocialAuth
             </div>
 
             {/* Social Auth Buttons */}
-            <div className="grid grid-cols-1 gap-3">
+            {/* <div className="grid grid-cols-1 gap-3">
                 {providers.map((provider) => (
                     <button
                         key={provider.id}
@@ -125,7 +125,7 @@ export default function SocialAuthButtons({ mode, role = 'student' }: SocialAuth
                         )}
                     </button>
                 ))}
-            </div>
+            </div> */}
         </div>
     );
 }

@@ -7,7 +7,8 @@ import { Skill } from "@/types/student.types";
 
 interface SkillsSectionProps {
     skills: Skill[];
-    onEdit: () => void;
+    isEditMode?: boolean;
+    onEdit?: () => void;
 }
 
 const SkillBadge = ({ skill }: { skill: Skill }) => {
@@ -28,9 +29,9 @@ const SkillBadge = ({ skill }: { skill: Skill }) => {
     );
 };
 
-export default function SkillsSection({ skills, onEdit }: SkillsSectionProps) {
+export default function SkillsSection({ skills, isEditMode = false, onEdit }: SkillsSectionProps) {
     return (
-        <SectionCard title="Skills" icon={Zap} onEdit={onEdit} isEmpty={skills.length === 0}>
+        <SectionCard title="Skills" icon={Zap} onEdit={isEditMode ? onEdit : undefined} isEmpty={skills.length === 0}>
             {skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                     {skills.map((skill) => (
@@ -38,13 +39,20 @@ export default function SkillsSection({ skills, onEdit }: SkillsSectionProps) {
                     ))}
                 </div>
             ) : (
-                <EmptyState
-                    icon={Zap}
-                    title="Add your skills to get AI-matched with relevant tasks"
-                    description="Include technical skills, tools, and frameworks you know"
-                    ctaLabel="Add Skills"
-                    onCtaClick={onEdit}
-                />
+                isEditMode ? (
+                    <EmptyState
+                        icon={Zap}
+                        title="Add your skills to get AI-matched with relevant tasks"
+                        description="Include technical skills, tools, and frameworks you know"
+                        ctaLabel="Add Skills"
+                        onCtaClick={onEdit}
+                    />
+                ) : (
+                    <div className="text-center py-8">
+                        <Zap className="w-12 h-12 text-[#CBD5E1] mx-auto mb-3" />
+                        <p className="text-[#64748B] text-sm">No skills information available</p>
+                    </div>
+                )
             )}
         </SectionCard>
     );

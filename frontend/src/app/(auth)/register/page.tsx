@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import AuthLayout from '@/components/auth/AuthLayout';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { RegisterData } from '@/types/auth.types';
@@ -9,6 +10,22 @@ import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
     const router = useRouter();
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (authService.isAuthenticated()) {
+            const user = authService.getStoredUser();
+            if (user) {
+                const roleRoutes: Record<string, string> = {
+                    student: '/student/dashboard',
+                    company: '/company/dashboard',
+                    mentor: '/mentor/students',
+                    admin: '/admin/analytics'
+                };
+                router.push(roleRoutes[user.role] || '/student/dashboard');
+            }
+        }
+    }, [router]);
 
     const handleRegister = async (data: RegisterData): Promise<void> => {
         try {

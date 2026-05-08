@@ -8,49 +8,18 @@ import RecentApplicationsCard from '@/components/company/dashboard/RecentApplica
 import TopCandidatesCard from '@/components/company/dashboard/TopCandidatesCard';
 import RecentActivityCard from '@/components/student/dashboard/RecentActivityCard';
 import DashboardHeader from '@/components/shared/DashboardHeader';
+import { useRoleProtection } from '@/hooks/useRoleProtection';
 
 export default function CompanyDashboard() {
+    // Protect this route - only companies can access
+    useRoleProtection({ allowedRoles: ['company'] });
+
     // Mock data - will be replaced with API calls
     const stats = [
         { label: 'Total Applications', value: '48', change: '+12', trend: 'up' as const, icon: Inbox },
         { label: 'Active Tasks', value: '5', change: '+2', trend: 'up' as const, icon: ClipboardList },
         { label: 'Successful Hires', value: '23', change: '+5', trend: 'up' as const, icon: UserCheck },
         { label: 'Profile Views', value: '892', change: '+45', trend: 'up' as const, icon: Eye },
-    ];
-
-    const activeTasks = [
-        {
-            id: '1',
-            title: 'Frontend Developer for E-commerce Platform',
-            applicants: 24,
-            views: 156,
-            deadline: 'Jan 15, 2025',
-            status: 'active' as const,
-        },
-        {
-            id: '2',
-            title: 'UI/UX Designer for Mobile App',
-            applicants: 18,
-            views: 203,
-            deadline: 'Jan 20, 2025',
-            status: 'active' as const,
-        },
-        {
-            id: '3',
-            title: 'Content Writer for Blog Posts',
-            applicants: 12,
-            views: 89,
-            deadline: 'Jan 10, 2025',
-            status: 'active' as const,
-        },
-        {
-            id: '4',
-            title: 'Social Media Marketing Strategy',
-            applicants: 0,
-            views: 45,
-            deadline: 'Jan 25, 2025',
-            status: 'draft' as const,
-        },
     ];
 
     const recentApplications = [
@@ -179,7 +148,7 @@ export default function CompanyDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left Column - 2/3 width */}
                         <div className="lg:col-span-2 space-y-6">
-                            <ActiveTasksCard tasks={activeTasks} />
+                            <ActiveTasksCard />
                             <RecentApplicationsCard applications={recentApplications} />
                         </div>
 

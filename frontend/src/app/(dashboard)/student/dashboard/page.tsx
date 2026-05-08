@@ -7,8 +7,12 @@ import UpcomingDeadlinesCard from '@/components/student/dashboard/UpcomingDeadli
 import RecentActivityCard from '@/components/student/dashboard/RecentActivityCard';
 import RecommendedTasksCard from '@/components/student/dashboard/RecommendedTasksCard';
 import DashboardHeader from '@/components/shared/DashboardHeader';
+import { useRoleProtection } from '@/hooks/useRoleProtection';
 
 export default function StudentDashboard() {
+    // Protect this route - only students can access
+    useRoleProtection({ allowedRoles: ['student'] });
+
     // Mock data - will be replaced with API calls
     const stats = [
         { label: 'Active Tasks', value: '3', change: '+2', trend: 'up' as const, icon: ClipboardList },
@@ -79,42 +83,6 @@ export default function StudentDashboard() {
         },
     ];
 
-    const recommendedTasks = [
-        {
-            id: '1',
-            title: 'Build Responsive Landing Page',
-            company: 'WebFlow Agency',
-            companyLogo: '🌐',
-            matchScore: 94,
-            skills: ['HTML', 'CSS', 'JavaScript', 'Responsive Design'],
-            duration: '2 weeks',
-            compensation: '$500',
-            difficulty: 'intermediate' as const,
-        },
-        {
-            id: '2',
-            title: 'Create Social Media Graphics',
-            company: 'Brand Studio',
-            companyLogo: '🎨',
-            matchScore: 89,
-            skills: ['Figma', 'Adobe Illustrator', 'Branding'],
-            duration: '1 week',
-            compensation: '$300',
-            difficulty: 'beginner' as const,
-        },
-        {
-            id: '3',
-            title: 'API Development & Testing',
-            company: 'DevOps Solutions',
-            companyLogo: '⚙️',
-            matchScore: 85,
-            skills: ['Node.js', 'Express', 'MongoDB', 'REST API'],
-            duration: '3 weeks',
-            compensation: '$800',
-            difficulty: 'advanced' as const,
-        },
-    ];
-
     return (
         <div className="min-h-screen bg-[#F8FAFC]">
             <DashboardHeader />
@@ -134,7 +102,7 @@ export default function StudentDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left Column - 2/3 width */}
                         <div className="lg:col-span-2 space-y-6">
-                            <RecommendedTasksCard tasks={recommendedTasks} />
+                            <RecommendedTasksCard />
                             <UpcomingDeadlinesCard deadlines={upcomingDeadlines} />
                         </div>
 
