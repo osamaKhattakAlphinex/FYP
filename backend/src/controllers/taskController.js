@@ -1,156 +1,163 @@
-const Task = require('../models/Task');
-const Company = require('../models/Company');
+const { Op } = require('sequelize');
+const {
+    sequelize,
+    Task,
+    TaskSkill,
+    TaskAttachment,
+    Company
+} = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
 
+// Translate Mongo-style body fields into Sequelize columns
+const flattenTaskBody = (body = {}) => {
+    const out = {};
+    const passthrough = [
+        'title', 'description', 'category', 'subcategory', 'companyId', 'type',
+        'workType', 'experienceLevel', 'requirements',
+        'applicationDeadline', 'startDate', 'endDate',
+        'status', 'isPublic', 'isFeatured', 'maxApplications', 'applicationCount',
+        'deliverables', 'benefits', 'tags', 'views', 'saves', 'publishedAt', 'closedAt'
+    ];
+    passthrough.forEach((k) => { if (body[k] !== undefined) out[k] = body[k]; });
+
+    if (body.duration && typeof body.duration === 'object') {
+        if (body.duration.value !== undefined) out.durationValue = body.duration.value;
+        if (body.duration.unit !== undefined) out.durationUnit = body.duration.unit;
+    }
+    if (body.budget && typeof body.budget === 'object') {
+        if (body.budget.type !== undefined) out.budgetType = body.budget.type;
+        if (body.budget.currency !== undefined) out.budgetCurrency = body.budget.currency;
+        if (body.budget.amount && typeof body.budget.amount === 'object') {
+            if (body.budget.amount.min !== undefined) out.budgetAmountMin = body.budget.amount.min;
+            if (body.budget.amount.max !== undefined) out.budgetAmountMax = body.budget.amount.max;
+        }
+    }
+    if (body.location && typeof body.location === 'object') {
+        if (body.location.city !== undefined) out.locationCity = body.location.city;
+        if (body.location.state !== undefined) out.locationState = body.location.state;
+        if (body.location.country !== undefined) out.locationCountry = body.location.country;
+        if (body.location.timezone !== undefined) out.locationTimezone = body.location.timezone;
+    }
+
+    return out;
+};
+
+const taskIncludes = (companyAttrs) => ([
+    { model: TaskSkill, as: 'skillsRequired' },
+    { model: TaskAttachment, as: 'attachments' },
+    {
+        model: Company,
+        as: 'company',
+        attributes: companyAttrs || [
+            'id', 'companyName', 'logo', 'industry',
+            'locationCity', 'locationState', 'locationCountry',
+            'verificationIsVerified'
+        ]
+    }
+]);
+
+// Apply Mongo-style filters in req.query to Sequelize where clause
+const buildListWhere = (q) => {
+    const where = {
+        status: 'active',
+        isPublic: true,
+        applicationDeadline: { [Op.gt]: new Date() }
+    };
+
+    if (q.category && q.category !== 'all') where.category = q.category;
+    if (q.workType && q.workType !== 'all') where.workType = q.workType;
+    if (q.experienceLevel && q.experienceLevel !== 'all') where.experienceLevel = q.experienceLevel;
+
+    if (q.budget && q.budget !== 'all') {
+        switch (q.budget) {
+            case 'unpaid':
+                where.budgetType = 'unpaid';
+                break;
+            case 'under-500':
+                where.budgetAmountMax = { [Op.lt]: 500 };
+                break;
+            case '500-1000':
+                where.budgetAmountMin = { [Op.gte]: 500 };
+                where.budgetAmountMax = { [Op.lte]: 1000 };
+                break;
+            case 'over-1000':
+                where.budgetAmountMin = { [Op.gt]: 1000 };
+                break;
+        }
+    }
+
+    if (q.location && q.location !== 'all') {
+        if (q.location === 'remote') {
+            where.workType = 'remote';
+        } else {
+            where.locationCountry = { [Op.like]: `%${q.location}%` };
+        }
+    }
+
+    if (q.search) {
+        where[Op.or] = [
+            { title: { [Op.like]: `%${q.search}%` } },
+            { description: { [Op.like]: `%${q.search}%` } },
+            { tags: { [Op.like]: `%${q.search}%` } }
+        ];
+    }
+
+    return where;
+};
+
 // @desc    Get all public tasks with filtering and pagination
-// @route   GET /api/tasks
-// @access  Public
 exports.getTasks = async (req, res, next) => {
     try {
         const {
             page = 1,
             limit = 12,
-            category,
-            workType,
-            experienceLevel,
-            budget,
-            search,
             skills,
-            location,
             sortBy = 'createdAt',
             sortOrder = 'desc'
         } = req.query;
 
-        // Build filter object
-        const filter = {
-            status: 'active',
-            isPublic: true,
-            applicationDeadline: {
-                $gt: new Date()
-            }
-        };
+        const where = buildListWhere(req.query);
+        const include = taskIncludes();
 
-        // Category filter
-        if (category && category !== 'all') {
-            filter.category = category;
-        }
-
-        // Work type filter
-        if (workType && workType !== 'all') {
-            filter.workType = workType;
-        }
-
-        // Experience level filter
-        if (experienceLevel && experienceLevel !== 'all') {
-            filter.experienceLevel = experienceLevel;
-        }
-
-        // Budget filter
-        if (budget && budget !== 'all') {
-            switch (budget) {
-                case 'unpaid':
-                    filter['budget.type'] = 'unpaid';
-                    break;
-                case 'under-500':
-                    filter['budget.amount.max'] = {
-                        $lt: 500
-                    };
-                    break;
-                case '500-1000':
-                    filter['budget.amount.min'] = {
-                        $gte: 500
-                    };
-                    filter['budget.amount.max'] = {
-                        $lte: 1000
-                    };
-                    break;
-                case 'over-1000':
-                    filter['budget.amount.min'] = {
-                        $gt: 1000
-                    };
-                    break;
-            }
-        }
-
-        // Location filter
-        if (location && location !== 'all') {
-            if (location === 'remote') {
-                filter.workType = 'remote';
-            } else {
-                filter['location.country'] = new RegExp(location, 'i');
-            }
-        }
-
-        // Skills filter
         if (skills) {
-            const skillsArray = skills.split(',').map(s => s.trim());
-            filter['skillsRequired.name'] = {
-                $in: skillsArray
+            const skillsArray = skills.split(',').map((s) => s.trim()).filter(Boolean);
+            include[0] = {
+                model: TaskSkill,
+                as: 'skillsRequired',
+                required: true,
+                where: { name: { [Op.in]: skillsArray } }
             };
         }
 
-        // Search filter
-        if (search) {
-            filter.$or = [{
-                title: {
-                    $regex: search,
-                    $options: 'i'
-                }
-            },
-            {
-                description: {
-                    $regex: search,
-                    $options: 'i'
-                }
-            },
-            {
-                'skillsRequired.name': {
-                    $regex: search,
-                    $options: 'i'
-                }
-            },
-            {
-                tags: {
-                    $regex: search,
-                    $options: 'i'
-                }
-            }
-            ];
-        }
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-        // Sort options
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+        const { rows, count } = await Task.findAndCountAll({
+            where,
+            include,
+            order: [[sortBy, sortOrder === 'desc' ? 'DESC' : 'ASC']],
+            offset,
+            limit: parseInt(limit, 10),
+            distinct: true,
+            subQuery: false
+        });
 
-        // Execute query with pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const tasks = await Task.find(filter)
-            .populate('companyId', 'companyName logo industry location isVerified')
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(parseInt(limit))
-            .lean();
-
-        // Get total count for pagination
-        const total = await Task.countDocuments(filter);
-
-        // Calculate pagination info
-        const totalPages = Math.ceil(total / parseInt(limit));
-        const hasNextPage = parseInt(page) < totalPages;
-        const hasPrevPage = parseInt(page) > 1;
+        const totalPages = Math.ceil(count / parseInt(limit, 10));
 
         res.status(200).json({
             success: true,
             data: {
-                tasks,
+                tasks: rows.map((t) => {
+                    const json = t.toJSON();
+                    if (json.company) json.companyId = json.company;
+                    return json;
+                }),
                 pagination: {
-                    currentPage: parseInt(page),
+                    currentPage: parseInt(page, 10),
                     totalPages,
-                    totalTasks: total,
-                    hasNextPage,
-                    hasPrevPage,
-                    limit: parseInt(limit)
+                    totalTasks: count,
+                    hasNextPage: parseInt(page, 10) < totalPages,
+                    hasPrevPage: parseInt(page, 10) > 1,
+                    limit: parseInt(limit, 10)
                 }
             }
         });
@@ -160,52 +167,40 @@ exports.getTasks = async (req, res, next) => {
 };
 
 // @desc    Get single task by ID
-// @route   GET /api/tasks/:id
-// @access  Public
 exports.getTask = async (req, res, next) => {
     try {
-        const task = await Task.findById(req.params.id)
-            .populate('companyId', 'companyName logo industry location isVerified description website socialLinks')
-            .lean();
+        const task = await Task.findByPk(req.params.id, {
+            include: taskIncludes([
+                'id', 'companyName', 'logo', 'industry', 'description', 'website',
+                'locationCity', 'locationState', 'locationCountry', 'verificationIsVerified',
+                'socialLinkedin', 'socialTwitter', 'socialFacebook', 'socialInstagram'
+            ])
+        });
 
-        if (!task) {
-            return next(new ErrorResponse('Task not found', 404));
-        }
-
-        // Check if task is accessible
+        if (!task) return next(new ErrorResponse('Task not found', 404));
         if (!task.isPublic || task.status !== 'active') {
             return next(new ErrorResponse('Task not available', 403));
         }
 
-        res.status(200).json({
-            success: true,
-            data: task
-        });
+        const json = task.toJSON();
+        if (json.company) json.companyId = json.company;
+        res.status(200).json({ success: true, data: json });
     } catch (error) {
         next(error);
     }
 };
 
-// @desc    Track unique view for a task
-// @route   POST /api/tasks/:id/view
-// @access  Private (Authenticated users only)
+// @desc    Track unique view
 exports.trackTaskView = async (req, res, next) => {
     try {
-        const task = await Task.findById(req.params.id);
+        const task = await Task.findByPk(req.params.id);
+        if (!task) return next(new ErrorResponse('Task not found', 404));
 
-        if (!task) {
-            return next(new ErrorResponse('Task not found', 404));
-        }
-
-        // Track unique view
         const isNewView = await task.trackUniqueView(req.user.id);
 
         res.status(200).json({
             success: true,
-            data: {
-                views: task.views,
-                isNewView
-            }
+            data: { views: task.views, isNewView }
         });
     } catch (error) {
         next(error);
@@ -213,115 +208,155 @@ exports.trackTaskView = async (req, res, next) => {
 };
 
 // @desc    Create new task
-// @route   POST /api/tasks
-// @access  Private (Company only)
 exports.createTask = async (req, res, next) => {
+    const t = await sequelize.transaction();
     try {
-        // Get company from authenticated user
-        const company = await Company.findOne({
-            userId: req.user.id
-        });
+        const company = await Company.findOne({ where: { userId: req.user.id } });
         if (!company) {
+            await t.rollback();
             return next(new ErrorResponse('Company profile not found', 404));
         }
 
-        // Add company ID to task data
-        req.body.companyId = company._id;
+        const data = flattenTaskBody(req.body);
+        data.companyId = company.id;
 
-        // Create task
-        const task = await Task.create(req.body);
+        const task = await Task.create(data, { transaction: t });
 
-        // Populate company data
-        await task.populate('companyId', 'companyName logo industry location isVerified');
+        const skills = req.body.skillsRequired;
+        if (Array.isArray(skills) && skills.length > 0) {
+            await TaskSkill.bulkCreate(
+                skills.map((s) => ({
+                    taskId: task.id,
+                    name: s.name,
+                    level: s.level || 'intermediate',
+                    required: s.required !== undefined ? !!s.required : true
+                })),
+                { transaction: t }
+            );
+        }
+
+        if (Array.isArray(req.body.attachments) && req.body.attachments.length > 0) {
+            await TaskAttachment.bulkCreate(
+                req.body.attachments.map((a) => ({
+                    taskId: task.id,
+                    name: a.name,
+                    url: a.url,
+                    type: a.type
+                })),
+                { transaction: t }
+            );
+        }
+
+        await t.commit();
+
+        const fresh = await Task.findByPk(task.id, { include: taskIncludes() });
+        const json = fresh.toJSON();
+        if (json.company) json.companyId = json.company;
 
         res.status(201).json({
             success: true,
             message: 'Task created successfully',
-            data: task
+            data: json
         });
     } catch (error) {
+        try { await t.rollback(); } catch (e) { /* already rolled back */ }
         next(error);
     }
 };
 
 // @desc    Update task
-// @route   PUT /api/tasks/:id
-// @access  Private (Company owner only)
 exports.updateTask = async (req, res, next) => {
+    const t = await sequelize.transaction();
     try {
-        let task = await Task.findById(req.params.id);
-
+        const task = await Task.findByPk(req.params.id);
         if (!task) {
+            await t.rollback();
             return next(new ErrorResponse('Task not found', 404));
         }
 
-        // Get company from authenticated user
-        const company = await Company.findOne({
-            userId: req.user.id
-        });
+        const company = await Company.findOne({ where: { userId: req.user.id } });
         if (!company) {
+            await t.rollback();
             return next(new ErrorResponse('Company profile not found', 404));
         }
 
-        // Check if user owns this task
-        if (task.companyId.toString() !== company._id.toString()) {
+        if (String(task.companyId) !== String(company.id)) {
+            await t.rollback();
             return next(new ErrorResponse('Not authorized to update this task', 403));
         }
 
-        // Update task
-        task = await Task.findByIdAndUpdate(req.params.id, req.body, {
-            new: true,
-            runValidators: true
-        }).populate('companyId', 'companyName logo industry location isVerified');
+        const updates = flattenTaskBody(req.body);
+        await task.update(updates, { transaction: t });
+
+        if (Array.isArray(req.body.skillsRequired)) {
+            await TaskSkill.destroy({ where: { taskId: task.id }, transaction: t });
+            if (req.body.skillsRequired.length > 0) {
+                await TaskSkill.bulkCreate(
+                    req.body.skillsRequired.map((s) => ({
+                        taskId: task.id,
+                        name: s.name,
+                        level: s.level || 'intermediate',
+                        required: s.required !== undefined ? !!s.required : true
+                    })),
+                    { transaction: t }
+                );
+            }
+        }
+
+        if (Array.isArray(req.body.attachments)) {
+            await TaskAttachment.destroy({ where: { taskId: task.id }, transaction: t });
+            if (req.body.attachments.length > 0) {
+                await TaskAttachment.bulkCreate(
+                    req.body.attachments.map((a) => ({
+                        taskId: task.id,
+                        name: a.name,
+                        url: a.url,
+                        type: a.type
+                    })),
+                    { transaction: t }
+                );
+            }
+        }
+
+        await t.commit();
+
+        const fresh = await Task.findByPk(task.id, { include: taskIncludes() });
+        const json = fresh.toJSON();
+        if (json.company) json.companyId = json.company;
 
         res.status(200).json({
             success: true,
             message: 'Task updated successfully',
-            data: task
+            data: json
         });
     } catch (error) {
+        try { await t.rollback(); } catch (e) { /* already rolled back */ }
         next(error);
     }
 };
 
 // @desc    Delete task
-// @route   DELETE /api/tasks/:id
-// @access  Private (Company owner only)
 exports.deleteTask = async (req, res, next) => {
     try {
-        const task = await Task.findById(req.params.id);
+        const task = await Task.findByPk(req.params.id);
+        if (!task) return next(new ErrorResponse('Task not found', 404));
 
-        if (!task) {
-            return next(new ErrorResponse('Task not found', 404));
-        }
+        const company = await Company.findOne({ where: { userId: req.user.id } });
+        if (!company) return next(new ErrorResponse('Company profile not found', 404));
 
-        // Get company from authenticated user
-        const company = await Company.findOne({
-            userId: req.user.id
-        });
-        if (!company) {
-            return next(new ErrorResponse('Company profile not found', 404));
-        }
-
-        // Check if user owns this task
-        if (task.companyId.toString() !== company._id.toString()) {
+        if (String(task.companyId) !== String(company.id)) {
             return next(new ErrorResponse('Not authorized to delete this task', 403));
         }
 
-        await Task.findByIdAndDelete(req.params.id);
+        await task.destroy();
 
-        res.status(200).json({
-            success: true,
-            message: 'Task deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Task deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Get company's tasks
-// @route   GET /api/tasks/company/my-tasks
-// @access  Private (Company only)
 exports.getMyTasks = async (req, res, next) => {
     try {
         const {
@@ -332,53 +367,37 @@ exports.getMyTasks = async (req, res, next) => {
             sortOrder = 'desc'
         } = req.query;
 
-        // Get company from authenticated user
-        const company = await Company.findOne({
-            userId: req.user.id
+        const company = await Company.findOne({ where: { userId: req.user.id } });
+        if (!company) return next(new ErrorResponse('Company profile not found', 404));
+
+        const where = { companyId: company.id };
+        if (status !== 'all') where.status = status;
+
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+        const { rows, count } = await Task.findAndCountAll({
+            where,
+            include: [{ model: TaskSkill, as: 'skillsRequired' }],
+            order: [[sortBy, sortOrder === 'desc' ? 'DESC' : 'ASC']],
+            offset,
+            limit: parseInt(limit, 10),
+            distinct: true,
+            subQuery: false
         });
-        if (!company) {
-            return next(new ErrorResponse('Company profile not found', 404));
-        }
 
-        // Build filter
-        const filter = {
-            companyId: company._id
-        };
-
-        if (status !== 'all') {
-            filter.status = status;
-        }
-
-        // Sort options
-        const sortOptions = {};
-        sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-        // Execute query with pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const tasks = await Task.find(filter)
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(parseInt(limit))
-            .lean();
-
-        // Get total count
-        const total = await Task.countDocuments(filter);
-
-        // Calculate pagination info
-        const totalPages = Math.ceil(total / parseInt(limit));
+        const totalPages = Math.ceil(count / parseInt(limit, 10));
 
         res.status(200).json({
             success: true,
             data: {
-                tasks,
+                tasks: rows.map((t) => t.toJSON()),
                 pagination: {
-                    currentPage: parseInt(page),
+                    currentPage: parseInt(page, 10),
                     totalPages,
-                    totalTasks: total,
-                    hasNextPage: parseInt(page) < totalPages,
-                    hasPrevPage: parseInt(page) > 1,
-                    limit: parseInt(limit)
+                    totalTasks: count,
+                    hasNextPage: parseInt(page, 10) < totalPages,
+                    hasPrevPage: parseInt(page, 10) > 1,
+                    limit: parseInt(limit, 10)
                 }
             }
         });
@@ -388,89 +407,47 @@ exports.getMyTasks = async (req, res, next) => {
 };
 
 // @desc    Get task statistics
-// @route   GET /api/tasks/stats
-// @access  Public
 exports.getTaskStats = async (req, res, next) => {
     try {
-        const stats = await Promise.all([
-            // Total active tasks
-            Task.countDocuments({
-                status: 'active',
-                isPublic: true
+        const baseWhere = { status: 'active', isPublic: true };
+
+        const [totalActiveTasks, tasksByCategoryRaw, tasksByWorkTypeRaw, avgBudgetRaw] = await Promise.all([
+            Task.count({ where: baseWhere }),
+
+            Task.findAll({
+                attributes: ['category', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+                where: baseWhere,
+                group: ['category'],
+                order: [[sequelize.literal('count'), 'DESC']],
+                raw: true
             }),
 
-            // Tasks by category
-            Task.aggregate([{
-                $match: {
-                    status: 'active',
-                    isPublic: true
-                }
-            },
-            {
-                $group: {
-                    _id: '$category',
-                    count: {
-                        $sum: 1
-                    }
-                }
-            },
-            {
-                $sort: {
-                    count: -1
-                }
-            }
-            ]),
+            Task.findAll({
+                attributes: ['workType', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+                where: baseWhere,
+                group: ['workType'],
+                raw: true
+            }),
 
-            // Tasks by work type
-            Task.aggregate([{
-                $match: {
-                    status: 'active',
-                    isPublic: true
-                }
-            },
-            {
-                $group: {
-                    _id: '$workType',
-                    count: {
-                        $sum: 1
-                    }
-                }
-            }
-            ]),
-
-            // Average budget
-            Task.aggregate([{
-                $match: {
-                    status: 'active',
-                    isPublic: true,
-                    'budget.type': {
-                        $ne: 'unpaid'
-                    }
-                }
-            },
-            {
-                $group: {
-                    _id: null,
-                    avgMin: {
-                        $avg: '$budget.amount.min'
-                    },
-                    avgMax: {
-                        $avg: '$budget.amount.max'
-                    }
-                }
-            }
-            ])
+            Task.findOne({
+                attributes: [
+                    [sequelize.fn('AVG', sequelize.col('budgetAmountMin')), 'avgMin'],
+                    [sequelize.fn('AVG', sequelize.col('budgetAmountMax')), 'avgMax']
+                ],
+                where: { ...baseWhere, budgetType: { [Op.ne]: 'unpaid' } },
+                raw: true
+            })
         ]);
 
         res.status(200).json({
             success: true,
             data: {
-                totalActiveTasks: stats[0],
-                tasksByCategory: stats[1],
-                tasksByWorkType: stats[2],
-                averageBudget: stats[3][0] || {
-                    avgMin: 0,
-                    avgMax: 0
+                totalActiveTasks,
+                tasksByCategory: tasksByCategoryRaw.map((r) => ({ _id: r.category, count: Number(r.count) })),
+                tasksByWorkType: tasksByWorkTypeRaw.map((r) => ({ _id: r.workType, count: Number(r.count) })),
+                averageBudget: {
+                    avgMin: avgBudgetRaw && avgBudgetRaw.avgMin ? Number(avgBudgetRaw.avgMin) : 0,
+                    avgMax: avgBudgetRaw && avgBudgetRaw.avgMax ? Number(avgBudgetRaw.avgMax) : 0
                 }
             }
         });
@@ -479,9 +456,7 @@ exports.getTaskStats = async (req, res, next) => {
     }
 };
 
-// @desc    Search tasks with advanced filters
-// @route   POST /api/tasks/search
-// @access  Public
+// @desc    Search tasks
 exports.searchTasks = async (req, res, next) => {
     try {
         const {
@@ -492,62 +467,49 @@ exports.searchTasks = async (req, res, next) => {
             sortBy = 'relevance'
         } = req.body;
 
-        let searchFilter = {
+        const where = {
             status: 'active',
             isPublic: true,
-            applicationDeadline: {
-                $gt: new Date()
-            }
+            applicationDeadline: { [Op.gt]: new Date() }
         };
 
-        // Text search
         if (query) {
-            searchFilter.$text = {
-                $search: query
-            };
+            where[Op.or] = [
+                { title: { [Op.like]: `%${query}%` } },
+                { description: { [Op.like]: `%${query}%` } },
+                { tags: { [Op.like]: `%${query}%` } }
+            ];
         }
 
-        // Apply additional filters
-        Object.assign(searchFilter, filters);
+        // shallow merge of additional filters that already use SQL column names
+        Object.assign(where, filters);
 
-        let sortOptions = {};
+        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        const order = sortBy === 'relevance' ? [['createdAt', 'DESC']] : [[sortBy, 'DESC']];
 
-        if (sortBy === 'relevance' && query) {
-            sortOptions = {
-                score: {
-                    $meta: 'textScore'
-                }
-            };
-        } else {
-            sortOptions[sortBy] = -1;
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const tasks = await Task.find(searchFilter,
-            query ? {
-                score: {
-                    $meta: 'textScore'
-                }
-            } : {}
-        )
-            .populate('companyId', 'companyName logo industry location isVerified')
-            .sort(sortOptions)
-            .skip(skip)
-            .limit(parseInt(limit))
-            .lean();
-
-        const total = await Task.countDocuments(searchFilter);
+        const { rows, count } = await Task.findAndCountAll({
+            where,
+            include: taskIncludes(),
+            order,
+            offset,
+            limit: parseInt(limit, 10),
+            distinct: true,
+            subQuery: false
+        });
 
         res.status(200).json({
             success: true,
             data: {
-                tasks,
+                tasks: rows.map((t) => {
+                    const json = t.toJSON();
+                    if (json.company) json.companyId = json.company;
+                    return json;
+                }),
                 pagination: {
-                    currentPage: parseInt(page),
-                    totalPages: Math.ceil(total / parseInt(limit)),
-                    totalTasks: total,
-                    limit: parseInt(limit)
+                    currentPage: parseInt(page, 10),
+                    totalPages: Math.ceil(count / parseInt(limit, 10)),
+                    totalTasks: count,
+                    limit: parseInt(limit, 10)
                 }
             }
         });
@@ -556,35 +518,30 @@ exports.searchTasks = async (req, res, next) => {
     }
 };
 
-// @desc    Get recommended tasks for student
-// @route   GET /api/tasks/recommendations
-// @access  Private (Student only)
+// @desc    Get recommended tasks
 exports.getRecommendedTasks = async (req, res, next) => {
     try {
-        const {
-            limit = 10
-        } = req.query;
+        const { limit = 10 } = req.query;
 
-        // This would typically use AI/ML for recommendations
-        // For now, we'll use a simple skill-based matching
-
-        const tasks = await Task.find({
-            status: 'active',
-            isPublic: true,
-            applicationDeadline: {
-                $gt: new Date()
-            }
-        })
-            .populate('companyId', 'companyName logo industry location isVerified')
-            .sort({
-                createdAt: -1
-            })
-            .limit(parseInt(limit))
-            .lean();
+        const tasks = await Task.findAll({
+            where: {
+                status: 'active',
+                isPublic: true,
+                applicationDeadline: { [Op.gt]: new Date() }
+            },
+            include: taskIncludes(),
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit, 10),
+            subQuery: false
+        });
 
         res.status(200).json({
             success: true,
-            data: tasks
+            data: tasks.map((t) => {
+                const json = t.toJSON();
+                if (json.company) json.companyId = json.company;
+                return json;
+            })
         });
     } catch (error) {
         next(error);

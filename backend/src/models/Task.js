@@ -1,429 +1,306 @@
-const mongoose = require('mongoose');
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const taskSchema = new mongoose.Schema({
-    // Basic Information
-    title: {
-        type: String,
-        required: [true, 'Task title is required'],
-        trim: true,
-        maxlength: [100, 'Title cannot exceed 100 characters']
-    },
-    description: {
-        type: String,
-        required: [true, 'Task description is required'],
-        maxlength: [5000, 'Description cannot exceed 5000 characters']
-    },
-    category: {
-        type: String,
-        required: [true, 'Category is required'],
-        enum: [
-            'Web Development',
-            'Mobile Development',
-            'UI/UX Design',
-            'Data Science',
-            'Machine Learning',
-            'Digital Marketing',
-            'Content Writing',
-            'Graphic Design',
-            'Video Editing',
-            'Business Analysis',
-            'Quality Assurance',
-            'DevOps',
-            'Cybersecurity',
-            'Other'
-        ]
-    },
-    subcategory: {
-        type: String,
-        trim: true
-    },
+const CATEGORIES = [
+    'Web Development',
+    'Mobile Development',
+    'UI/UX Design',
+    'Data Science',
+    'Machine Learning',
+    'Digital Marketing',
+    'Content Writing',
+    'Graphic Design',
+    'Video Editing',
+    'Business Analysis',
+    'Quality Assurance',
+    'DevOps',
+    'Cybersecurity',
+    'Other'
+];
 
-    // Company Information
-    companyId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-        required: true
-    },
+class Task extends Model {
+    getTimeRemaining() {
+        if (!this.applicationDeadline) return null;
+        const now = new Date();
+        const deadline = new Date(this.applicationDeadline);
+        const diff = deadline - now;
+        if (diff <= 0) return { expired: true };
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        return { days, hours, expired: false };
+    }
 
-    // Task Details
-    type: {
-        type: String,
-        required: true,
-        enum: ['internship', 'project', 'freelance'],
-        default: 'internship'
-    },
-    duration: {
-        value: {
-            type: Number,
-            required: true
-        },
-        unit: {
-            type: String,
-            required: true,
-            enum: ['days', 'weeks', 'months']
+    getBudgetDisplay() {
+        if (!this.budgetType || this.budgetType === 'unpaid') return 'Unpaid';
+        const currency = this.budgetCurrency || 'USD';
+        const min = this.budgetAmountMin;
+        const max = this.budgetAmountMax;
+        if (this.budgetType === 'fixed') {
+            if (min === max) return `${currency} ${min}`;
+            return `${currency} ${min} - ${max}`;
         }
-    },
-    workType: {
-        type: String,
-        required: true,
-        enum: ['remote', 'onsite', 'hybrid']
-    },
-    experienceLevel: {
-        type: String,
-        required: true,
-        enum: ['entry', 'intermediate', 'expert']
-    },
-
-    // Skills and Requirements
-    skillsRequired: [{
-        name: {
-            type: String,
-            required: true
-        },
-        level: {
-            type: String,
-            enum: ['beginner', 'intermediate', 'advanced'],
-            default: 'intermediate'
-        },
-        required: {
-            type: Boolean,
-            default: true
+        if (this.budgetType === 'hourly') {
+            if (min === max) return `${currency} ${min}/hr`;
+            return `${currency} ${min} - ${max}/hr`;
         }
-    }],
-    requirements: [String],
+        return 'Negotiable';
+    }
 
-    // Compensation
-    budget: {
+    canApply() {
+        const now = new Date();
+        return this.status === 'active'
+            && new Date(this.applicationDeadline) > now
+            && this.applicationCount < this.maxApplications;
+    }
+
+    getMatchingScore(studentSkills) {
+        if (!studentSkills || !Array.isArray(this.skillsRequired) || this.skillsRequired.length === 0) {
+            return 0;
+        }
+        const required = this.skillsRequired.map((s) => (s.name || '').toLowerCase());
+        const have = studentSkills.map((s) => (s.name || '').toLowerCase());
+        const matches = required.filter((s) => have.includes(s));
+        return Math.round((matches.length / required.length) * 100);
+    }
+
+    async trackUniqueView(userId) {
+        const TaskUniqueViewer = sequelize.models.TaskUniqueViewer;
+        const [, created] = await TaskUniqueViewer.findOrCreate({
+            where: { taskId: this.id, userId },
+            defaults: { viewedAt: new Date() }
+        });
+
+        if (created) {
+            const count = await TaskUniqueViewer.count({ where: { taskId: this.id } });
+            this.views = count;
+            await this.save();
+            return true;
+        }
+        return false;
+    }
+
+    toJSON() {
+        const values = { ...this.get() };
+        values._id = values.id;
+
+        values.duration = {
+            value: values.durationValue,
+            unit: values.durationUnit
+        };
+
+        values.budget = {
+            type: values.budgetType,
+            amount: {
+                min: values.budgetAmountMin != null ? Number(values.budgetAmountMin) : undefined,
+                max: values.budgetAmountMax != null ? Number(values.budgetAmountMax) : undefined
+            },
+            currency: values.budgetCurrency || 'USD'
+        };
+
+        values.location = {
+            city: values.locationCity || undefined,
+            state: values.locationState || undefined,
+            country: values.locationCountry || undefined,
+            timezone: values.locationTimezone || undefined
+        };
+
+        if (Array.isArray(values.skillsRequired)) {
+            values.skillsRequired = values.skillsRequired.map((s) => ({
+                ...(s.toJSON ? s.toJSON() : s),
+                _id: (s.toJSON ? s.toJSON() : s).id
+            }));
+        }
+
+        if (Array.isArray(values.attachments)) {
+            values.attachments = values.attachments.map((a) => ({
+                ...(a.toJSON ? a.toJSON() : a),
+                _id: (a.toJSON ? a.toJSON() : a).id
+            }));
+        }
+
+        if (Array.isArray(values.uniqueViewers)) {
+            values.uniqueViewers = values.uniqueViewers.map((v) => ({
+                ...(v.toJSON ? v.toJSON() : v),
+                _id: (v.toJSON ? v.toJSON() : v).id
+            }));
+        }
+
+        values.timeRemaining = this.getTimeRemaining();
+        values.budgetDisplay = this.getBudgetDisplay();
+
+        if (values.company && typeof values.company === 'object') {
+            values.company = values.company.toJSON ? values.company.toJSON() : values.company;
+        }
+
+        [
+            'durationValue', 'durationUnit',
+            'budgetType', 'budgetAmountMin', 'budgetAmountMax', 'budgetCurrency',
+            'locationCity', 'locationState', 'locationCountry', 'locationTimezone'
+        ].forEach((k) => delete values[k]);
+
+        return values;
+    }
+}
+
+Task.init(
+    {
+        id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
+        title: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            validate: {
+                notEmpty: { msg: 'Task title is required' },
+                len: { args: [1, 100], msg: 'Title cannot exceed 100 characters' }
+            }
+        },
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: false,
+            validate: {
+                notEmpty: { msg: 'Task description is required' },
+                len: { args: [1, 5000], msg: 'Description cannot exceed 5000 characters' }
+            }
+        },
+        category: {
+            type: DataTypes.ENUM(...CATEGORIES),
+            allowNull: false
+        },
+        subcategory: { type: DataTypes.STRING(150), allowNull: true },
+        companyId: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            allowNull: false,
+            references: { model: 'companies', key: 'id' },
+            onDelete: 'CASCADE'
+        },
         type: {
-            type: String,
-            enum: ['fixed', 'hourly', 'unpaid'],
-            required: true
+            type: DataTypes.ENUM('internship', 'project', 'freelance'),
+            allowNull: false,
+            defaultValue: 'internship'
         },
-        amount: {
-            min: Number,
-            max: Number
+
+        durationValue: { type: DataTypes.INTEGER, allowNull: false },
+        durationUnit: {
+            type: DataTypes.ENUM('days', 'weeks', 'months'),
+            allowNull: false
         },
-        currency: {
-            type: String,
-            default: 'USD'
-        }
-    },
 
-    // Timeline
-    applicationDeadline: {
-        type: Date,
-        required: true
-    },
-    startDate: {
-        type: Date,
-        required: true
-    },
-    endDate: Date,
-
-    // Status and Visibility
-    status: {
-        type: String,
-        enum: ['draft', 'active', 'paused', 'closed', 'completed'],
-        default: 'draft'
-    },
-    isPublic: {
-        type: Boolean,
-        default: true
-    },
-    isFeatured: {
-        type: Boolean,
-        default: false
-    },
-
-    // Application Settings
-    maxApplications: {
-        type: Number,
-        default: 50
-    },
-    applicationCount: {
-        type: Number,
-        default: 0
-    },
-
-    // Additional Information
-    deliverables: [String],
-    benefits: [String],
-
-    // Location (for onsite/hybrid)
-    location: {
-        city: String,
-        state: String,
-        country: String,
-        timezone: String
-    },
-
-    // Attachments
-    attachments: [{
-        name: String,
-        url: String,
-        type: String
-    }],
-
-    // SEO and Search
-    tags: [String],
-    searchKeywords: [String],
-
-    // Analytics
-    views: {
-        type: Number,
-        default: 0
-    },
-    uniqueViewers: [{
-        userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+        workType: {
+            type: DataTypes.ENUM('remote', 'onsite', 'hybrid'),
+            allowNull: false
         },
-        viewedAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    saves: {
-        type: Number,
-        default: 0
-    },
+        experienceLevel: {
+            type: DataTypes.ENUM('entry', 'intermediate', 'expert'),
+            allowNull: false
+        },
 
-    // Timestamps
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    },
-    publishedAt: Date,
-    closedAt: Date
-}, {
-    timestamps: true,
-    toJSON: {
-        virtuals: true
-    },
-    toObject: {
-        virtuals: true
-    }
-});
+        requirements: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
 
-// Indexes for better query performance
-taskSchema.index({
-    companyId: 1,
-    status: 1
-});
-taskSchema.index({
-    category: 1,
-    status: 1
-});
-taskSchema.index({
-    'skillsRequired.name': 1
-});
-taskSchema.index({
-    workType: 1,
-    experienceLevel: 1
-});
-taskSchema.index({
-    applicationDeadline: 1
-});
-taskSchema.index({
-    createdAt: -1
-});
-taskSchema.index({
-    views: -1
-});
+        budgetType: {
+            type: DataTypes.ENUM('fixed', 'hourly', 'unpaid'),
+            allowNull: false
+        },
+        budgetAmountMin: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+        budgetAmountMax: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+        budgetCurrency: { type: DataTypes.STRING(10), defaultValue: 'USD' },
 
-// Text search index
-taskSchema.index({
-    title: 'text',
-    description: 'text',
-    'skillsRequired.name': 'text',
-    tags: 'text'
-});
+        applicationDeadline: { type: DataTypes.DATE, allowNull: false },
+        startDate: { type: DataTypes.DATE, allowNull: false },
+        endDate: { type: DataTypes.DATE, allowNull: true },
 
-// Virtual for company details
-taskSchema.virtual('company', {
-    ref: 'Company',
-    localField: 'companyId',
-    foreignField: '_id',
-    justOne: true
-});
-
-// Virtual for applications
-taskSchema.virtual('applications', {
-    ref: 'Application',
-    localField: '_id',
-    foreignField: 'taskId'
-});
-
-// Virtual for time remaining
-taskSchema.virtual('timeRemaining').get(function () {
-    if (!this.applicationDeadline) return null;
-
-    const now = new Date();
-    const deadline = new Date(this.applicationDeadline);
-    const diff = deadline - now;
-
-    if (diff <= 0) return {
-        expired: true
-    };
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    return {
-        days,
-        hours,
-        expired: false
-    };
-});
-
-// Virtual for budget display
-taskSchema.virtual('budgetDisplay').get(function () {
-    if (!this.budget || this.budget.type === 'unpaid') {
-        return 'Unpaid';
-    }
-
-    const {
-        type,
-        amount,
-        currency
-    } = this.budget;
-
-    if (type === 'fixed') {
-        if (amount.min === amount.max) {
-            return `${currency} ${amount.min}`;
-        }
-        return `${currency} ${amount.min} - ${amount.max}`;
-    }
-
-    if (type === 'hourly') {
-        if (amount.min === amount.max) {
-            return `${currency} ${amount.min}/hr`;
-        }
-        return `${currency} ${amount.min} - ${amount.max}/hr`;
-    }
-
-    return 'Negotiable';
-});
-
-// Pre-save middleware
-taskSchema.pre('save', function (next) {
-    this.updatedAt = Date.now();
-
-    // Set publishedAt when status changes to active
-    if (this.isModified('status') && this.status === 'active' && !this.publishedAt) {
-        this.publishedAt = Date.now();
-    }
-
-    // Set closedAt when status changes to closed/completed
-    if (this.isModified('status') && ['closed', 'completed'].includes(this.status) && !this.closedAt) {
-        this.closedAt = Date.now();
-    }
-
-    // Generate search keywords from title and description
-    if (this.isModified('title') || this.isModified('description')) {
-        const keywords = [];
-
-        // Extract keywords from title
-        const titleWords = this.title.toLowerCase().split(/\s+/);
-        keywords.push(...titleWords);
-
-        // Extract keywords from description (first 100 words)
-        const descWords = this.description.toLowerCase()
-            .replace(/[^\w\s]/g, ' ')
-            .split(/\s+/)
-            .slice(0, 100);
-        keywords.push(...descWords);
-
-        // Remove duplicates and short words
-        this.searchKeywords = [...new Set(keywords)]
-            .filter(word => word.length > 2);
-    }
-
-    next();
-});
-
-// Static methods
-taskSchema.statics.getActiveTasksCount = function (companyId) {
-    return this.countDocuments({
-        companyId,
         status: {
-            $in: ['active', 'paused']
+            type: DataTypes.ENUM('draft', 'active', 'paused', 'closed', 'completed'),
+            defaultValue: 'draft'
+        },
+        isPublic: { type: DataTypes.BOOLEAN, defaultValue: true },
+        isFeatured: { type: DataTypes.BOOLEAN, defaultValue: false },
+
+        maxApplications: { type: DataTypes.INTEGER, defaultValue: 50 },
+        applicationCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+
+        deliverables: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+        benefits: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+
+        locationCity: { type: DataTypes.STRING(100), allowNull: true },
+        locationState: { type: DataTypes.STRING(100), allowNull: true },
+        locationCountry: { type: DataTypes.STRING(100), allowNull: true },
+        locationTimezone: { type: DataTypes.STRING(50), allowNull: true },
+
+        tags: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+        searchKeywords: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+
+        views: { type: DataTypes.INTEGER, defaultValue: 0 },
+        saves: { type: DataTypes.INTEGER, defaultValue: 0 },
+
+        publishedAt: { type: DataTypes.DATE, allowNull: true },
+        closedAt: { type: DataTypes.DATE, allowNull: true }
+    },
+    {
+        sequelize,
+        modelName: 'Task',
+        tableName: 'tasks',
+        timestamps: true,
+        indexes: [
+            { fields: ['companyId', 'status'] },
+            { fields: ['category', 'status'] },
+            { fields: ['workType', 'experienceLevel'] },
+            { fields: ['applicationDeadline'] },
+            { fields: ['createdAt'] },
+            { fields: ['views'] },
+            { type: 'FULLTEXT', fields: ['title', 'description'] }
+        ],
+        hooks: {
+            beforeSave: (task) => {
+                if (task.changed('status')) {
+                    if (task.status === 'active' && !task.publishedAt) {
+                        task.publishedAt = new Date();
+                    }
+                    if (['closed', 'completed'].includes(task.status) && !task.closedAt) {
+                        task.closedAt = new Date();
+                    }
+                }
+
+                if (task.changed('title') || task.changed('description')) {
+                    const keywords = [];
+                    if (task.title) {
+                        keywords.push(...task.title.toLowerCase().split(/\s+/));
+                    }
+                    if (task.description) {
+                        const descWords = task.description.toLowerCase()
+                            .replace(/[^\w\s]/g, ' ')
+                            .split(/\s+/)
+                            .slice(0, 100);
+                        keywords.push(...descWords);
+                    }
+                    task.searchKeywords = [...new Set(keywords)].filter((w) => w.length > 2);
+                }
+            }
+        }
+    }
+);
+
+Task.CATEGORIES = CATEGORIES;
+
+Task.getActiveTasksCount = function (companyId) {
+    return Task.count({
+        where: {
+            companyId,
+            status: ['active', 'paused']
         }
     });
 };
 
-taskSchema.statics.getPopularCategories = function () {
-    return this.aggregate([{
-        $match: {
-            status: 'active'
-        }
-    },
-    {
-        $group: {
-            _id: '$category',
-            count: {
-                $sum: 1
-            }
-        }
-    },
-    {
-        $sort: {
-            count: -1
-        }
-    },
-    {
-        $limit: 10
-    }
-    ]);
+Task.getPopularCategories = async function () {
+    return Task.findAll({
+        attributes: [
+            'category',
+            [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        where: { status: 'active' },
+        group: ['category'],
+        order: [[sequelize.literal('count'), 'DESC']],
+        limit: 10,
+        raw: true
+    });
 };
 
-// Instance methods
-taskSchema.methods.incrementViews = function () {
-    this.views += 1;
-    return this.save();
-};
-
-taskSchema.methods.trackUniqueView = async function (userId) {
-    // Check if user has already viewed this task
-    const hasViewed = this.uniqueViewers.some(
-        viewer => viewer.userId && viewer.userId.toString() === userId.toString()
-    );
-
-    if (!hasViewed) {
-        this.uniqueViewers.push({
-            userId,
-            viewedAt: new Date()
-        });
-        this.views = this.uniqueViewers.length;
-        await this.save();
-        return true; // New view
-    }
-
-    return false; // Already viewed
-};
-
-taskSchema.methods.canApply = function () {
-    const now = new Date();
-    return this.status === 'active' &&
-        this.applicationDeadline > now &&
-        this.applicationCount < this.maxApplications;
-};
-
-taskSchema.methods.getMatchingScore = function (studentSkills) {
-    if (!studentSkills || !this.skillsRequired) return 0;
-
-    const requiredSkills = this.skillsRequired.map(s => s.name.toLowerCase());
-    const studentSkillNames = studentSkills.map(s => s.name.toLowerCase());
-
-    const matches = requiredSkills.filter(skill =>
-        studentSkillNames.includes(skill)
-    );
-
-    return Math.round((matches.length / requiredSkills.length) * 100);
-};
-
-module.exports = mongoose.model('Task', taskSchema);
+module.exports = Task;

@@ -1,15 +1,14 @@
-const mongoose = require('mongoose');
-const Company = require('../models/Company');
 require('dotenv').config();
+const { sequelize, Company, User } = require('../models');
 
 async function checkCompanies() {
     try {
-        // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('✅ Connected to MongoDB\n');
+        await sequelize.authenticate();
+        console.log('✅ Connected to MySQL\n');
 
-        // Get all companies
-        const companies = await Company.find().populate('userId', 'email role');
+        const companies = await Company.findAll({
+            include: [{ model: User, as: 'user', attributes: ['email', 'role'] }]
+        });
 
         if (companies.length === 0) {
             console.log('❌ No companies found in the database.');
@@ -24,11 +23,11 @@ async function checkCompanies() {
 
         companies.forEach((company, index) => {
             console.log(`${index + 1}. ${company.companyName || 'Unnamed Company'}`);
-            console.log(`   ID: ${company._id}`);
-            console.log(`   Email: ${company.userId?.email || 'N/A'}`);
+            console.log(`   ID: ${company.id}`);
+            console.log(`   Email: ${company.user ? company.user.email : 'N/A'}`);
             console.log(`   Industry: ${company.industry || 'N/A'}`);
             console.log(`   Size: ${company.companySize || 'N/A'}`);
-            console.log(`   Verified: ${company.verification?.isVerified ? '✓' : '✗'}`);
+            console.log(`   Verified: ${company.verificationIsVerified ? '✓' : '✗'}`);
             console.log(`   Profile Completion: ${company.profileCompletion}%`);
             console.log('');
         });
@@ -43,5 +42,4 @@ async function checkCompanies() {
     }
 }
 
-// Run the check
 checkCompanies();

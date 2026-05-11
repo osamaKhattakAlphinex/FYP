@@ -1,47 +1,62 @@
-const Student = require('../models/Student');
-const User = require('../models/User');
+const {
+    User,
+    Student,
+    StudentEducation,
+    StudentSkill,
+    StudentExperience,
+    StudentProject,
+    StudentCertificate,
+    recalcStudentCompletion
+} = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
 
+const studentIncludes = () => ([
+    { model: StudentEducation, as: 'education' },
+    { model: StudentSkill, as: 'skills' },
+    { model: StudentExperience, as: 'experience' },
+    { model: StudentProject, as: 'projects' },
+    { model: StudentCertificate, as: 'certificates' }
+]);
+
+const findStudentByUser = (userId) =>
+    Student.findOne({ where: { userId }, include: studentIncludes() });
+
+const reloadWithChildren = (student) =>
+    student.reload({ include: studentIncludes() });
+
 // @desc    Get student profile
-// @route   GET /api/students/profile
-// @access  Private (Student only)
 exports.getProfile = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await findStudentByUser(req.user.id);
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const user = await User.findById(req.user.id);
+        const user = await User.findByPk(req.user.id);
 
         res.status(200).json({
             success: true,
-            data: {
-                ...student.toObject(),
-                email: user.email
-            }
+            data: { ...student.toJSON(), email: user.email }
         });
     } catch (error) {
         next(error);
     }
 };
 
-// @desc    Get all public students (for testing/listing)
-// @route   GET /api/students/public
-// @access  Public
+// @desc    Get all public students
 exports.getPublicStudents = async (req, res, next) => {
     try {
-        const students = await Student.find({
-            isProfilePublic: true
-        }).select('_id firstName lastName profilePicture headline location skills createdAt');
+        const students = await Student.findAll({
+            where: { isProfilePublic: true },
+            attributes: [
+                'id', 'firstName', 'lastName', 'profilePicture', 'headline',
+                'locationCity', 'locationState', 'locationCountry', 'createdAt'
+            ],
+            include: [{ model: StudentSkill, as: 'skills' }]
+        });
 
         res.status(200).json({
             success: true,
             count: students.length,
-            data: students
+            data: students.map((s) => s.toJSON())
         });
     } catch (error) {
         next(error);
@@ -49,119 +64,87 @@ exports.getPublicStudents = async (req, res, next) => {
 };
 
 // @desc    Get public student profile by ID
-// @route   GET /api/students/public/:studentId
-// @access  Public
 exports.getPublicProfile = async (req, res, next) => {
     try {
-        const student = await Student.findById(req.params.studentId);
+        const student = await Student.findByPk(req.params.studentId, { include: studentIncludes() });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+        if (!student.isProfilePublic) return next(new ErrorResponse('This profile is private', 403));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        // Only return public profile if isProfilePublic is true
-        if (!student.isProfilePublic) {
-            return next(new ErrorResponse('This profile is private', 403));
-        }
-
-        // Return profile without sensitive information
+        const data = student.toJSON();
         const publicProfile = {
-            _id: student._id,
-            firstName: student.firstName,
-            lastName: student.lastName,
-            profilePicture: student.profilePicture,
-            headline: student.headline,
-            bio: student.bio,
-            location: student.location,
-            education: student.education,
-            skills: student.skills,
-            experience: student.experience,
-            projects: student.projects,
-            certificates: student.certificates,
-            socialLinks: student.socialLinks,
-            profileCompletion: student.profileCompletion,
-            isProfilePublic: student.isProfilePublic,
-            stats: student.stats,
-            createdAt: student.createdAt,
-            updatedAt: student.updatedAt
+            _id: data._id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            profilePicture: data.profilePicture,
+            headline: data.headline,
+            bio: data.bio,
+            location: data.location,
+            education: data.education,
+            skills: data.skills,
+            experience: data.experience,
+            projects: data.projects,
+            certificates: data.certificates,
+            socialLinks: data.socialLinks,
+            profileCompletion: data.profileCompletion,
+            isProfilePublic: data.isProfilePublic,
+            stats: data.stats,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt
         };
 
-        res.status(200).json({
-            success: true,
-            data: publicProfile
-        });
+        res.status(200).json({ success: true, data: publicProfile });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Update basic profile info
-// @route   PUT /api/students/profile/basic
-// @access  Private (Student only)
 exports.updateBasicInfo = async (req, res, next) => {
     try {
-        const {
-            firstName,
-            lastName,
-            headline,
-            phone,
-            dateOfBirth,
-            bio,
-            location
-        } = req.body;
+        const { firstName, lastName, headline, phone, dateOfBirth, bio, location } = req.body;
 
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await findStudentByUser(req.user.id);
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        // Update fields
         if (firstName) student.firstName = firstName;
         if (lastName) student.lastName = lastName;
         if (headline !== undefined) student.headline = headline;
         if (phone !== undefined) student.phone = phone;
         if (dateOfBirth !== undefined) student.dateOfBirth = dateOfBirth;
         if (bio !== undefined) student.bio = bio;
-        if (location) student.location = {
-            ...student.location,
-            ...location
-        };
+        if (location) {
+            if (location.city !== undefined) student.locationCity = location.city;
+            if (location.state !== undefined) student.locationState = location.state;
+            if (location.country !== undefined) student.locationCountry = location.country;
+        }
 
         await student.save();
+        await recalcStudentCompletion(student);
+        await reloadWithChildren(student);
 
         res.status(200).json({
             success: true,
             message: 'Profile updated successfully',
-            data: student
+            data: student.toJSON()
         });
     } catch (error) {
         next(error);
     }
 };
 
-// @desc    Add/Update education
-// @route   POST /api/students/profile/education
-// @access  Private (Student only)
+// @desc    Add education
 exports.addEducation = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.education.push(req.body);
-        await student.save();
+        const education = await StudentEducation.create({ ...req.body, studentId: student.id });
+        await recalcStudentCompletion(student);
 
         res.status(201).json({
             success: true,
             message: 'Education added successfully',
-            data: student.education[student.education.length - 1]
+            data: education.toJSON()
         });
     } catch (error) {
         next(error);
@@ -169,31 +152,22 @@ exports.addEducation = async (req, res, next) => {
 };
 
 // @desc    Update education
-// @route   PUT /api/students/profile/education/:id
-// @access  Private (Student only)
 exports.updateEducation = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const education = await StudentEducation.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!education) return next(new ErrorResponse('Education not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const education = student.education.id(req.params.id);
-
-        if (!education) {
-            return next(new ErrorResponse('Education not found', 404));
-        }
-
-        Object.assign(education, req.body);
-        await student.save();
+        await education.update(req.body);
 
         res.status(200).json({
             success: true,
             message: 'Education updated successfully',
-            data: education
+            data: education.toJSON()
         });
     } catch (error) {
         next(error);
@@ -201,50 +175,37 @@ exports.updateEducation = async (req, res, next) => {
 };
 
 // @desc    Delete education
-// @route   DELETE /api/students/profile/education/:id
-// @access  Private (Student only)
 exports.deleteEducation = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const deleted = await StudentEducation.destroy({
+            where: { id: req.params.id, studentId: student.id }
         });
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
+        if (!deleted) return next(new ErrorResponse('Education not found', 404));
+        await recalcStudentCompletion(student);
 
-        student.education.pull(req.params.id);
-        await student.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Education deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Education deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Add skill
-// @route   POST /api/students/profile/skills
-// @access  Private (Student only)
 exports.addSkill = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.skills.push(req.body);
-        await student.save();
+        const skill = await StudentSkill.create({ ...req.body, studentId: student.id });
+        await recalcStudentCompletion(student);
 
         res.status(201).json({
             success: true,
             message: 'Skill added successfully',
-            data: student.skills[student.skills.length - 1]
+            data: skill.toJSON()
         });
     } catch (error) {
         next(error);
@@ -252,31 +213,22 @@ exports.addSkill = async (req, res, next) => {
 };
 
 // @desc    Update skill
-// @route   PUT /api/students/profile/skills/:id
-// @access  Private (Student only)
 exports.updateSkill = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const skill = await StudentSkill.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!skill) return next(new ErrorResponse('Skill not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const skill = student.skills.id(req.params.id);
-
-        if (!skill) {
-            return next(new ErrorResponse('Skill not found', 404));
-        }
-
-        Object.assign(skill, req.body);
-        await student.save();
+        await skill.update(req.body);
 
         res.status(200).json({
             success: true,
             message: 'Skill updated successfully',
-            data: skill
+            data: skill.toJSON()
         });
     } catch (error) {
         next(error);
@@ -284,50 +236,36 @@ exports.updateSkill = async (req, res, next) => {
 };
 
 // @desc    Delete skill
-// @route   DELETE /api/students/profile/skills/:id
-// @access  Private (Student only)
 exports.deleteSkill = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const deleted = await StudentSkill.destroy({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!deleted) return next(new ErrorResponse('Skill not found', 404));
+        await recalcStudentCompletion(student);
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.skills.pull(req.params.id);
-        await student.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Skill deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Skill deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Add experience
-// @route   POST /api/students/profile/experience
-// @access  Private (Student only)
 exports.addExperience = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.experience.push(req.body);
-        await student.save();
+        const experience = await StudentExperience.create({ ...req.body, studentId: student.id });
+        await recalcStudentCompletion(student);
 
         res.status(201).json({
             success: true,
             message: 'Experience added successfully',
-            data: student.experience[student.experience.length - 1]
+            data: experience.toJSON()
         });
     } catch (error) {
         next(error);
@@ -335,31 +273,22 @@ exports.addExperience = async (req, res, next) => {
 };
 
 // @desc    Update experience
-// @route   PUT /api/students/profile/experience/:id
-// @access  Private (Student only)
 exports.updateExperience = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const experience = await StudentExperience.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!experience) return next(new ErrorResponse('Experience not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const experience = student.experience.id(req.params.id);
-
-        if (!experience) {
-            return next(new ErrorResponse('Experience not found', 404));
-        }
-
-        Object.assign(experience, req.body);
-        await student.save();
+        await experience.update(req.body);
 
         res.status(200).json({
             success: true,
             message: 'Experience updated successfully',
-            data: experience
+            data: experience.toJSON()
         });
     } catch (error) {
         next(error);
@@ -367,50 +296,36 @@ exports.updateExperience = async (req, res, next) => {
 };
 
 // @desc    Delete experience
-// @route   DELETE /api/students/profile/experience/:id
-// @access  Private (Student only)
 exports.deleteExperience = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const deleted = await StudentExperience.destroy({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!deleted) return next(new ErrorResponse('Experience not found', 404));
+        await recalcStudentCompletion(student);
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.experience.pull(req.params.id);
-        await student.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Experience deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Experience deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Add project
-// @route   POST /api/students/profile/projects
-// @access  Private (Student only)
 exports.addProject = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.projects.push(req.body);
-        await student.save();
+        const project = await StudentProject.create({ ...req.body, studentId: student.id });
+        await recalcStudentCompletion(student);
 
         res.status(201).json({
             success: true,
             message: 'Project added successfully',
-            data: student.projects[student.projects.length - 1]
+            data: project.toJSON()
         });
     } catch (error) {
         next(error);
@@ -418,31 +333,22 @@ exports.addProject = async (req, res, next) => {
 };
 
 // @desc    Update project
-// @route   PUT /api/students/profile/projects/:id
-// @access  Private (Student only)
 exports.updateProject = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const project = await StudentProject.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!project) return next(new ErrorResponse('Project not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const project = student.projects.id(req.params.id);
-
-        if (!project) {
-            return next(new ErrorResponse('Project not found', 404));
-        }
-
-        Object.assign(project, req.body);
-        await student.save();
+        await project.update(req.body);
 
         res.status(200).json({
             success: true,
             message: 'Project updated successfully',
-            data: project
+            data: project.toJSON()
         });
     } catch (error) {
         next(error);
@@ -450,57 +356,40 @@ exports.updateProject = async (req, res, next) => {
 };
 
 // @desc    Delete project
-// @route   DELETE /api/students/profile/projects/:id
-// @access  Private (Student only)
 exports.deleteProject = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const deleted = await StudentProject.destroy({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!deleted) return next(new ErrorResponse('Project not found', 404));
+        await recalcStudentCompletion(student);
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.projects.pull(req.params.id);
-        await student.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Project deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Project deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Add certificate
-// @route   POST /api/students/profile/certificates
-// @access  Private (Student only)
 exports.addCertificate = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const certificateData = req.body;
-
-        // Add certificate image path if file was uploaded
+        const certificateData = { ...req.body, studentId: student.id };
         if (req.file) {
             certificateData.certificateImage = `/uploads/certificates/${req.file.filename}`;
         }
 
-        student.certificates.push(certificateData);
-        await student.save();
+        const certificate = await StudentCertificate.create(certificateData);
 
         res.status(201).json({
             success: true,
             message: 'Certificate added successfully',
-            data: student.certificates[student.certificates.length - 1]
+            data: certificate.toJSON()
         });
     } catch (error) {
         next(error);
@@ -508,36 +397,25 @@ exports.addCertificate = async (req, res, next) => {
 };
 
 // @desc    Update certificate
-// @route   PUT /api/students/profile/certificates/:id
-// @access  Private (Student only)
 exports.updateCertificate = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const certificate = await StudentCertificate.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!certificate) return next(new ErrorResponse('Certificate not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
+        const updates = { ...req.body };
+        if (req.file) updates.certificateImage = `/uploads/certificates/${req.file.filename}`;
 
-        const certificate = student.certificates.id(req.params.id);
-
-        if (!certificate) {
-            return next(new ErrorResponse('Certificate not found', 404));
-        }
-
-        // Add certificate image path if file was uploaded
-        if (req.file) {
-            req.body.certificateImage = `/uploads/certificates/${req.file.filename}`;
-        }
-
-        Object.assign(certificate, req.body);
-        await student.save();
+        await certificate.update(updates);
 
         res.status(200).json({
             success: true,
             message: 'Certificate updated successfully',
-            data: certificate
+            data: certificate.toJSON()
         });
     } catch (error) {
         next(error);
@@ -545,84 +423,65 @@ exports.updateCertificate = async (req, res, next) => {
 };
 
 // @desc    Delete certificate
-// @route   DELETE /api/students/profile/certificates/:id
-// @access  Private (Student only)
 exports.deleteCertificate = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const deleted = await StudentCertificate.destroy({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!deleted) return next(new ErrorResponse('Certificate not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.certificates.pull(req.params.id);
-        await student.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Certificate deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Certificate deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Delete certificate image
-// @route   DELETE /api/students/profile/certificates/:id/image
-// @access  Private (Student only)
 exports.deleteCertificateImage = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        const certificate = await StudentCertificate.findOne({
+            where: { id: req.params.id, studentId: student.id }
         });
+        if (!certificate) return next(new ErrorResponse('Certificate not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        const certificate = student.certificates.id(req.params.id);
-        if (!certificate) {
-            return next(new ErrorResponse('Certificate not found', 404));
-        }
-
-        // Remove the image path
         certificate.certificateImage = null;
-        await student.save();
+        await certificate.save();
 
-        res.status(200).json({
-            success: true,
-            message: 'Certificate image deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Certificate image deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Update social links
-// @route   PUT /api/students/profile/social-links
-// @access  Private (Student only)
 exports.updateSocialLinks = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
+        const { linkedin, github, portfolio, twitter } = req.body;
+        if (linkedin !== undefined) student.socialLinkedin = linkedin;
+        if (github !== undefined) student.socialGithub = github;
+        if (portfolio !== undefined) student.socialPortfolio = portfolio;
+        if (twitter !== undefined) student.socialTwitter = twitter;
 
-        student.socialLinks = {
-            ...student.socialLinks,
-            ...req.body
-        };
         await student.save();
 
         res.status(200).json({
             success: true,
             message: 'Social links updated successfully',
-            data: student.socialLinks
+            data: {
+                linkedin: student.socialLinkedin,
+                github: student.socialGithub,
+                portfolio: student.socialPortfolio,
+                twitter: student.socialTwitter
+            }
         });
     } catch (error) {
         next(error);
@@ -630,17 +489,10 @@ exports.updateSocialLinks = async (req, res, next) => {
 };
 
 // @desc    Update profile visibility
-// @route   PUT /api/students/profile/visibility
-// @access  Private (Student only)
 exports.updateProfileVisibility = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
-
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
         student.isProfilePublic = req.body.isProfilePublic;
         await student.save();
@@ -648,9 +500,7 @@ exports.updateProfileVisibility = async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: 'Profile visibility updated successfully',
-            data: {
-                isProfilePublic: student.isProfilePublic
-            }
+            data: { isProfilePublic: student.isProfilePublic }
         });
     } catch (error) {
         next(error);
@@ -658,34 +508,21 @@ exports.updateProfileVisibility = async (req, res, next) => {
 };
 
 // @desc    Upload resume
-// @route   POST /api/students/profile/resume
-// @access  Private (Student only)
 exports.uploadResume = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+        if (!req.file) return next(new ErrorResponse('Please upload a file', 400));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        if (!req.file) {
-            return next(new ErrorResponse('Please upload a file', 400));
-        }
-
-        // Update resume info
-        student.resume = {
-            url: `/uploads/resumes/${req.file.filename}`,
-            uploadedAt: new Date()
-        };
-
+        student.resumeUrl = `/uploads/resumes/${req.file.filename}`;
+        student.resumeUploadedAt = new Date();
         await student.save();
+        await recalcStudentCompletion(student);
 
         res.status(200).json({
             success: true,
             message: 'Resume uploaded successfully',
-            data: student.resume
+            data: { url: student.resumeUrl, uploadedAt: student.resumeUploadedAt }
         });
     } catch (error) {
         next(error);
@@ -693,61 +530,36 @@ exports.uploadResume = async (req, res, next) => {
 };
 
 // @desc    Delete resume
-// @route   DELETE /api/students/profile/resume
-// @access  Private (Student only)
 exports.deleteResume = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        student.resume = {
-            url: null,
-            uploadedAt: null
-        };
-
+        student.resumeUrl = null;
+        student.resumeUploadedAt = null;
         await student.save();
+        await recalcStudentCompletion(student);
 
-        res.status(200).json({
-            success: true,
-            message: 'Resume deleted successfully'
-        });
+        res.status(200).json({ success: true, message: 'Resume deleted successfully' });
     } catch (error) {
         next(error);
     }
 };
 
 // @desc    Upload profile picture
-// @route   POST /api/students/profile/avatar
-// @access  Private (Student only)
 exports.uploadAvatar = async (req, res, next) => {
     try {
-        const student = await Student.findOne({
-            userId: req.user.id
-        });
+        const student = await Student.findOne({ where: { userId: req.user.id } });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+        if (!req.file) return next(new ErrorResponse('Please upload a file', 400));
 
-        if (!student) {
-            return next(new ErrorResponse('Student profile not found', 404));
-        }
-
-        if (!req.file) {
-            return next(new ErrorResponse('Please upload a file', 400));
-        }
-
-        // Update profile picture
         student.profilePicture = `/uploads/avatars/${req.file.filename}`;
         await student.save();
 
         res.status(200).json({
             success: true,
             message: 'Profile picture uploaded successfully',
-            data: {
-                profilePicture: student.profilePicture
-            }
+            data: { profilePicture: student.profilePicture }
         });
     } catch (error) {
         next(error);

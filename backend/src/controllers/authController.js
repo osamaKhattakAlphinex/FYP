@@ -1,8 +1,6 @@
 const crypto = require('crypto');
-const User = require('../models/User');
-const Student = require('../models/Student');
-const Company = require('../models/Company');
-const Admin = require('../models/Admin');
+const { Op } = require('sequelize');
+const { User, Student, Company, Admin } = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
 const sendEmail = require('../utils/sendEmail');
 const {
@@ -33,7 +31,8 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
             message,
             token,
             user: {
-                id: user._id,
+                id: user.id,
+                _id: user.id,
                 email: user.email,
                 role: user.role,
                 isEmailVerified: user.isEmailVerified,
@@ -61,117 +60,63 @@ exports.register = async (req, res, next) => {
             phone
         } = req.body;
 
-        console.log('Registration request:', {
-            email,
-            role,
-            companyName,
-            industry,
-            companySize,
-            website,
-            phone
-        });
+        console.log('Registration request:', { email, role, companyName, industry, companySize, website, phone });
 
-        // Check if user already exists
-        const existingUser = await User.findOne({
-            email
-        });
+        const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             return next(new ErrorResponse('Email already registered', 400));
         }
 
-        // Create user
-        user = await User.create({
-            email,
-            password,
-            role
-        });
+        user = await User.create({ email, password, role });
 
-        // Variables for email template
-        let userName = email; // Default to email
+        let userName = email;
 
-        // Create role-specific profile
         try {
             if (role === 'student') {
-                if (!name) {
-                    throw new Error('Name is required for students');
-                }
-                // Split name into firstName and lastName
+                if (!name) throw new Error('Name is required for students');
                 const nameParts = name.trim().split(' ');
                 const firstName = nameParts[0];
-                const lastName = nameParts.slice(1).join(' ') || '';
+                const lastName = nameParts.slice(1).join(' ') || firstName;
 
-                await Student.create({
-                    userId: user._id,
-                    firstName,
-                    lastName
-                });
-
+                await Student.create({ userId: user.id, firstName, lastName });
                 userName = firstName;
             } else if (role === 'company') {
-                if (!companyName && !name) {
-                    throw new Error('Company name is required');
-                }
-                if (!industry) {
-                    throw new Error('Industry is required for companies');
-                }
-                if (!companySize) {
-                    throw new Error('Company size is required');
-                }
+                if (!companyName && !name) throw new Error('Company name is required');
+                if (!industry) throw new Error('Industry is required for companies');
+                if (!companySize) throw new Error('Company size is required');
 
                 const finalCompanyName = companyName || name;
-
-                // Build company data object
                 const companyData = {
-                    userId: user._id,
+                    userId: user.id,
                     companyName: finalCompanyName,
                     industry,
                     companySize,
-                    contactInfo: {
-                        email
-                    }
+                    contactEmail: email
                 };
 
-                // Add optional fields if provided
-                if (website) {
-                    companyData.website = website;
-                }
-                if (phone) {
-                    companyData.contactInfo.phone = phone;
-                }
+                if (website) companyData.website = website;
+                if (phone) companyData.contactPhone = phone;
 
-                console.log('Creating company with data:', companyData);
                 await Company.create(companyData);
-
                 userName = finalCompanyName;
             } else if (role === 'admin') {
-                if (!name) {
-                    throw new Error('Name is required for admins');
-                }
-                // Split name into firstName and lastName
+                if (!name) throw new Error('Name is required for admins');
                 const nameParts = name.trim().split(' ');
                 const firstName = nameParts[0];
-                const lastName = nameParts.slice(1).join(' ') || '';
+                const lastName = nameParts.slice(1).join(' ') || firstName;
 
-                await Admin.create({
-                    userId: user._id,
-                    firstName,
-                    lastName
-                });
-
+                await Admin.create({ userId: user.id, firstName, lastName });
                 userName = firstName;
             }
         } catch (roleError) {
-            // If role-specific profile creation fails, delete the user
             console.error('Role profile creation error:', roleError);
-            await User.findByIdAndDelete(user._id);
+            await user.destroy();
             return next(new ErrorResponse(roleError.message, 400));
         }
 
-        // Generate OTP for email verification
         const otp = user.generateOTP();
         await user.save();
 
-        // Send OTP email
         try {
             await sendEmail({
                 email: user.email,
@@ -182,33 +127,18 @@ exports.register = async (req, res, next) => {
             res.status(201).json({
                 success: true,
                 message: 'Registration successful. Please check your email for the verification code.',
-                userId: user._id,
+                userId: user.id,
                 email: user.email
             });
         } catch (emailError) {
             console.error('Email send error:', emailError);
-            // Clean up user and role profile if email fails
-            await User.findByIdAndDelete(user._id);
-            if (role === 'student') {
-                await Student.findOneAndDelete({
-                    userId: user._id
-                });
-            } else if (role === 'company') {
-                await Company.findOneAndDelete({
-                    userId: user._id
-                });
-            } else if (role === 'admin') {
-                await Admin.findOneAndDelete({
-                    userId: user._id
-                });
-            }
+            await user.destroy(); // cascade handles role rows
             return next(new ErrorResponse('Email could not be sent', 500));
         }
     } catch (error) {
         console.error('Registration error:', error);
-        // Clean up user if it was created
-        if (user && user._id) {
-            await User.findByIdAndDelete(user._id);
+        if (user && user.id) {
+            try { await user.destroy(); } catch (e) { /* ignore */ }
         }
         next(error);
     }
@@ -219,39 +149,22 @@ exports.register = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
     try {
-        const {
-            email,
-            password
-        } = req.body;
+        const { email, password } = req.body;
 
-        // Validate email & password
         if (!email || !password) {
             return next(new ErrorResponse('Please provide email and password', 400));
         }
 
-        // Check for user
-        const user = await User.findOne({
-            email
-        }).select('+password');
+        const user = await User.scope('withPassword').findOne({ where: { email } });
 
-        if (!user) {
-            return next(new ErrorResponse('Invalid credentials', 401));
-        }
+        if (!user) return next(new ErrorResponse('Invalid credentials', 401));
 
-        // Check if password matches
         const isMatch = await user.comparePassword(password);
+        if (!isMatch) return next(new ErrorResponse('Invalid credentials', 401));
 
-        if (!isMatch) {
-            return next(new ErrorResponse('Invalid credentials', 401));
-        }
+        if (!user.isActive) return next(new ErrorResponse('Account has been deactivated', 403));
 
-        // Check if account is active
-        if (!user.isActive) {
-            return next(new ErrorResponse('Account has been deactivated', 403));
-        }
-
-        // Update last login
-        user.lastLogin = Date.now();
+        user.lastLogin = new Date();
         await user.save();
 
         sendTokenResponse(user, 200, res, 'Login successful');
@@ -270,10 +183,7 @@ exports.logout = async (req, res, next) => {
             httpOnly: true
         });
 
-        res.status(200).json({
-            success: true,
-            message: 'Logout successful'
-        });
+        res.status(200).json({ success: true, message: 'Logout successful' });
     } catch (error) {
         next(error);
     }
@@ -284,29 +194,22 @@ exports.logout = async (req, res, next) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findByPk(req.user.id);
 
-        // Get role-specific data
         let roleData = null;
         if (user.role === 'student') {
-            roleData = await Student.findOne({
-                userId: user._id
-            });
+            roleData = await Student.findOne({ where: { userId: user.id } });
         } else if (user.role === 'company') {
-            roleData = await Company.findOne({
-                userId: user._id
-            });
+            roleData = await Company.findOne({ where: { userId: user.id } });
         } else if (user.role === 'admin') {
-            roleData = await Admin.findOne({
-                userId: user._id
-            });
+            roleData = await Admin.findOne({ where: { userId: user.id } });
         }
 
         res.status(200).json({
             success: true,
             user: {
-                ...user.toObject(),
-                roleData
+                ...user.toJSON(),
+                roleData: roleData ? roleData.toJSON() : null
             }
         });
     } catch (error) {
@@ -319,44 +222,34 @@ exports.getMe = async (req, res, next) => {
 // @access  Public
 exports.verifyEmail = async (req, res, next) => {
     try {
-        // Get hashed token
         const emailVerificationToken = crypto
             .createHash('sha256')
             .update(req.params.token)
             .digest('hex');
 
         const user = await User.findOne({
-            emailVerificationToken,
-            emailVerificationExpire: {
-                $gt: Date.now()
+            where: {
+                emailVerificationToken,
+                emailVerificationExpire: { [Op.gt]: new Date() }
             }
         });
 
-        if (!user) {
-            return next(new ErrorResponse('Invalid or expired verification token', 400));
-        }
+        if (!user) return next(new ErrorResponse('Invalid or expired verification token', 400));
 
-        // Update user
         user.isEmailVerified = true;
-        user.emailVerificationToken = undefined;
-        user.emailVerificationExpire = undefined;
+        user.emailVerificationToken = null;
+        user.emailVerificationExpire = null;
         await user.save();
 
-        // Get user name for welcome email
         let userName = user.email;
         if (user.role === 'student') {
-            const student = await Student.findOne({
-                userId: user._id
-            });
-            userName = student.firstName;
+            const student = await Student.findOne({ where: { userId: user.id } });
+            if (student) userName = student.firstName;
         } else if (user.role === 'company') {
-            const company = await Company.findOne({
-                userId: user._id
-            });
-            userName = company.companyName;
+            const company = await Company.findOne({ where: { userId: user.id } });
+            if (company) userName = company.companyName;
         }
 
-        // Send welcome email
         try {
             await sendEmail({
                 email: user.email,
@@ -378,44 +271,26 @@ exports.verifyEmail = async (req, res, next) => {
 // @access  Public
 exports.resendVerification = async (req, res, next) => {
     try {
-        const {
-            email
-        } = req.body;
+        const { email } = req.body;
 
-        const user = await User.findOne({
-            email
-        });
+        const user = await User.findOne({ where: { email } });
+        if (!user) return next(new ErrorResponse('User not found', 404));
+        if (user.isEmailVerified) return next(new ErrorResponse('Email already verified', 400));
 
-        if (!user) {
-            return next(new ErrorResponse('User not found', 404));
-        }
-
-        if (user.isEmailVerified) {
-            return next(new ErrorResponse('Email already verified', 400));
-        }
-
-        // Generate new verification token
         const verificationToken = user.generateEmailVerificationToken();
         await user.save();
 
-        // Create verification URL
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-        // Get user name
         let userName = user.email;
         if (user.role === 'student') {
-            const student = await Student.findOne({
-                userId: user._id
-            });
-            userName = student.firstName;
+            const student = await Student.findOne({ where: { userId: user.id } });
+            if (student) userName = student.firstName;
         } else if (user.role === 'company') {
-            const company = await Company.findOne({
-                userId: user._id
-            });
-            userName = company.companyName;
+            const company = await Company.findOne({ where: { userId: user.id } });
+            if (company) userName = company.companyName;
         }
 
-        // Send verification email
         await sendEmail({
             email: user.email,
             subject: 'Email Verification - Smart AI Platform',
@@ -436,56 +311,28 @@ exports.resendVerification = async (req, res, next) => {
 // @access  Public
 exports.sendOTP = async (req, res, next) => {
     try {
-        const {
-            email
-        } = req.body;
+        const { email } = req.body;
+        if (!email) return next(new ErrorResponse('Email is required', 400));
 
-        if (!email) {
-            return next(new ErrorResponse('Email is required', 400));
-        }
+        const user = await User.findOne({ where: { email } });
+        if (!user) return next(new ErrorResponse('User not found', 404));
+        if (user.isEmailVerified) return next(new ErrorResponse('Email already verified', 400));
 
-        const user = await User.findOne({
-            email
-        });
-
-        if (!user) {
-            return next(new ErrorResponse('User not found', 404));
-        }
-
-        if (user.isEmailVerified) {
-            return next(new ErrorResponse('Email already verified', 400));
-        }
-
-        // Generate OTP
         const otp = user.generateOTP();
         await user.save();
 
-        // Get user name
         let userName = email;
         if (user.role === 'student') {
-            const student = await Student.findOne({
-                userId: user._id
-            });
-            if (student && student.firstName) {
-                userName = student.firstName;
-            }
+            const student = await Student.findOne({ where: { userId: user.id } });
+            if (student && student.firstName) userName = student.firstName;
         } else if (user.role === 'company') {
-            const company = await Company.findOne({
-                userId: user._id
-            });
-            if (company && company.companyName) {
-                userName = company.companyName;
-            }
+            const company = await Company.findOne({ where: { userId: user.id } });
+            if (company && company.companyName) userName = company.companyName;
         } else if (user.role === 'admin') {
-            const admin = await Admin.findOne({
-                userId: user._id
-            });
-            if (admin && admin.firstName) {
-                userName = admin.firstName;
-            }
+            const admin = await Admin.findOne({ where: { userId: user.id } });
+            if (admin && admin.firstName) userName = admin.firstName;
         }
 
-        // Send OTP email
         try {
             await sendEmail({
                 email: user.email,
@@ -499,8 +346,8 @@ exports.sendOTP = async (req, res, next) => {
             });
         } catch (emailError) {
             console.error('Email send error:', emailError);
-            user.otp = undefined;
-            user.otpExpire = undefined;
+            user.otp = null;
+            user.otpExpire = null;
             user.otpAttempts = 0;
             await user.save();
 
@@ -516,65 +363,34 @@ exports.sendOTP = async (req, res, next) => {
 // @access  Public
 exports.verifyOTP = async (req, res, next) => {
     try {
-        const {
-            email,
-            otp
-        } = req.body;
+        const { email, otp } = req.body;
+        if (!email || !otp) return next(new ErrorResponse('Email and OTP are required', 400));
 
-        if (!email || !otp) {
-            return next(new ErrorResponse('Email and OTP are required', 400));
-        }
+        const user = await User.findOne({ where: { email } });
+        if (!user) return next(new ErrorResponse('User not found', 404));
+        if (user.isEmailVerified) return next(new ErrorResponse('Email already verified', 400));
 
-        const user = await User.findOne({
-            email
-        });
-
-        if (!user) {
-            return next(new ErrorResponse('User not found', 404));
-        }
-
-        if (user.isEmailVerified) {
-            return next(new ErrorResponse('Email already verified', 400));
-        }
-
-        // Verify OTP
         const result = user.verifyOTP(otp);
-
         if (!result.success) {
-            await user.save(); // Save updated attempt count
+            await user.save();
             return next(new ErrorResponse(result.message, 400));
         }
 
-        // Update user
         user.isEmailVerified = true;
         await user.save();
 
-        // Get user name for welcome email
         let userName = email;
         if (user.role === 'student') {
-            const student = await Student.findOne({
-                userId: user._id
-            });
-            if (student && student.firstName) {
-                userName = student.firstName;
-            }
+            const student = await Student.findOne({ where: { userId: user.id } });
+            if (student && student.firstName) userName = student.firstName;
         } else if (user.role === 'company') {
-            const company = await Company.findOne({
-                userId: user._id
-            });
-            if (company && company.companyName) {
-                userName = company.companyName;
-            }
+            const company = await Company.findOne({ where: { userId: user.id } });
+            if (company && company.companyName) userName = company.companyName;
         } else if (user.role === 'admin') {
-            const admin = await Admin.findOne({
-                userId: user._id
-            });
-            if (admin && admin.firstName) {
-                userName = admin.firstName;
-            }
+            const admin = await Admin.findOne({ where: { userId: user.id } });
+            if (admin && admin.firstName) userName = admin.firstName;
         }
 
-        // Send welcome email
         try {
             await sendEmail({
                 email: user.email,
@@ -596,40 +412,24 @@ exports.verifyOTP = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
     try {
-        const {
-            email
-        } = req.body;
+        const { email } = req.body;
+        const user = await User.findOne({ where: { email } });
+        if (!user) return next(new ErrorResponse('User not found', 404));
 
-        const user = await User.findOne({
-            email
-        });
-
-        if (!user) {
-            return next(new ErrorResponse('User not found', 404));
-        }
-
-        // Generate reset token
         const resetToken = user.generateResetPasswordToken();
         await user.save();
 
-        // Create reset URL
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-        // Get user name
         let userName = user.email;
         if (user.role === 'student') {
-            const student = await Student.findOne({
-                userId: user._id
-            });
-            userName = student.firstName;
+            const student = await Student.findOne({ where: { userId: user.id } });
+            if (student) userName = student.firstName;
         } else if (user.role === 'company') {
-            const company = await Company.findOne({
-                userId: user._id
-            });
-            userName = company.companyName;
+            const company = await Company.findOne({ where: { userId: user.id } });
+            if (company) userName = company.companyName;
         }
 
-        // Send reset email
         try {
             await sendEmail({
                 email: user.email,
@@ -642,10 +442,9 @@ exports.forgotPassword = async (req, res, next) => {
                 message: 'Password reset email sent successfully'
             });
         } catch (error) {
-            user.resetPasswordToken = undefined;
-            user.resetPasswordExpire = undefined;
+            user.resetPasswordToken = null;
+            user.resetPasswordExpire = null;
             await user.save();
-
             return next(new ErrorResponse('Email could not be sent', 500));
         }
     } catch (error) {
@@ -658,27 +457,23 @@ exports.forgotPassword = async (req, res, next) => {
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
     try {
-        // Get hashed token
         const resetPasswordToken = crypto
             .createHash('sha256')
             .update(req.params.token)
             .digest('hex');
 
-        const user = await User.findOne({
-            resetPasswordToken,
-            resetPasswordExpire: {
-                $gt: Date.now()
+        const user = await User.scope('withPassword').findOne({
+            where: {
+                resetPasswordToken,
+                resetPasswordExpire: { [Op.gt]: new Date() }
             }
         });
 
-        if (!user) {
-            return next(new ErrorResponse('Invalid or expired reset token', 400));
-        }
+        if (!user) return next(new ErrorResponse('Invalid or expired reset token', 400));
 
-        // Set new password
         user.password = req.body.password;
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpire = undefined;
+        user.resetPasswordToken = null;
+        user.resetPasswordExpire = null;
         await user.save();
 
         sendTokenResponse(user, 200, res, 'Password reset successful');
@@ -692,14 +487,10 @@ exports.resetPassword = async (req, res, next) => {
 // @access  Private
 exports.updatePassword = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id).select('+password');
+        const user = await User.scope('withPassword').findByPk(req.user.id);
 
-        // Check current password
         const isMatch = await user.comparePassword(req.body.currentPassword);
-
-        if (!isMatch) {
-            return next(new ErrorResponse('Current password is incorrect', 401));
-        }
+        if (!isMatch) return next(new ErrorResponse('Current password is incorrect', 401));
 
         user.password = req.body.newPassword;
         await user.save();
@@ -714,7 +505,6 @@ exports.updatePassword = async (req, res, next) => {
 // @route   GET /api/auth/google
 // @access  Public
 exports.googleAuth = (req, res, next) => {
-    // Store role in session for OAuth callback
     req.session.oauthRole = req.query.role || 'student';
     next();
 };
@@ -728,10 +518,7 @@ exports.googleAuthCallback = async (req, res, next) => {
             return res.redirect(`${process.env.FRONTEND_URL}/login?error=authentication_failed`);
         }
 
-        // Generate token
         const token = req.user.generateAuthToken();
-
-        // Redirect to frontend with token
         res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
     } catch (error) {
         res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
@@ -743,32 +530,13 @@ exports.googleAuthCallback = async (req, res, next) => {
 // @access  Private
 exports.deleteAccount = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id).select('+password');
+        const user = await User.scope('withPassword').findByPk(req.user.id);
 
-        // Verify password
         const isMatch = await user.comparePassword(req.body.password);
+        if (!isMatch) return next(new ErrorResponse('Password is incorrect', 401));
 
-        if (!isMatch) {
-            return next(new ErrorResponse('Password is incorrect', 401));
-        }
-
-        // Delete role-specific data
-        if (user.role === 'student') {
-            await Student.findOneAndDelete({
-                userId: user._id
-            });
-        } else if (user.role === 'company') {
-            await Company.findOneAndDelete({
-                userId: user._id
-            });
-        } else if (user.role === 'admin') {
-            await Admin.findOneAndDelete({
-                userId: user._id
-            });
-        }
-
-        // Delete user
-        await User.findByIdAndDelete(user._id);
+        // Cascade delete from FK constraints handles Student/Company/Admin rows
+        await user.destroy();
 
         res.status(200).json({
             success: true,

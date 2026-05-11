@@ -4,15 +4,18 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
-const mongoSanitize = require('express-mongo-sanitize');
 const rateLimit = require('express-rate-limit');
 const session = require('express-session');
+
+// Load env vars before anything that depends on them (database, passport)
+dotenv.config();
+
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 
-// Load env vars
-dotenv.config();
+// Initialize models (registers Sequelize associations)
+require('./models');
 
 // Connect to database
 connectDB();
@@ -33,9 +36,6 @@ app.use(cookieParser());
 
 // Security headers
 app.use(helmet());
-
-// Sanitize data
-app.use(mongoSanitize());
 
 // Enable CORS
 app.use(cors({

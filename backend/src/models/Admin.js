@@ -1,74 +1,69 @@
-const mongoose = require('mongoose');
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const adminSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        unique: true
-    },
-    firstName: {
-        type: String,
-        required: [true, 'Please provide first name'],
-        trim: true
-    },
-    lastName: {
-        type: String,
-        required: [true, 'Please provide last name'],
-        trim: true
-    },
-    phone: {
-        type: String,
-        trim: true
-    },
-    permissions: {
-        manageUsers: {
-            type: Boolean,
-            default: true
-        },
-        manageTasks: {
-            type: Boolean,
-            default: true
-        },
-        manageCompanies: {
-            type: Boolean,
-            default: true
-        },
-        manageStudents: {
-            type: Boolean,
-            default: true
-        },
-        viewAnalytics: {
-            type: Boolean,
-            default: true
-        },
-        manageContent: {
-            type: Boolean,
-            default: true
-        },
-        systemSettings: {
-            type: Boolean,
-            default: false
-        }
-    },
-    isSuperAdmin: {
-        type: Boolean,
-        default: false
-    },
-    lastActivity: {
-        type: Date,
-        default: Date.now
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
+class Admin extends Model {
+    toJSON() {
+        const values = { ...this.get() };
+        values._id = values.id;
+
+        values.permissions = {
+            manageUsers: values.permManageUsers !== false,
+            manageTasks: values.permManageTasks !== false,
+            manageCompanies: values.permManageCompanies !== false,
+            manageStudents: values.permManageStudents !== false,
+            viewAnalytics: values.permViewAnalytics !== false,
+            manageContent: values.permManageContent !== false,
+            systemSettings: values.permSystemSettings === true
+        };
+
+        [
+            'permManageUsers', 'permManageTasks', 'permManageCompanies', 'permManageStudents',
+            'permViewAnalytics', 'permManageContent', 'permSystemSettings'
+        ].forEach((k) => delete values[k]);
+
+        return values;
     }
-}, {
-    timestamps: true
-});
+}
 
-module.exports = mongoose.model('Admin', adminSchema);
+Admin.init(
+    {
+        id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
+        userId: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            allowNull: false,
+            unique: true,
+            references: { model: 'users', key: 'id' },
+            onDelete: 'CASCADE'
+        },
+        firstName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            validate: { notEmpty: { msg: 'Please provide first name' } }
+        },
+        lastName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            validate: { notEmpty: { msg: 'Please provide last name' } }
+        },
+        phone: { type: DataTypes.STRING(50), allowNull: true },
+
+        permManageUsers: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permManageTasks: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permManageCompanies: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permManageStudents: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permViewAnalytics: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permManageContent: { type: DataTypes.BOOLEAN, defaultValue: true },
+        permSystemSettings: { type: DataTypes.BOOLEAN, defaultValue: false },
+
+        isSuperAdmin: { type: DataTypes.BOOLEAN, defaultValue: false },
+        lastActivity: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+    },
+    {
+        sequelize,
+        modelName: 'Admin',
+        tableName: 'admins',
+        timestamps: true
+    }
+);
+
+module.exports = Admin;

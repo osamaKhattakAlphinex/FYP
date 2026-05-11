@@ -1,50 +1,48 @@
 const ErrorResponse = require('../utils/errorResponse');
 
 const errorHandler = (err, req, res, next) => {
-    let error = {
-        ...err
-    };
+    let error = { ...err };
     error.message = err.message;
 
-    // Log to console for dev
     console.error(err);
 
-    // Mongoose bad ObjectId
-    if (err.name === 'CastError') {
-        const message = 'Resource not found';
-        error = new ErrorResponse(message, 404);
+    // Sequelize unique constraint violation
+    if (err.name === 'SequelizeUniqueConstraintError') {
+        const field = err.errors && err.errors[0] && err.errors[0].path
+            ? err.errors[0].path
+            : 'Field';
+        const label = field.charAt(0).toUpperCase() + field.slice(1);
+        error = new ErrorResponse(`${label} already exists`, 400);
     }
 
-    // Mongoose duplicate key
-    if (err.code === 11000) {
-        const field = Object.keys(err.keyValue)[0];
-        const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;
+    // Sequelize validation error
+    if (err.name === 'SequelizeValidationError') {
+        const message = err.errors.map((e) => e.message).join(', ');
         error = new ErrorResponse(message, 400);
     }
 
-    // Mongoose validation error
-    if (err.name === 'ValidationError') {
-        const message = Object.values(err.errors).map(val => val.message).join(', ');
-        error = new ErrorResponse(message, 400);
+    // Sequelize foreign key violation
+    if (err.name === 'SequelizeForeignKeyConstraintError') {
+        error = new ErrorResponse('Invalid reference to related resource', 400);
+    }
+
+    // Sequelize database error (bad column/type/etc.)
+    if (err.name === 'SequelizeDatabaseError') {
+        error = new ErrorResponse('Database error', 500);
     }
 
     // JWT errors
     if (err.name === 'JsonWebTokenError') {
-        const message = 'Invalid token';
-        error = new ErrorResponse(message, 401);
+        error = new ErrorResponse('Invalid token', 401);
     }
-
     if (err.name === 'TokenExpiredError') {
-        const message = 'Token expired';
-        error = new ErrorResponse(message, 401);
+        error = new ErrorResponse('Token expired', 401);
     }
 
     res.status(error.statusCode || 500).json({
         success: false,
         error: error.message || 'Server Error',
-        ...(process.env.NODE_ENV === 'development' && {
-            stack: err.stack
-        })
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
 };
 

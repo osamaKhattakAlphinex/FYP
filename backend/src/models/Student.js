@@ -1,226 +1,172 @@
-const mongoose = require('mongoose');
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/database');
 
-const studentSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        unique: true
-    },
-    firstName: {
-        type: String,
-        required: [true, 'Please provide first name'],
-        trim: true
-    },
-    lastName: {
-        type: String,
-        required: [true, 'Please provide last name'],
-        trim: true
-    },
-    profilePicture: {
-        type: String,
-        default: null
-    },
-    headline: {
-        type: String,
-        trim: true,
-        maxlength: [100, 'Headline cannot exceed 100 characters']
-    },
-    phone: {
-        type: String,
-        trim: true
-    },
-    dateOfBirth: {
-        type: Date
-    },
-    bio: {
-        type: String,
-        maxlength: [500, 'Bio cannot exceed 500 characters']
-    },
-    location: {
-        city: String,
-        state: String,
-        country: String
-    },
-    education: [{
-        institution: {
-            type: String,
-            required: true
-        },
-        degree: {
-            type: String,
-            required: true
-        },
-        fieldOfStudy: String,
-        startYear: Number,
-        endYear: Number,
-        isCurrentlyStudying: {
-            type: Boolean,
-            default: false
-        },
-        grade: String,
-        description: String
-    }],
-    skills: [{
-        name: {
-            type: String,
-            required: true
-        },
-        level: {
-            type: String,
-            enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
-            default: 'Intermediate'
-        }
-    }],
-    experience: [{
-        title: {
-            type: String,
-            required: true
-        },
-        company: String,
-        employmentType: {
-            type: String,
-            enum: ['Full-time', 'Part-time', 'Internship', 'Freelance']
-        },
-        location: String,
-        startDate: String,
-        endDate: String,
-        isCurrentlyWorking: {
-            type: Boolean,
-            default: false
-        },
-        description: String,
-        skills: [String]
-    }],
-    projects: [{
-        title: {
-            type: String,
-            required: true
-        },
-        description: String,
-        techStack: [String],
-        projectUrl: String,
-        githubUrl: String,
-        thumbnailUrl: String,
-        startDate: String,
-        endDate: String
-    }],
-    certificates: [{
-        title: {
-            type: String,
-            required: true
-        },
-        issuer: String,
-        issueDate: String,
-        expiryDate: String,
-        credentialId: String,
-        credentialUrl: String,
-        certificateImage: String,
-        isNexInternCertificate: {
-            type: Boolean,
-            default: false
-        }
-    }],
-    socialLinks: {
-        linkedin: String,
-        github: String,
-        portfolio: String,
-        twitter: String
-    },
-    resume: {
-        url: String,
-        uploadedAt: Date
-    },
-    preferences: {
-        jobTypes: [{
-            type: String,
-            enum: ['internship', 'full-time', 'part-time', 'contract', 'freelance']
-        }],
-        industries: [String],
-        locations: [String],
-        remoteWork: {
-            type: Boolean,
-            default: true
-        }
-    },
-    stats: {
-        tasksCompleted: {
-            type: Number,
-            default: 0
-        },
-        tasksInProgress: {
-            type: Number,
-            default: 0
-        },
-        certificatesEarned: {
-            type: Number,
-            default: 0
-        },
-        averageRating: {
-            type: Number,
-            default: 0,
-            min: 0,
-            max: 5
-        },
-        totalRatings: {
-            type: Number,
-            default: 0
-        }
-    },
-    profileCompletion: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100
-    },
-    isProfilePublic: {
-        type: Boolean,
-        default: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
+class Student extends Model {
+    calculateProfileCompletion() {
+        let completion = 0;
+        const weights = {
+            basicInfo: 20,
+            education: 15,
+            skills: 15,
+            experience: 15,
+            projects: 15,
+            bio: 10,
+            resume: 10
+        };
+
+        const hasLocation = this.locationCity || this.locationCountry;
+        if (this.firstName && this.lastName && hasLocation) completion += weights.basicInfo;
+
+        if (this.education && this.education.length > 0) completion += weights.education;
+        if (this.skills && this.skills.length >= 3) completion += weights.skills;
+        if (this.experience && this.experience.length > 0) completion += weights.experience;
+        if (this.projects && this.projects.length > 0) completion += weights.projects;
+        if (this.bio) completion += weights.bio;
+        if (this.resumeUrl) completion += weights.resume;
+
+        this.profileCompletion = completion;
+        return completion;
     }
-}, {
-    timestamps: true
-});
 
-// Calculate profile completion percentage
-studentSchema.methods.calculateProfileCompletion = function() {
-    let completion = 0;
-    const weights = {
-        basicInfo: 20,
-        education: 15,
-        skills: 15,
-        experience: 15,
-        projects: 15,
-        bio: 10,
-        resume: 10
-    };
+    toJSON() {
+        const values = { ...this.get() };
+        values._id = values.id;
 
-    // Basic info: firstName, lastName, and location (city or country)
-    const hasLocation = (this.location && (this.location.city || this.location.country));
-    if (this.firstName && this.lastName && hasLocation) completion += weights.basicInfo;
+        values.location = {
+            city: values.locationCity || undefined,
+            state: values.locationState || undefined,
+            country: values.locationCountry || undefined
+        };
 
-    if (this.education && this.education.length > 0) completion += weights.education;
-    if (this.skills && this.skills.length >= 3) completion += weights.skills;
-    if (this.experience && this.experience.length > 0) completion += weights.experience;
-    if (this.projects && this.projects.length > 0) completion += weights.projects;
-    if (this.bio) completion += weights.bio;
-    if (this.resume && this.resume.url) completion += weights.resume;
+        values.socialLinks = {
+            linkedin: values.socialLinkedin || undefined,
+            github: values.socialGithub || undefined,
+            portfolio: values.socialPortfolio || undefined,
+            twitter: values.socialTwitter || undefined
+        };
 
-    this.profileCompletion = completion;
-    return completion;
-};
+        values.resume = {
+            url: values.resumeUrl || null,
+            uploadedAt: values.resumeUploadedAt || null
+        };
 
-// Update profile completion before saving
-studentSchema.pre('save', function(next) {
-    this.calculateProfileCompletion();
-    next();
-});
+        values.preferences = {
+            jobTypes: values.preferenceJobTypes || [],
+            industries: values.preferenceIndustries || [],
+            locations: values.preferenceLocations || [],
+            remoteWork: values.preferenceRemoteWork !== false
+        };
 
-module.exports = mongoose.model('Student', studentSchema);
+        values.stats = {
+            tasksCompleted: values.statTasksCompleted || 0,
+            tasksInProgress: values.statTasksInProgress || 0,
+            certificatesEarned: values.statCertificatesEarned || 0,
+            averageRating: values.statAverageRating ? Number(values.statAverageRating) : 0,
+            totalRatings: values.statTotalRatings || 0
+        };
+
+        if (Array.isArray(values.education)) {
+            values.education = values.education.map((e) => ({ ...e.toJSON ? e.toJSON() : e, _id: (e.toJSON ? e.toJSON() : e).id }));
+        }
+        if (Array.isArray(values.skills)) {
+            values.skills = values.skills.map((s) => ({ ...s.toJSON ? s.toJSON() : s, _id: (s.toJSON ? s.toJSON() : s).id }));
+        }
+        if (Array.isArray(values.experience)) {
+            values.experience = values.experience.map((e) => ({ ...e.toJSON ? e.toJSON() : e, _id: (e.toJSON ? e.toJSON() : e).id }));
+        }
+        if (Array.isArray(values.projects)) {
+            values.projects = values.projects.map((p) => ({ ...p.toJSON ? p.toJSON() : p, _id: (p.toJSON ? p.toJSON() : p).id }));
+        }
+        if (Array.isArray(values.certificates)) {
+            values.certificates = values.certificates.map((c) => ({ ...c.toJSON ? c.toJSON() : c, _id: (c.toJSON ? c.toJSON() : c).id }));
+        }
+
+        [
+            'locationCity', 'locationState', 'locationCountry',
+            'socialLinkedin', 'socialGithub', 'socialPortfolio', 'socialTwitter',
+            'resumeUrl', 'resumeUploadedAt',
+            'preferenceJobTypes', 'preferenceIndustries', 'preferenceLocations', 'preferenceRemoteWork',
+            'statTasksCompleted', 'statTasksInProgress', 'statCertificatesEarned', 'statAverageRating', 'statTotalRatings'
+        ].forEach((k) => delete values[k]);
+
+        return values;
+    }
+}
+
+Student.init(
+    {
+        id: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            autoIncrement: true,
+            primaryKey: true
+        },
+        userId: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            allowNull: false,
+            unique: true,
+            references: { model: 'users', key: 'id' },
+            onDelete: 'CASCADE'
+        },
+        firstName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            validate: { notEmpty: { msg: 'Please provide first name' } }
+        },
+        lastName: {
+            type: DataTypes.STRING(100),
+            allowNull: false,
+            validate: { notEmpty: { msg: 'Please provide last name' } }
+        },
+        profilePicture: { type: DataTypes.STRING(500), allowNull: true, defaultValue: null },
+        headline: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            validate: { len: { args: [0, 100], msg: 'Headline cannot exceed 100 characters' } }
+        },
+        phone: { type: DataTypes.STRING(50), allowNull: true },
+        dateOfBirth: { type: DataTypes.DATEONLY, allowNull: true },
+        bio: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+            validate: { len: { args: [0, 500], msg: 'Bio cannot exceed 500 characters' } }
+        },
+
+        locationCity: { type: DataTypes.STRING(100), allowNull: true },
+        locationState: { type: DataTypes.STRING(100), allowNull: true },
+        locationCountry: { type: DataTypes.STRING(100), allowNull: true },
+
+        socialLinkedin: { type: DataTypes.STRING(500), allowNull: true },
+        socialGithub: { type: DataTypes.STRING(500), allowNull: true },
+        socialPortfolio: { type: DataTypes.STRING(500), allowNull: true },
+        socialTwitter: { type: DataTypes.STRING(500), allowNull: true },
+
+        resumeUrl: { type: DataTypes.STRING(500), allowNull: true },
+        resumeUploadedAt: { type: DataTypes.DATE, allowNull: true },
+
+        preferenceJobTypes: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+        preferenceIndustries: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+        preferenceLocations: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
+        preferenceRemoteWork: { type: DataTypes.BOOLEAN, defaultValue: true },
+
+        statTasksCompleted: { type: DataTypes.INTEGER, defaultValue: 0 },
+        statTasksInProgress: { type: DataTypes.INTEGER, defaultValue: 0 },
+        statCertificatesEarned: { type: DataTypes.INTEGER, defaultValue: 0 },
+        statAverageRating: { type: DataTypes.DECIMAL(3, 2), defaultValue: 0 },
+        statTotalRatings: { type: DataTypes.INTEGER, defaultValue: 0 },
+
+        profileCompletion: {
+            type: DataTypes.INTEGER,
+            defaultValue: 0,
+            validate: { min: 0, max: 100 }
+        },
+        isProfilePublic: { type: DataTypes.BOOLEAN, defaultValue: true }
+    },
+    {
+        sequelize,
+        modelName: 'Student',
+        tableName: 'students',
+        timestamps: true
+    }
+);
+
+module.exports = Student;

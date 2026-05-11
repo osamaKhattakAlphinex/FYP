@@ -1,8 +1,6 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const User = require('../models/User');
-const Student = require('../models/Student');
-const Company = require('../models/Company');
+const { User, Student, Company } = require('../models');
 
 passport.serializeUser((user, done) => {
     done(null, user.id);
@@ -10,7 +8,7 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
     try {
-        const user = await User.findById(id);
+        const user = await User.findByPk(id);
         done(null, user);
     } catch (error) {
         done(error, null);
@@ -28,64 +26,48 @@ passport.use(
         },
         async (req, accessToken, refreshToken, profile, done) => {
             try {
-                // Check if user already exists
-                let user = await User.findOne({
-                    googleId: profile.id
-                });
+                let user = await User.findOne({ where: { googleId: profile.id } });
 
                 if (user) {
-                    // Update last login
-                    user.lastLogin = Date.now();
+                    user.lastLogin = new Date();
                     await user.save();
                     return done(null, user);
                 }
 
-                // Check if email already exists
-                user = await User.findOne({
-                    email: profile.emails[0].value
-                });
+                user = await User.findOne({ where: { email: profile.emails[0].value } });
 
                 if (user) {
-                    // Link Google account to existing user
                     user.googleId = profile.id;
                     user.isEmailVerified = true;
                     user.avatar = (profile.photos && profile.photos[0]) ? profile.photos[0].value : user.avatar;
-                    user.lastLogin = Date.now();
+                    user.lastLogin = new Date();
                     await user.save();
                     return done(null, user);
                 }
 
-                // Get role from session (set during OAuth initiation)
                 const role = req.session.oauthRole || 'student';
 
-                // Create new user
                 user = await User.create({
                     email: profile.emails[0].value,
                     googleId: profile.id,
-                    role: role,
+                    role,
                     isEmailVerified: true,
                     avatar: (profile.photos && profile.photos[0]) ? profile.photos[0].value : null,
-                    lastLogin: Date.now()
+                    lastLogin: new Date()
                 });
 
-                // Create role-specific profile
                 const names = profile.displayName.split(' ');
                 const firstName = names[0] || '';
-                const lastName = names.slice(1).join(' ') || '';
+                const lastName = names.slice(1).join(' ') || firstName;
 
                 if (role === 'student') {
-                    await Student.create({
-                        userId: user._id,
-                        firstName,
-                        lastName
-                    });
+                    await Student.create({ userId: user.id, firstName, lastName });
                 } else if (role === 'company') {
                     await Company.create({
-                        userId: user._id,
+                        userId: user.id,
                         companyName: profile.displayName,
-                        contactInfo: {
-                            email: profile.emails[0].value
-                        }
+                        industry: 'Unknown',
+                        contactEmail: profile.emails[0].value
                     });
                 }
 

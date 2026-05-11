@@ -1,206 +1,185 @@
-const mongoose = require('mongoose');
+const { DataTypes, Model } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { sequelize } = require('../config/database');
 
-const userSchema = new mongoose.Schema({
-    email: {
-        type: String,
-        required: [true, 'Please provide an email'],
-        unique: true,
-        lowercase: true,
-        trim: true,
-        match: [
-            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-            'Please provide a valid email'
-        ]
-    },
-    password: {
-        type: String,
-        required: function() {
-            return !this.googleId; // Password not required for Google OAuth users
-        },
-        minlength: [6, 'Password must be at least 6 characters'],
-        select: false
-    },
-    role: {
-        type: String,
-        enum: ['student', 'company', 'admin'],
-        required: [true, 'Please specify a role']
-    },
-    isEmailVerified: {
-        type: Boolean,
-        default: false
-    },
-    isActive: {
-        type: Boolean,
-        default: true
-    },
-    googleId: {
-        type: String,
-        sparse: true,
-        unique: true
-    },
-    avatar: {
-        type: String,
-        default: null
-    },
-    emailVerificationToken: String,
-    emailVerificationExpire: Date,
-    resetPasswordToken: String,
-    resetPasswordExpire: Date,
-    otp: String,
-    otpExpire: Date,
-    otpAttempts: {
-        type: Number,
-        default: 0
-    },
-    lastLogin: Date,
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-}, {
-    timestamps: true,
-    toJSON: {
-        virtuals: true
-    },
-    toObject: {
-        virtuals: true
-    }
-});
-
-// Virtual populate for role-specific data
-userSchema.virtual('roleData', {
-    refPath: 'role',
-    localField: '_id',
-    foreignField: 'userId',
-    justOne: true
-});
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) {
-        return next();
+class User extends Model {
+    async comparePassword(enteredPassword) {
+        return bcrypt.compare(enteredPassword, this.password);
     }
 
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-});
-
-// Compare password method
-userSchema.methods.comparePassword = async function(enteredPassword) {
-    return await bcrypt.compare(enteredPassword, this.password);
-};
-
-// Generate JWT token
-userSchema.methods.generateAuthToken = function() {
-    return jwt.sign({
-            id: this._id,
-            role: this.role
-        },
-        process.env.JWT_SECRET, {
-            expiresIn: process.env.JWT_EXPIRE
-        }
-    );
-};
-
-// Generate email verification token
-userSchema.methods.generateEmailVerificationToken = function() {
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-
-    this.emailVerificationToken = crypto
-        .createHash('sha256')
-        .update(verificationToken)
-        .digest('hex');
-
-    this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-
-    return verificationToken;
-};
-
-// Generate password reset token
-userSchema.methods.generateResetPasswordToken = function() {
-    const resetToken = crypto.randomBytes(32).toString('hex');
-
-    this.resetPasswordToken = crypto
-        .createHash('sha256')
-        .update(resetToken)
-        .digest('hex');
-
-    this.resetPasswordExpire = Date.now() + 60 * 60 * 1000; // 1 hour
-
-    return resetToken;
-};
-
-// Generate OTP
-userSchema.methods.generateOTP = function() {
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Hash and store OTP
-    this.otp = crypto
-        .createHash('sha256')
-        .update(otp)
-        .digest('hex');
-
-    this.otpExpire = Date.now() + parseInt(process.env.OTP_EXPIRE_MINUTES || 10) * 60 * 1000;
-    this.otpAttempts = 0;
-
-    return otp;
-};
-
-// Verify OTP
-userSchema.methods.verifyOTP = function(enteredOTP) {
-    const maxAttempts = parseInt(process.env.MAX_OTP_ATTEMPTS || 3);
-
-    if (this.otpAttempts >= maxAttempts) {
-        return {
-            success: false,
-            message: 'Maximum OTP attempts exceeded. Please request a new code.'
-        };
+    generateAuthToken() {
+        return jwt.sign(
+            { id: this.id, role: this.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRE }
+        );
     }
 
-    if (!this.otp || !this.otpExpire) {
-        return {
-            success: false,
-            message: 'No OTP found. Please request a new code.'
-        };
+    generateEmailVerificationToken() {
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        this.emailVerificationToken = crypto
+            .createHash('sha256')
+            .update(verificationToken)
+            .digest('hex');
+        this.emailVerificationExpire = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        return verificationToken;
     }
 
-    if (Date.now() > this.otpExpire) {
-        return {
-            success: false,
-            message: 'OTP has expired. Please request a new code.'
-        };
+    generateResetPasswordToken() {
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        this.resetPasswordToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
+        this.resetPasswordExpire = new Date(Date.now() + 60 * 60 * 1000);
+        return resetToken;
     }
 
-    const hashedOTP = crypto
-        .createHash('sha256')
-        .update(enteredOTP)
-        .digest('hex');
-
-    if (hashedOTP === this.otp) {
-        this.otp = undefined;
-        this.otpExpire = undefined;
+    generateOTP() {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        this.otp = crypto.createHash('sha256').update(otp).digest('hex');
+        this.otpExpire = new Date(
+            Date.now() + parseInt(process.env.OTP_EXPIRE_MINUTES || 10, 10) * 60 * 1000
+        );
         this.otpAttempts = 0;
+        return otp;
+    }
+
+    verifyOTP(enteredOTP) {
+        const maxAttempts = parseInt(process.env.MAX_OTP_ATTEMPTS || 3, 10);
+
+        if (this.otpAttempts >= maxAttempts) {
+            return {
+                success: false,
+                message: 'Maximum OTP attempts exceeded. Please request a new code.'
+            };
+        }
+
+        if (!this.otp || !this.otpExpire) {
+            return {
+                success: false,
+                message: 'No OTP found. Please request a new code.'
+            };
+        }
+
+        if (Date.now() > new Date(this.otpExpire).getTime()) {
+            return {
+                success: false,
+                message: 'OTP has expired. Please request a new code.'
+            };
+        }
+
+        const hashedOTP = crypto.createHash('sha256').update(enteredOTP).digest('hex');
+
+        if (hashedOTP === this.otp) {
+            this.otp = null;
+            this.otpExpire = null;
+            this.otpAttempts = 0;
+            return { success: true, message: 'OTP verified successfully' };
+        }
+
+        this.otpAttempts += 1;
         return {
-            success: true,
-            message: 'OTP verified successfully'
+            success: false,
+            message: 'Invalid OTP',
+            attemptsLeft: maxAttempts - this.otpAttempts
         };
     }
 
-    this.otpAttempts += 1;
-    return {
-        success: false,
-        message: 'Invalid OTP',
-        attemptsLeft: maxAttempts - this.otpAttempts
-    };
-};
+    toJSON() {
+        const values = { ...this.get() };
+        values._id = values.id;
+        delete values.password;
+        return values;
+    }
+}
 
-module.exports = mongoose.model('User', userSchema);
+User.init(
+    {
+        id: {
+            type: DataTypes.BIGINT.UNSIGNED,
+            autoIncrement: true,
+            primaryKey: true
+        },
+        email: {
+            type: DataTypes.STRING(191),
+            allowNull: false,
+            unique: true,
+            validate: {
+                isEmail: { msg: 'Please provide a valid email' },
+                notEmpty: { msg: 'Please provide an email' }
+            },
+            set(value) {
+                if (typeof value === 'string') {
+                    this.setDataValue('email', value.trim().toLowerCase());
+                } else {
+                    this.setDataValue('email', value);
+                }
+            }
+        },
+        password: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            validate: {
+                len: {
+                    args: [6, 255],
+                    msg: 'Password must be at least 6 characters'
+                }
+            }
+        },
+        role: {
+            type: DataTypes.ENUM('student', 'company', 'admin'),
+            allowNull: false
+        },
+        isEmailVerified: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        isActive: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
+        },
+        googleId: {
+            type: DataTypes.STRING(191),
+            allowNull: true,
+            unique: true
+        },
+        avatar: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+            defaultValue: null
+        },
+        emailVerificationToken: { type: DataTypes.STRING(255), allowNull: true },
+        emailVerificationExpire: { type: DataTypes.DATE, allowNull: true },
+        resetPasswordToken: { type: DataTypes.STRING(255), allowNull: true },
+        resetPasswordExpire: { type: DataTypes.DATE, allowNull: true },
+        otp: { type: DataTypes.STRING(255), allowNull: true },
+        otpExpire: { type: DataTypes.DATE, allowNull: true },
+        otpAttempts: { type: DataTypes.INTEGER, defaultValue: 0 },
+        lastLogin: { type: DataTypes.DATE, allowNull: true }
+    },
+    {
+        sequelize,
+        modelName: 'User',
+        tableName: 'users',
+        timestamps: true,
+        defaultScope: {
+            attributes: { exclude: ['password'] }
+        },
+        scopes: {
+            withPassword: { attributes: { include: ['password'] } }
+        },
+        hooks: {
+            beforeSave: async (user) => {
+                if (user.changed('password') && user.password) {
+                    const salt = await bcrypt.genSalt(10);
+                    user.password = await bcrypt.hash(user.password, salt);
+                }
+            }
+        }
+    }
+);
+
+module.exports = User;
