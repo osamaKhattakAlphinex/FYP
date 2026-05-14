@@ -314,14 +314,16 @@ export default function CompanyTasksPage() {
                                         )}
                                     </div>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                                        <span className="flex items-center gap-1">
+                                        <Link
+                                            href={`/company/candidates?taskId=${task._id}`}
+                                            className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-100"
+                                        >
                                             <Users className="h-3 w-3" />
-                                            {task.applicationCount}
+                                            Applications: {task.applicationCount}
                                             {task.maxApplications
                                                 ? ` / ${task.maxApplications}`
-                                                : ''}{' '}
-                                            applicants
-                                        </span>
+                                                : ''}
+                                        </Link>
                                         <span className="flex items-center gap-1">
                                             <Eye className="h-3 w-3" /> {task.views} views
                                         </span>

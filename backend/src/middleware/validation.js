@@ -324,3 +324,135 @@ exports.validateTaskUpdate = [
         }),
     exports.validate
 ];
+
+const APPLICATION_STATUSES = [
+    'submitted',
+    'under_review',
+    'shortlisted',
+    'interview_scheduled',
+    'accepted',
+    'rejected',
+    'withdrawn'
+];
+
+// Application creation validation rules
+exports.validateApplicationCreation = [
+    body('coverLetter')
+        .trim()
+        .isLength({ min: 50, max: 5000 })
+        .withMessage('Cover letter must be between 50 and 5000 characters'),
+    body('proposedRate')
+        .optional({ values: 'falsy' })
+        .isFloat({ min: 0 })
+        .withMessage('Proposed rate must be a non-negative number'),
+    body('proposed.rate')
+        .optional({ values: 'falsy' })
+        .isFloat({ min: 0 })
+        .withMessage('Proposed rate must be a non-negative number'),
+    body('proposedCurrency')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ min: 1, max: 10 })
+        .withMessage('Proposed currency is invalid'),
+    body('expectedStartDate')
+        .optional({ values: 'falsy' })
+        .isISO8601()
+        .withMessage('Expected start date must be a valid ISO date'),
+    body('availabilityHoursPerWeek')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 1, max: 168 })
+        .withMessage('Availability must be between 1 and 168 hours per week'),
+    body('resumeUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Resume URL is invalid'),
+    body('portfolioUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Portfolio URL is invalid'),
+    body('attachments')
+        .optional()
+        .isArray()
+        .withMessage('Attachments must be an array'),
+    body('attachments.*.name')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 255 })
+        .withMessage('Attachment name must be a string up to 255 characters'),
+    body('attachments.*.url')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Attachment URL must be a string up to 500 characters'),
+    body('attachments.*.type')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 100 })
+        .withMessage('Attachment type must be a string up to 100 characters'),
+    exports.validate
+];
+
+// Application update validation rules
+exports.validateApplicationUpdate = [
+    body('coverLetter')
+        .optional()
+        .trim()
+        .isLength({ min: 50, max: 5000 })
+        .withMessage('Cover letter must be between 50 and 5000 characters'),
+    body('proposedRate')
+        .optional({ values: 'falsy' })
+        .isFloat({ min: 0 })
+        .withMessage('Proposed rate must be a non-negative number'),
+    body('proposed.rate')
+        .optional({ values: 'falsy' })
+        .isFloat({ min: 0 })
+        .withMessage('Proposed rate must be a non-negative number'),
+    body('expectedStartDate')
+        .optional({ values: 'falsy' })
+        .isISO8601()
+        .withMessage('Expected start date must be a valid ISO date'),
+    body('availabilityHoursPerWeek')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 1, max: 168 })
+        .withMessage('Availability must be between 1 and 168 hours per week'),
+    body('portfolioUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Portfolio URL is invalid'),
+    body('attachments')
+        .optional()
+        .isArray()
+        .withMessage('Attachments must be an array'),
+    body('attachments.*.name')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 255 })
+        .withMessage('Attachment name must be a string up to 255 characters'),
+    body('attachments.*.url')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Attachment URL must be a string up to 500 characters'),
+    body('attachments.*.type')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 100 })
+        .withMessage('Attachment type must be a string up to 100 characters'),
+    exports.validate
+];
+
+// Application status-change validation rules
+exports.validateApplicationStatusChange = [
+    body('status')
+        .isIn(APPLICATION_STATUSES)
+        .withMessage('Invalid application status'),
+    body('reason')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Reason cannot exceed 500 characters'),
+    exports.validate
+];

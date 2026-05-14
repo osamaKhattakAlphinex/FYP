@@ -77,6 +77,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/companies', require('./routes/companyRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/applications', require('./routes/applicationRoutes'));
 
 // Health check route
 app.get('/health', (req, res) => {

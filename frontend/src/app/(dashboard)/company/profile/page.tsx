@@ -86,8 +86,22 @@ export default function CompanyProfilePage() {
                 verificationDate: data.verification?.verifiedAt || null,
                 profileCompletionScore: data.profileCompletion || 0,
                 status: 'Active',
-                techStack: data.culture?.values || [],
-                perks: data.culture?.benefits || [],
+                techStack: ((): string[] => {
+                    const v = data.culture?.values
+                    if (Array.isArray(v)) return v
+                    if (typeof v === 'string') {
+                        try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+                    }
+                    return []
+                })(),
+                perks: ((): string[] => {
+                    const v = data.culture?.benefits
+                    if (Array.isArray(v)) return v
+                    if (typeof v === 'string') {
+                        try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] }
+                    }
+                    return []
+                })(),
                 socialLinks: {
                     linkedin: data.socialLinks?.linkedin || null,
                     twitter: data.socialLinks?.twitter || null,

@@ -15,6 +15,9 @@ const Task = require('./Task');
 const TaskSkill = require('./TaskSkill');
 const TaskAttachment = require('./TaskAttachment');
 const TaskUniqueViewer = require('./TaskUniqueViewer');
+const Application = require('./Application');
+const ApplicationAttachment = require('./ApplicationAttachment');
+const ApplicationStatusHistory = require('./ApplicationStatusHistory');
 
 // User <-> role profiles
 User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile', onDelete: 'CASCADE' });
@@ -66,6 +69,32 @@ TaskAttachment.belongsTo(Task, { foreignKey: 'taskId' });
 Task.hasMany(TaskUniqueViewer, { foreignKey: 'taskId', as: 'uniqueViewers', onDelete: 'CASCADE' });
 TaskUniqueViewer.belongsTo(Task, { foreignKey: 'taskId' });
 TaskUniqueViewer.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+// Application associations
+Task.hasMany(Application, { foreignKey: 'taskId', as: 'applications', onDelete: 'CASCADE' });
+Application.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+
+Student.hasMany(Application, { foreignKey: 'studentId', as: 'applications', onDelete: 'CASCADE' });
+Application.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+
+Application.hasMany(ApplicationAttachment, {
+    foreignKey: 'applicationId',
+    as: 'attachments',
+    onDelete: 'CASCADE'
+});
+ApplicationAttachment.belongsTo(Application, { foreignKey: 'applicationId' });
+
+Application.hasMany(ApplicationStatusHistory, {
+    foreignKey: 'applicationId',
+    as: 'statusHistory',
+    onDelete: 'CASCADE'
+});
+ApplicationStatusHistory.belongsTo(Application, { foreignKey: 'applicationId' });
+
+User.hasMany(ApplicationStatusHistory, {
+    foreignKey: 'changedByUserId',
+    as: 'applicationStatusChanges'
+});
 
 // Student profile completion hook (needs counts of associated rows)
 const recalcStudentCompletion = async (student) => {
@@ -127,6 +156,9 @@ module.exports = {
     TaskSkill,
     TaskAttachment,
     TaskUniqueViewer,
+    Application,
+    ApplicationAttachment,
+    ApplicationStatusHistory,
     recalcStudentCompletion,
     recalcCompanyCompletion
 };

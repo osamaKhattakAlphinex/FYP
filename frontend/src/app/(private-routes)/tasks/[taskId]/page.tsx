@@ -13,29 +13,19 @@ import {
     Clock,
     DollarSign,
     Eye,
-    Loader2,
     MapPin,
     Send,
     Target,
     Users,
 } from 'lucide-react'
 import { taskService, Task } from '@/services/taskService'
+import { applicationService } from '@/services/applicationService'
+import ApplyModal from '@/components/applications/ApplyModal'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogBody,
-    DialogFooter,
-    DialogTitle,
-    DialogCloseButton,
-} from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { toast } from 'react-hot-toast'
 import { formatRelativeTime, getInitials } from '@/lib/utils'
 
@@ -46,11 +36,31 @@ export default function TaskDetailPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showApply, setShowApply] = useState(false)
-    const [coverLetter, setCoverLetter] = useState('')
+    const [myApplicationId, setMyApplicationId] = useState<string | null>(null)
+    const { user } = useAuth()
+    const isStudent = user?.role === 'student'
 
     useEffect(() => {
         fetchTask()
     }, [params.taskId])
+
+    useEffect(() => {
+        if (!isStudent || !params.taskId) {
+            setMyApplicationId(null)
+            return
+        }
+        ;(async () => {
+            try {
+                const res = await applicationService.getMyApplications(1, 100, 'all')
+                const match = res.applications.find(
+                    (a) => String(a.taskId) === String(params.taskId),
+                )
+                setMyApplicationId(match?._id ?? null)
+            } catch {
+                // Non-critical — leave button enabled
+            }
+        })()
+    }, [isStudent, params.taskId])
 
     const fetchTask = async () => {
         try {
@@ -99,11 +109,6 @@ export default function TaskDetailPage() {
 
     const time = taskService.getTimeRemaining(task.applicationDeadline)
     const company = task.companyId
-
-    const handleApply = async () => {
-        toast.success('Application submitted!')
-        setShowApply(false)
-    }
 
     return (
         <div className="surface-canvas min-h-[calc(100vh-3.5rem)] py-6">
@@ -171,9 +176,23 @@ export default function TaskDetailPage() {
                             </div>
 
                             <div className="mt-5 flex flex-wrap items-center gap-2">
-                                <Button onClick={() => setShowApply(true)}>
-                                    <Send className="h-4 w-4" /> Apply
-                                </Button>
+                                {myApplicationId ? (
+                                    <>
+                                        <Button variant="secondary" disabled>
+                                            <CheckCircle className="h-4 w-4 text-success" />
+                                            Applied
+                                        </Button>
+                                        <Button asChild variant="ghost" size="sm">
+                                            <Link href={`/student/applications/${myApplicationId}`}>
+                                                View application
+                                            </Link>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button onClick={() => setShowApply(true)}>
+                                        <Send className="h-4 w-4" /> Apply
+                                    </Button>
+                                )}
                                 <Button variant="secondary">
                                     <Bookmark className="h-4 w-4" /> Save
                                 </Button>
@@ -369,47 +388,17 @@ export default function TaskDetailPage() {
                 </div>
             </div>
 
-            {/* Apply Dialog */}
-            <Dialog open={showApply} onOpenChange={setShowApply}>
-                <DialogContent size="lg">
-                    <DialogHeader>
-                        <div>
-                            <DialogTitle>Apply to {task.title}</DialogTitle>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Tell {company.companyName} why you're a great fit.
-                            </p>
-                        </div>
-                        <DialogCloseButton />
-                    </DialogHeader>
-                    <DialogBody>
-                        <Label htmlFor="cover-letter">Cover letter</Label>
-                        <Textarea
-                            id="cover-letter"
-                            value={coverLetter}
-                            onChange={(e) => setCoverLetter(e.target.value)}
-                            placeholder="Highlight your relevant experience, skills, and what you'll deliver…"
-                            rows={9}
-                            maxLength={1000}
-                            className="mt-1.5"
-                        />
-                        <div className="mt-1 flex justify-end text-xs text-muted-foreground">
-                            {coverLetter.length} / 1000
-                        </div>
-                        <div className="mt-4 rounded-md border border-accent-100 bg-accent-50 px-3 py-2.5 text-xs text-accent-700">
-                            <strong>Tip:</strong> Connect your past projects to the task's
-                            deliverables. Specific beats generic.
-                        </div>
-                    </DialogBody>
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={() => setShowApply(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleApply} disabled={coverLetter.length < 50}>
-                            Submit application
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ApplyModal
+                taskId={task._id}
+                taskTitle={task.title}
+                taskBudgetType={task.budget?.type}
+                isOpen={showApply}
+                onClose={() => setShowApply(false)}
+                onSuccess={(application) => {
+                    fetchTask()
+                    setMyApplicationId(application._id)
+                }}
+            />
         </div>
     )
 }

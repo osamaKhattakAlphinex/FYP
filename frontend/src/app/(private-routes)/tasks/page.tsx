@@ -18,6 +18,9 @@ import {
 } from '@/components/ui/select'
 import { Search } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import ApplyModal from '@/components/applications/ApplyModal'
+import { applicationService } from '@/services/applicationService'
+import { useAuth } from '@/contexts/AuthContext'
 
 const LIMIT = 12
 
@@ -33,8 +36,32 @@ export default function TasksPage() {
     })
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+    const [applyOpen, setApplyOpen] = useState(false)
+    const [appliedMap, setAppliedMap] = useState<Record<string, string>>({})
+    const { user } = useAuth()
+    const isStudent = user?.role === 'student'
 
     const selectedTask = tasks.find((t) => t._id === selectedTaskId) ?? null
+    const appliedApplicationId = selectedTask ? appliedMap[selectedTask._id] : null
+
+    const refreshAppliedMap = async () => {
+        if (!isStudent) return
+        try {
+            const res = await applicationService.getMyApplications(1, 100, 'all')
+            const map: Record<string, string> = {}
+            res.applications.forEach((a) => {
+                map[String(a.taskId)] = a._id
+            })
+            setAppliedMap(map)
+        } catch {
+            // Non-critical
+        }
+    }
+
+    useEffect(() => {
+        refreshAppliedMap()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isStudent])
 
     useEffect(() => {
         fetchTasks()
@@ -221,12 +248,30 @@ export default function TasksPage() {
                         <div className="sticky top-[4.5rem] max-h-[calc(100vh-5rem)] overflow-y-auto scrollbar-thin">
                             <TaskDetailPane
                                 task={selectedTask}
-                                onApply={() => toast.success('Apply flow coming soon')}
+                                appliedApplicationId={appliedApplicationId}
+                                onApply={() => {
+                                    if (!selectedTask) return
+                                    setApplyOpen(true)
+                                }}
                             />
                         </div>
                     </aside>
                 </div>
             </div>
+
+            {selectedTask && (
+                <ApplyModal
+                    taskId={selectedTask._id}
+                    taskTitle={selectedTask.title}
+                    taskBudgetType={selectedTask.budget?.type}
+                    isOpen={applyOpen}
+                    onClose={() => setApplyOpen(false)}
+                    onSuccess={() => {
+                        fetchTasks()
+                        refreshAppliedMap()
+                    }}
+                />
+            )}
         </div>
     )
 }

@@ -15,6 +15,7 @@ import {
     Calendar,
     Send,
     Building2,
+    CheckCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatRelativeTime, getInitials } from '@/lib/utils'
@@ -23,9 +24,14 @@ import { getTextPreview } from '@/utils/textUtils'
 interface TaskDetailPaneProps {
     task: Task | null
     onApply?: () => void
+    appliedApplicationId?: string | null
 }
 
-export default function TaskDetailPane({ task, onApply }: TaskDetailPaneProps) {
+export default function TaskDetailPane({
+    task,
+    onApply,
+    appliedApplicationId,
+}: TaskDetailPaneProps) {
     if (!task) {
         return (
             <div className="grid place-items-center rounded-md border border-dashed border-border bg-card/40 p-12 text-center text-sm text-muted-foreground">
@@ -36,6 +42,21 @@ export default function TaskDetailPane({ task, onApply }: TaskDetailPaneProps) {
 
     const time = taskService.getTimeRemaining(task.applicationDeadline)
     const company = task.companyId
+
+    const toArray = <T,>(v: unknown): T[] => {
+        if (Array.isArray(v)) return v as T[]
+        if (typeof v === 'string') {
+            try {
+                const parsed = JSON.parse(v)
+                return Array.isArray(parsed) ? (parsed as T[]) : []
+            } catch {
+                return []
+            }
+        }
+        return []
+    }
+    const deliverables = toArray<string>(task.deliverables)
+    const skillsRequired = toArray<{ name: string; required?: boolean }>(task.skillsRequired)
 
     return (
         <div className="rounded-md border border-border bg-card">
@@ -93,16 +114,31 @@ export default function TaskDetailPane({ task, onApply }: TaskDetailPaneProps) {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <Button onClick={onApply} className="min-w-[120px]">
-                        <Send className="h-4 w-4" />
-                        Apply
-                    </Button>
+                    {appliedApplicationId ? (
+                        <Button variant="secondary" disabled className="min-w-[120px]">
+                            <CheckCircle className="h-4 w-4 text-success" />
+                            Applied
+                        </Button>
+                    ) : (
+                        <Button onClick={onApply} className="min-w-[120px]">
+                            <Send className="h-4 w-4" />
+                            Apply
+                        </Button>
+                    )}
                     <Button variant="secondary" size="md">
                         <Bookmark className="h-4 w-4" />
                         Save
                     </Button>
                     <Button asChild variant="ghost" size="md">
-                        <Link href={`/tasks/${task._id}`}>Open full view</Link>
+                        <Link
+                            href={
+                                appliedApplicationId
+                                    ? `/student/applications/${appliedApplicationId}`
+                                    : `/tasks/${task._id}`
+                            }
+                        >
+                            {appliedApplicationId ? 'View application' : 'Open full view'}
+                        </Link>
                     </Button>
                     {!time.expired && (
                         <span className="ml-auto text-xs text-muted-foreground">
@@ -156,13 +192,13 @@ export default function TaskDetailPane({ task, onApply }: TaskDetailPaneProps) {
                 </p>
             </div>
 
-            {task.skillsRequired.length > 0 && (
+            {skillsRequired.length > 0 && (
                 <>
                     <Separator />
                     <div className="px-6 py-5">
                         <h3 className="text-sm font-semibold text-foreground">Skills</h3>
                         <div className="mt-3 flex flex-wrap gap-1.5">
-                            {task.skillsRequired.map((s, i) => (
+                            {skillsRequired.map((s, i) => (
                                 <Badge key={i} variant={s.required ? 'soft' : 'muted'}>
                                     {s.name}
                                 </Badge>
@@ -172,13 +208,13 @@ export default function TaskDetailPane({ task, onApply }: TaskDetailPaneProps) {
                 </>
             )}
 
-            {task.deliverables.length > 0 && (
+            {deliverables.length > 0 && (
                 <>
                     <Separator />
                     <div className="px-6 py-5">
                         <h3 className="text-sm font-semibold text-foreground">Deliverables</h3>
                         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-                            {task.deliverables.map((d, i) => (
+                            {deliverables.map((d, i) => (
                                 <li key={i} className="flex gap-2">
                                     <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-muted-foreground" />
                                     {d}

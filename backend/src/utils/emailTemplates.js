@@ -176,9 +176,139 @@ const getWelcomeTemplate = (userName, role) => {
   `;
 };
 
+const STATUS_LABELS = {
+    submitted: 'Submitted',
+    under_review: 'Under Review',
+    shortlisted: 'Shortlisted',
+    interview_scheduled: 'Interview Scheduled',
+    accepted: 'Accepted',
+    rejected: 'Rejected',
+    withdrawn: 'Withdrawn'
+};
+
+const STATUS_COLORS = {
+    submitted: '#6b7280',
+    under_review: '#2563eb',
+    shortlisted: '#4f46e5',
+    interview_scheduled: '#7c3aed',
+    accepted: '#16a34a',
+    rejected: '#dc2626',
+    withdrawn: '#ca8a04'
+};
+
+const getApplicationStatusChangeTemplate = ({
+    studentName,
+    companyName,
+    taskTitle,
+    fromStatus,
+    toStatus,
+    reason,
+    applicationUrl
+}) => {
+    const label = STATUS_LABELS[toStatus] || toStatus;
+    const color = STATUS_COLORS[toStatus] || '#667eea';
+    const fromLabel = STATUS_LABELS[fromStatus] || fromStatus || '—';
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .status-pill { display: inline-block; padding: 6px 14px; background: ${color}; color: white; border-radius: 9999px; font-weight: 600; font-size: 14px; }
+        .meta { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
+        .meta-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+        .meta-row strong { color: #111; }
+        .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 16px 0; }
+        .reason { background: #fff7ed; border-left: 4px solid #f97316; padding: 12px 16px; margin: 20px 0; border-radius: 5px; font-size: 14px; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Application Update</h1>
+        </div>
+        <div class="content">
+          <p>Hi ${studentName || 'there'},</p>
+          <p>Your application to <strong>${taskTitle}</strong> at <strong>${companyName}</strong> has a new status:</p>
+          <p style="text-align: center;">
+            <span class="status-pill">${label}</span>
+          </p>
+          <div class="meta">
+            <div class="meta-row"><span>Previous status</span><strong>${fromLabel}</strong></div>
+            <div class="meta-row"><span>New status</span><strong>${label}</strong></div>
+            <div class="meta-row"><span>Task</span><strong>${taskTitle}</strong></div>
+            <div class="meta-row"><span>Company</span><strong>${companyName}</strong></div>
+          </div>
+          ${reason ? `<div class="reason"><strong>Message from ${companyName}:</strong><br>${reason}</div>` : ''}
+          ${applicationUrl ? `<p style="text-align: center;"><a href="${applicationUrl}" class="button">View application</a></p>` : ''}
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Smart AI Platform. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+const getApplicationWithdrawnTemplate = ({
+    companyName,
+    studentName,
+    taskTitle,
+    reason,
+    candidatesUrl
+}) => {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #ca8a04 0%, #b45309 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .meta { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
+        .meta-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+        .meta-row strong { color: #111; }
+        .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 16px 0; }
+        .reason { background: #fef3c7; border-left: 4px solid #ca8a04; padding: 12px 16px; margin: 20px 0; border-radius: 5px; font-size: 14px; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Application Withdrawn</h1>
+        </div>
+        <div class="content">
+          <p>Hi ${companyName || 'there'},</p>
+          <p><strong>${studentName || 'A candidate'}</strong> has withdrawn their application for your task <strong>${taskTitle}</strong>.</p>
+          <div class="meta">
+            <div class="meta-row"><span>Candidate</span><strong>${studentName || '—'}</strong></div>
+            <div class="meta-row"><span>Task</span><strong>${taskTitle}</strong></div>
+            <div class="meta-row"><span>Withdrawn at</span><strong>${new Date().toLocaleString()}</strong></div>
+          </div>
+          ${reason ? `<div class="reason"><strong>Reason provided:</strong><br>${reason}</div>` : ''}
+          ${candidatesUrl ? `<p style="text-align: center;"><a href="${candidatesUrl}" class="button">View remaining applicants</a></p>` : ''}
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Smart AI Platform. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
     getEmailVerificationTemplate,
     getOTPTemplate,
     getPasswordResetTemplate,
-    getWelcomeTemplate
+    getWelcomeTemplate,
+    getApplicationStatusChangeTemplate,
+    getApplicationWithdrawnTemplate
 };

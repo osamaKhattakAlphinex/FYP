@@ -83,6 +83,13 @@ class Task extends Model {
         const values = { ...this.get() };
         values._id = values.id;
 
+        ['deliverables', 'benefits', 'tags', 'searchKeywords', 'requirements'].forEach((k) => {
+            if (typeof values[k] === 'string') {
+                try { values[k] = JSON.parse(values[k]); } catch { values[k] = []; }
+            }
+            if (!Array.isArray(values[k])) values[k] = [];
+        });
+
         values.duration = {
             value: values.durationValue,
             unit: values.durationUnit

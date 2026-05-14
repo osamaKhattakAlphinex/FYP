@@ -30,6 +30,13 @@ class Company extends Model {
         const values = { ...this.get() };
         values._id = values.id;
 
+        ['cultureValues', 'cultureBenefits'].forEach((k) => {
+            if (typeof values[k] === 'string') {
+                try { values[k] = JSON.parse(values[k]); } catch { values[k] = []; }
+            }
+            if (!Array.isArray(values[k])) values[k] = [];
+        });
+
         values.location = {
             address: values.locationAddress || undefined,
             city: values.locationCity || undefined,
