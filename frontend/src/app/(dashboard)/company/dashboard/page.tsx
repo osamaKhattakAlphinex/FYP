@@ -5,7 +5,6 @@ import Link from 'next/link'
 import {
     Activity,
     Award,
-    CalendarDays,
     ClipboardList,
     Inbox,
     Plus,
@@ -18,6 +17,7 @@ import StatStrip from '@/components/shared/StatStrip'
 import ComingSoonCard from '@/components/shared/ComingSoonCard'
 import CompanyWelcomeBanner from '@/components/company/dashboard/CompanyWelcomeBanner'
 import ActiveTasksCard from '@/components/company/dashboard/ActiveTasksCard'
+import UpcomingInterviewsCard from '@/components/company/dashboard/UpcomingInterviewsCard'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -252,12 +252,7 @@ export default function CompanyDashboard() {
                 icon={Users}
             />
 
-            {/* Module 5 placeholder */}
-            <ComingSoonCard
-                title="Upcoming interviews"
-                description="Schedule interviews with shortlisted candidates and they'll appear here."
-                icon={CalendarDays}
-            />
+            <UpcomingInterviewsCard />
 
             {/* Certificates placeholder */}
             <ComingSoonCard

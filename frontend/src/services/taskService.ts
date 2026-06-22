@@ -72,6 +72,9 @@ export interface Task {
     expired: boolean;
   };
   budgetDisplay?: string;
+  // Present on tasks returned by /tasks/recommendations
+  matchScore?: number | null;
+  matchReasons?: string[];
 }
 
 export interface TaskFilters {
@@ -264,6 +267,14 @@ export const taskService = {
   // Get recommended tasks (Student only)
   async getRecommendedTasks(limit: number = 10): Promise<Task[]> {
     const response = await api.get(`/tasks/recommendations?limit=${limit}`);
+    return response.data.data;
+  },
+
+  // Recompute AI match scores for every applicant of a task (Company owner only)
+  async recomputeMatchScores(
+    taskId: string,
+  ): Promise<{ updated: number; total: number }> {
+    const response = await api.post(`/tasks/${taskId}/recompute-matches`);
     return response.data.data;
   },
 

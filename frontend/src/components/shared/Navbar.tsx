@@ -13,6 +13,7 @@ import {
     LogOut,
     Settings,
     LayoutDashboard,
+    CalendarClock,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -89,6 +90,8 @@ export default function Navbar() {
         user?.role === 'company' ? '/company/dashboard' : '/student/dashboard'
     const profileHref =
         user?.role === 'company' ? '/company/profile' : '/student/profile'
+    const interviewsHref =
+        user?.role === 'company' ? '/company/interviews' : '/student/interviews'
 
     const userName =
         user?.firstName && user?.lastName
@@ -131,6 +134,12 @@ export default function Navbar() {
                             icon={Briefcase}
                             label="Tasks"
                             active={pathname?.startsWith('/tasks')}
+                        />
+                        <NavIconLink
+                            href={interviewsHref}
+                            icon={CalendarClock}
+                            label="Interviews"
+                            active={pathname?.includes('/interviews')}
                         />
                         <NavIconLink
                             href={profileHref}
@@ -249,6 +258,13 @@ export default function Navbar() {
                                     className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                                 >
                                     <Briefcase className="h-4 w-4" /> Tasks
+                                </Link>
+                                <Link
+                                    href={interviewsHref}
+                                    onClick={() => setMobileOpen(false)}
+                                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                >
+                                    <CalendarClock className="h-4 w-4" /> Interviews
                                 </Link>
                                 <Link
                                     href={profileHref}

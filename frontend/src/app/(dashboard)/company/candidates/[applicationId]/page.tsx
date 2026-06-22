@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
     ArrowLeft,
     Loader2,
@@ -14,12 +14,16 @@ import {
     Paperclip,
     Download,
     CalendarClock,
+    CalendarPlus,
     DollarSign,
     Clock,
     Globe,
     History,
     Save,
     AlertCircle,
+    RotateCcw,
+    XCircle,
+    CheckCircle2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -56,11 +60,24 @@ import {
 
 import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { applicationService } from '@/services/applicationService'
+import { interviewService } from '@/services/interviewService'
 import type {
     Application,
     ApplicationStatus,
 } from '@/types/application.types'
+import type { Interview } from '@/types/interview.types'
+import ScheduleInterviewModal from '@/components/interviews/ScheduleInterviewModal'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+
+// Format a Date as the value a datetime-local input expects.
+const toLocalInputValue = (iso: string) => {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+        d.getHours(),
+    )}:${pad(d.getMinutes())}`
+}
 
 const VALID_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
     submitted: ['under_review', 'shortlisted', 'rejected'],
@@ -104,7 +121,10 @@ export default function CandidateDetailPage() {
     useRoleProtection({ allowedRoles: ['company'] })
     const router = useRouter()
     const params = useParams<{ applicationId: string }>()
+    const searchParams = useSearchParams()
     const applicationId = params?.applicationId
+    const initialTab =
+        searchParams.get('tab') === 'interview' ? 'interview' : 'application'
 
     const [application, setApplication] = useState<Application | null>(null)
     const [loading, setLoading] = useState(true)
@@ -115,12 +135,26 @@ export default function CandidateDetailPage() {
     const [reason, setReason] = useState('')
     const [submittingStatus, setSubmittingStatus] = useState(false)
 
+    // Module 5 — Interview
+    const [interview, setInterview] = useState<Interview | null>(null)
+    const [scheduleOpen, setScheduleOpen] = useState(false)
+    const [rescheduleOpen, setRescheduleOpen] = useState(false)
+    const [cancelOpen, setCancelOpen] = useState(false)
+    const [completeOpen, setCompleteOpen] = useState(false)
+    const [rescheduleAt, setRescheduleAt] = useState('')
+    const [rescheduleReason, setRescheduleReason] = useState('')
+    const [cancelReason, setCancelReason] = useState('')
+    const [completeFeedback, setCompleteFeedback] = useState('')
+    const [completeRating, setCompleteRating] = useState('')
+    const [interviewBusy, setInterviewBusy] = useState(false)
+
     const fetchApplication = useCallback(async () => {
         if (!applicationId) return
         try {
             setLoading(true)
             const data = await applicationService.getApplication(applicationId)
             setApplication(data)
+            setInterview(data.interview ?? null)
             setNotes(data.companyNotes ?? '')
         } catch {
             toast.error('Failed to load application')
@@ -186,6 +220,81 @@ export default function CandidateDetailPage() {
             toast.error(error?.response?.data?.message || 'Failed to save notes')
         } finally {
             setSavingNotes(false)
+        }
+    }
+
+    const openReschedule = () => {
+        if (interview) setRescheduleAt(toLocalInputValue(interview.scheduledAt))
+        setRescheduleReason('')
+        setRescheduleOpen(true)
+    }
+
+    const handleReschedule = async () => {
+        if (!interview) return
+        if (!rescheduleAt) {
+            toast.error('Pick a new date and time')
+            return
+        }
+        if (new Date(rescheduleAt).getTime() <= Date.now()) {
+            toast.error('The new time must be in the future')
+            return
+        }
+        try {
+            setInterviewBusy(true)
+            await interviewService.reschedule(interview._id, {
+                scheduledAt: new Date(rescheduleAt).toISOString(),
+                reason: rescheduleReason.trim() || undefined,
+            })
+            toast.success('Interview rescheduled')
+            setRescheduleOpen(false)
+            setRescheduleReason('')
+            fetchApplication()
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to reschedule')
+        } finally {
+            setInterviewBusy(false)
+        }
+    }
+
+    const handleCancelInterview = async () => {
+        if (!interview) return
+        if (!cancelReason.trim()) {
+            toast.error('A cancellation reason is required')
+            return
+        }
+        try {
+            setInterviewBusy(true)
+            await interviewService.cancel(interview._id, {
+                reason: cancelReason.trim(),
+            })
+            toast.success('Interview cancelled')
+            setCancelOpen(false)
+            setCancelReason('')
+            fetchApplication()
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to cancel')
+        } finally {
+            setInterviewBusy(false)
+        }
+    }
+
+    const handleCompleteInterview = async () => {
+        if (!interview) return
+        try {
+            setInterviewBusy(true)
+            await interviewService.complete(interview._id, {
+                companyFeedback: completeFeedback.trim() || undefined,
+                companyRating: completeRating ? Number(completeRating) : undefined,
+            })
+            toast.success('Interview marked as completed')
+            setCompleteOpen(false)
+            setCompleteFeedback('')
+            setCompleteRating('')
+            fetchApplication()
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to complete')
+        } finally {
+            setInterviewBusy(false)
         }
     }
 
@@ -262,14 +371,14 @@ export default function CandidateDetailPage() {
                     </div>
                 </div>
 
-                {application.status === 'interview_scheduled' && (
+                {application.status === 'interview_scheduled' && !interview && (
                     <Card className="flex items-start gap-3 border-purple-200 bg-purple-50/50 p-4 text-purple-900">
                         <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
                         <div className="text-sm">
-                            <p className="font-semibold">Interview ready to schedule</p>
+                            <p className="font-semibold">Interview not scheduled yet</p>
                             <p className="text-purple-800/80">
-                                Schedule the interview from the Interviews tab (coming in
-                                Module 5).
+                                Open the Interview tab to set a date, mode, and meeting
+                                details.
                             </p>
                         </div>
                     </Card>
@@ -432,9 +541,15 @@ export default function CandidateDetailPage() {
 
                     {/* Right: tabs */}
                     <Card className="p-4">
-                        <Tabs defaultValue="application">
+                        <Tabs defaultValue={initialTab}>
                             <TabsList>
                                 <TabsTrigger value="application">Application</TabsTrigger>
+                                <TabsTrigger value="interview">
+                                    Interview
+                                    {interview && (
+                                        <span className="ml-1 h-1.5 w-1.5 rounded-full bg-brand-600" />
+                                    )}
+                                </TabsTrigger>
                                 <TabsTrigger value="attachments">
                                     Attachments
                                     {application.attachments.length > 0 && (
@@ -452,7 +567,7 @@ export default function CandidateDetailPage() {
                                     <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                         Cover letter
                                     </p>
-                                    <p className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground/90">
+                                    <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground/90">
                                         {application.coverLetter}
                                     </p>
                                 </section>
@@ -495,6 +610,206 @@ export default function CandidateDetailPage() {
                                         </p>
                                     </Card>
                                 </div>
+                            </TabsContent>
+
+                            <TabsContent value="interview" className="space-y-4">
+                                {!interview ? (
+                                    <div className="rounded-md border border-dashed border-border bg-muted/30 p-8 text-center">
+                                        <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-muted text-muted-foreground">
+                                            <CalendarPlus className="h-4 w-4" />
+                                        </div>
+                                        <p className="mt-3 text-sm font-medium text-foreground">
+                                            No interview scheduled
+                                        </p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            Schedule an interview with this candidate to
+                                            move the process forward.
+                                        </p>
+                                        <Button
+                                            size="sm"
+                                            className="mt-4"
+                                            onClick={() => setScheduleOpen(true)}
+                                        >
+                                            <CalendarPlus className="h-3.5 w-3.5" />
+                                            Schedule interview
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span
+                                                className={cn(
+                                                    'rounded-full px-2.5 py-1 text-xs font-medium',
+                                                    interviewService.getStatusColor(
+                                                        interview.status,
+                                                    ),
+                                                )}
+                                            >
+                                                {interviewService.getStatusLabel(
+                                                    interview.status,
+                                                )}
+                                            </span>
+                                            {interview.rescheduleCount > 0 && (
+                                                <Badge variant="muted">
+                                                    Rescheduled ×
+                                                    {interview.rescheduleCount}
+                                                </Badge>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <Card className="p-3">
+                                                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                    <CalendarClock className="h-3.5 w-3.5" />{' '}
+                                                    When
+                                                </p>
+                                                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                                                    {interviewService.formatScheduledAt(
+                                                        interview.scheduledAt,
+                                                        interview.timezone,
+                                                    )}
+                                                </p>
+                                            </Card>
+                                            <Card className="p-3">
+                                                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                    <Clock className="h-3.5 w-3.5" />{' '}
+                                                    Duration & mode
+                                                </p>
+                                                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                                                    {interview.durationMinutes} min ·{' '}
+                                                    {interviewService.getModeLabel(
+                                                        interview.mode,
+                                                    )}
+                                                </p>
+                                            </Card>
+                                        </div>
+
+                                        {(interview.meeting.link ||
+                                            interview.meeting.phoneNumber ||
+                                            interview.meeting.location) && (
+                                            <Card className="p-3">
+                                                <p className="text-xs text-muted-foreground">
+                                                    Meeting details
+                                                </p>
+                                                {interview.meeting.link && (
+                                                    <a
+                                                        href={interview.meeting.link}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="mt-0.5 block break-all text-sm font-medium text-brand-700 hover:underline"
+                                                    >
+                                                        {interview.meeting.link}
+                                                    </a>
+                                                )}
+                                                {interview.meeting.phoneNumber && (
+                                                    <p className="mt-0.5 text-sm font-medium text-foreground">
+                                                        {interview.meeting.phoneNumber}
+                                                    </p>
+                                                )}
+                                                {interview.meeting.location && (
+                                                    <p className="mt-0.5 text-sm font-medium text-foreground">
+                                                        {interview.meeting.location}
+                                                    </p>
+                                                )}
+                                            </Card>
+                                        )}
+
+                                        {interview.agenda && (
+                                            <section>
+                                                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                    Agenda
+                                                </p>
+                                                <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-muted/30 p-3 text-sm leading-relaxed text-foreground/90">
+                                                    {interview.agenda}
+                                                </p>
+                                            </section>
+                                        )}
+
+                                        {interview.status === 'cancelled' &&
+                                            interview.cancellationReason && (
+                                                <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2.5 text-xs text-destructive">
+                                                    <strong>
+                                                        Cancellation reason:{' '}
+                                                    </strong>
+                                                    {interview.cancellationReason}
+                                                </div>
+                                            )}
+
+                                        {interview.status === 'completed' && (
+                                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                <Card className="p-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Your feedback
+                                                    </p>
+                                                    <p className="mt-0.5 text-sm text-foreground/90">
+                                                        {interview.companyFeedback ||
+                                                            '—'}
+                                                    </p>
+                                                    {interview.ratings.company !=
+                                                        null && (
+                                                        <p className="mt-1 text-xs text-muted-foreground">
+                                                            Rating:{' '}
+                                                            {interview.ratings.company}/5
+                                                        </p>
+                                                    )}
+                                                </Card>
+                                                <Card className="p-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Student feedback
+                                                    </p>
+                                                    <p className="mt-0.5 text-sm text-foreground/90">
+                                                        {interview.studentFeedback ||
+                                                            'Not submitted yet'}
+                                                    </p>
+                                                    {interview.ratings.student !=
+                                                        null && (
+                                                        <p className="mt-1 text-xs text-muted-foreground">
+                                                            Rating:{' '}
+                                                            {interview.ratings.student}/5
+                                                        </p>
+                                                    )}
+                                                </Card>
+                                            </div>
+                                        )}
+
+                                        {['scheduled', 'rescheduled'].includes(
+                                            interview.status,
+                                        ) && (
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={openReschedule}
+                                                >
+                                                    <RotateCcw className="h-3.5 w-3.5" />
+                                                    Reschedule
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    onClick={() => {
+                                                        setCancelReason('')
+                                                        setCancelOpen(true)
+                                                    }}
+                                                >
+                                                    <XCircle className="h-3.5 w-3.5" />
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setCompleteFeedback('')
+                                                        setCompleteRating('')
+                                                        setCompleteOpen(true)
+                                                    }}
+                                                >
+                                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                                    Mark complete
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </TabsContent>
 
                             <TabsContent value="attachments">
@@ -664,6 +979,195 @@ export default function CandidateDetailPage() {
                                 </>
                             ) : (
                                 'Confirm'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Schedule interview modal */}
+            <ScheduleInterviewModal
+                application={application}
+                isOpen={scheduleOpen}
+                onClose={() => setScheduleOpen(false)}
+                onScheduled={() => {
+                    // Re-fetch to pick up the embedded interview + updated status
+                    fetchApplication()
+                }}
+            />
+
+            {/* Reschedule dialog */}
+            <Dialog
+                open={rescheduleOpen}
+                onOpenChange={(open) => {
+                    if (!open && !interviewBusy) setRescheduleOpen(false)
+                }}
+            >
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle>Reschedule interview</DialogTitle>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody className="space-y-3">
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                                New date & time
+                            </span>
+                            <Input
+                                type="datetime-local"
+                                value={rescheduleAt}
+                                onChange={(e) => setRescheduleAt(e.target.value)}
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                                Reason (optional)
+                            </span>
+                            <Textarea
+                                rows={3}
+                                maxLength={500}
+                                value={rescheduleReason}
+                                onChange={(e) => setRescheduleReason(e.target.value)}
+                                placeholder="Let the candidate know why the time changed…"
+                            />
+                        </label>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setRescheduleOpen(false)}
+                            disabled={interviewBusy}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleReschedule} disabled={interviewBusy}>
+                            {interviewBusy ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : (
+                                'Reschedule'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel dialog */}
+            <Dialog
+                open={cancelOpen}
+                onOpenChange={(open) => {
+                    if (!open && !interviewBusy) setCancelOpen(false)
+                }}
+            >
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle>Cancel interview?</DialogTitle>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody className="space-y-3">
+                        <p className="text-sm text-foreground/80">
+                            The candidate will be notified. You can schedule a new
+                            interview afterwards if needed.
+                        </p>
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                                Reason <span className="text-destructive">*</span>
+                            </span>
+                            <Textarea
+                                rows={3}
+                                maxLength={500}
+                                value={cancelReason}
+                                onChange={(e) => setCancelReason(e.target.value)}
+                                placeholder="Why is this interview being cancelled?"
+                            />
+                        </label>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setCancelOpen(false)}
+                            disabled={interviewBusy}
+                        >
+                            Keep interview
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancelInterview}
+                            disabled={interviewBusy}
+                        >
+                            {interviewBusy ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Cancelling…
+                                </>
+                            ) : (
+                                'Cancel interview'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Mark complete dialog */}
+            <Dialog
+                open={completeOpen}
+                onOpenChange={(open) => {
+                    if (!open && !interviewBusy) setCompleteOpen(false)
+                }}
+            >
+                <DialogContent size="sm">
+                    <DialogHeader>
+                        <DialogTitle>Mark interview as completed</DialogTitle>
+                        <DialogCloseButton />
+                    </DialogHeader>
+                    <DialogBody className="space-y-3">
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                                Your feedback (optional)
+                            </span>
+                            <Textarea
+                                rows={3}
+                                value={completeFeedback}
+                                onChange={(e) => setCompleteFeedback(e.target.value)}
+                                placeholder="How did the interview go?"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground">
+                                Rating (optional)
+                            </span>
+                            <Select
+                                value={completeRating}
+                                onValueChange={setCompleteRating}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="No rating" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[1, 2, 3, 4, 5].map((r) => (
+                                        <SelectItem key={r} value={String(r)}>
+                                            {r} / 5
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </label>
+                    </DialogBody>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setCompleteOpen(false)}
+                            disabled={interviewBusy}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleCompleteInterview} disabled={interviewBusy}>
+                            {interviewBusy ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                                </>
+                            ) : (
+                                'Mark complete'
                             )}
                         </Button>
                     </DialogFooter>

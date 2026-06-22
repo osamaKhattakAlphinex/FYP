@@ -18,6 +18,7 @@ const TaskUniqueViewer = require('./TaskUniqueViewer');
 const Application = require('./Application');
 const ApplicationAttachment = require('./ApplicationAttachment');
 const ApplicationStatusHistory = require('./ApplicationStatusHistory');
+const Interview = require('./Interview');
 
 // User <-> role profiles
 User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile', onDelete: 'CASCADE' });
@@ -96,6 +97,21 @@ User.hasMany(ApplicationStatusHistory, {
     as: 'applicationStatusChanges'
 });
 
+// Interview associations
+Application.hasOne(Interview, { foreignKey: 'applicationId', as: 'interview', onDelete: 'CASCADE' });
+Interview.belongsTo(Application, { foreignKey: 'applicationId', as: 'application' });
+
+Task.hasMany(Interview, { foreignKey: 'taskId', as: 'interviews', onDelete: 'CASCADE' });
+Interview.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+
+Company.hasMany(Interview, { foreignKey: 'companyId', as: 'interviews', onDelete: 'CASCADE' });
+Interview.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+
+Student.hasMany(Interview, { foreignKey: 'studentId', as: 'interviews', onDelete: 'CASCADE' });
+Interview.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+
+User.hasMany(Interview, { foreignKey: 'createdByUserId', as: 'createdInterviews' });
+
 // Student profile completion hook (needs counts of associated rows)
 const recalcStudentCompletion = async (student) => {
     if (!student) return;
@@ -159,6 +175,7 @@ module.exports = {
     Application,
     ApplicationAttachment,
     ApplicationStatusHistory,
+    Interview,
     recalcStudentCompletion,
     recalcCompanyCompletion
 };

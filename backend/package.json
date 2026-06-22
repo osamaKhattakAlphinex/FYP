@@ -9,9 +9,11 @@
     "build": "echo 'No build step required'",
     "test": "jest",
     "seed:tasks": "node src/scripts/seedTasks.js",
+    "seed:applications": "node src/scripts/seedApplications.js",
     "check:companies": "node src/scripts/checkCompanies.js"
   },
   "dependencies": {
+    "axios": "^1.6.7",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

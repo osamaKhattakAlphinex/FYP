@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Bookmark, BadgeCheck, MapPin, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import MatchScoreBadge from '@/components/match/MatchScoreBadge'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 
 interface TaskCardProps {
@@ -53,20 +54,29 @@ export default function TaskCard({ task, showCompany = true, className }: TaskCa
                         <h3 className="line-clamp-2 text-base font-semibold text-foreground group-hover:text-brand-700">
                             {task.title}
                         </h3>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                setIsSaved(!isSaved)
-                            }}
-                            className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                            aria-label="Save task"
-                        >
-                            <Bookmark
-                                className={cn('h-4 w-4', isSaved && 'fill-foreground text-foreground')}
-                            />
-                        </button>
+                        <div className="flex flex-shrink-0 items-center gap-1.5">
+                            {typeof task.matchScore === 'number' && (
+                                <MatchScoreBadge
+                                    score={task.matchScore}
+                                    reasons={task.matchReasons}
+                                    size="sm"
+                                />
+                            )}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setIsSaved(!isSaved)
+                                }}
+                                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                aria-label="Save task"
+                            >
+                                <Bookmark
+                                    className={cn('h-4 w-4', isSaved && 'fill-foreground text-foreground')}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     {showCompany && company && (

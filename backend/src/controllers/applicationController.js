@@ -4,12 +4,14 @@ const {
     Application,
     ApplicationAttachment,
     ApplicationStatusHistory,
+    Interview,
     Task,
     TaskSkill,
     TaskAttachment,
     Company,
     Student,
     StudentSkill,
+    StudentExperience,
     StudentEducation
 } = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
@@ -17,6 +19,44 @@ const {
     notifyStudentOfStatusChange,
     notifyCompanyOfWithdrawal
 } = require('../utils/applicationNotifications');
+const aiService = require('../services/aiService');
+const { AIServiceUnavailableError } = aiService;
+
+// Fire-and-forget match calc for a single new application.
+// Never blocks the API response; logs on failure.
+const scheduleMatchScoreForApplication = (applicationId, taskId, studentId) => {
+    setImmediate(async () => {
+        try {
+            const [task, student] = await Promise.all([
+                Task.findByPk(taskId, {
+                    include: [{ model: TaskSkill, as: 'skillsRequired' }]
+                }),
+                Student.findByPk(studentId, {
+                    include: [
+                        { model: StudentSkill, as: 'skills' },
+                        { model: StudentExperience, as: 'experience' },
+                        { model: StudentEducation, as: 'education' }
+                    ]
+                })
+            ]);
+            if (!task || !student) return;
+
+            const results = await aiService.matchTasksForStudent(
+                aiService.mapStudentToDto(student),
+                [aiService.mapTaskToDto(task)]
+            );
+            if (results.length === 0) return;
+            await Application.update(
+                { matchScore: results[0].score },
+                { where: { id: applicationId } }
+            );
+        } catch (err) {
+            console.warn(
+                `[scheduleMatchScoreForApplication] application ${applicationId} not scored: ${err.message}`
+            );
+        }
+    });
+};
 
 const STUDENT_BASIC_ATTRS = [
     'id', 'firstName', 'lastName', 'headline', 'profilePicture',
@@ -147,6 +187,9 @@ exports.applyToTask = async (req, res, next) => {
         await task.increment('applicationCount', { by: 1, transaction: t });
 
         await t.commit();
+
+        // Kick off match-score calc in the background (best-effort).
+        scheduleMatchScoreForApplication(application.id, task.id, student.id);
 
         const fresh = await Application.findByPk(application.id, {
             include: studentApplicationIncludes()
@@ -423,6 +466,47 @@ exports.getApplicationsForTask = async (req, res, next) => {
             subQuery: false
         });
 
+        // Backfill matchScore for any rows on this page that don't have one yet.
+        const needsScoring = rows.filter((a) => a.matchScore == null);
+        if (needsScoring.length > 0) {
+            try {
+                const taskFull = await Task.findByPk(task.id, {
+                    include: [{ model: TaskSkill, as: 'skillsRequired' }]
+                });
+                const studentsFull = await Student.findAll({
+                    where: { id: { [Op.in]: needsScoring.map((a) => a.studentId) } },
+                    include: [
+                        { model: StudentSkill, as: 'skills' },
+                        { model: StudentExperience, as: 'experience' },
+                        { model: StudentEducation, as: 'education' }
+                    ]
+                });
+                const ranking = await aiService.rankCandidates(
+                    aiService.mapTaskToDto(taskFull),
+                    studentsFull.map(aiService.mapStudentToDto)
+                );
+                const scoreByStudentId = new Map(
+                    ranking.map((r) => [String(r.student_id), r.score])
+                );
+                await Promise.all(needsScoring.map(async (app) => {
+                    const score = scoreByStudentId.get(String(app.studentId));
+                    if (typeof score === 'number') {
+                        app.matchScore = score;
+                        await Application.update(
+                            { matchScore: score },
+                            { where: { id: app.id } }
+                        );
+                    }
+                }));
+            } catch (err) {
+                if (err instanceof AIServiceUnavailableError) {
+                    console.warn('[getApplicationsForTask] AI scoring skipped:', err.message);
+                } else {
+                    throw err;
+                }
+            }
+        }
+
         const totalPages = Math.ceil(count / parseInt(limit, 10));
 
         res.status(200).json({
@@ -469,7 +553,8 @@ exports.getApplication = async (req, res, next) => {
                     ]
                 },
                 { model: ApplicationAttachment, as: 'attachments' },
-                { model: ApplicationStatusHistory, as: 'statusHistory' }
+                { model: ApplicationStatusHistory, as: 'statusHistory' },
+                { model: Interview, as: 'interview' }
             ],
             order: [[{ model: ApplicationStatusHistory, as: 'statusHistory' }, 'createdAt', 'ASC']]
         });

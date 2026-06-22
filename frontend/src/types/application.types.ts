@@ -1,3 +1,5 @@
+import type { Interview } from "./interview.types";
+
 export type ApplicationStatus =
   | "submitted"
   | "under_review"
@@ -89,6 +91,7 @@ export interface Application {
   decidedAt?: string | null;
   attachments: ApplicationAttachment[];
   statusHistory?: ApplicationStatusHistoryEntry[];
+  interview?: Interview | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -340,7 +340,7 @@ export default function CompanyTasksPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem
-                                            onClick={() => router.push(`/tasks/${task._id}`)}
+                                            onClick={() => router.push(`/company/tasks/${task._id}`)}
                                         >
                                             <Eye className="h-4 w-4" /> View details
                                         </DropdownMenuItem>

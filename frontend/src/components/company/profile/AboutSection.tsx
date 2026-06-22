@@ -24,6 +24,20 @@ export default function AboutSection({
     onUpdateAbout,
     onUpdateTechStack
 }: AboutSectionProps) {
+    // Defensive: a MySQL JSON column can arrive as a string or null instead of an array.
+    const safeTechStack: string[] = Array.isArray(techStack)
+        ? techStack
+        : typeof techStack === 'string'
+            ? (() => {
+                try {
+                    const parsed = JSON.parse(techStack);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    return [];
+                }
+            })()
+            : [];
+
     const [showAboutModal, setShowAboutModal] = useState(false);
     const [showTechModal, setShowTechModal] = useState(false);
     const [showFullAbout, setShowFullAbout] = useState(false);
@@ -112,7 +126,7 @@ export default function AboutSection({
                 title="Technologies We Use"
                 onEdit={isEditMode ? () => setShowTechModal(true) : undefined}
             >
-                {techStack.length === 0 ? (
+                {safeTechStack.length === 0 ? (
                     isEditMode ? (
                         <EmptyState
                             icon={Cpu}
@@ -129,7 +143,7 @@ export default function AboutSection({
                     )
                 ) : (
                     <div className="flex flex-wrap gap-2">
-                        {techStack.map((tech, index) => (
+                        {safeTechStack.map((tech, index) => (
                             <span
                                 key={index}
                                 className="inline-flex items-center bg-foreground text-background text-[13px] font-medium px-3.5 py-1.5 rounded-full"
@@ -224,7 +238,7 @@ export default function AboutSection({
                             Add up to 20 technologies your team uses. Students will be matched based on these skills.
                         </p>
                         <TagInput
-                            tags={techStack}
+                            tags={safeTechStack}
                             onChange={onUpdateTechStack || (() => { })}
                             placeholder="e.g. React, Node.js, Python..."
                             maxTags={20}

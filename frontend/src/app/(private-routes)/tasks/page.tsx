@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { taskService, Task, TaskFilters } from '@/services/taskService'
 import TaskListItem from '@/components/task/TaskListItem'
 import TaskFiltersComponent from '@/components/task/TaskFilters'
@@ -40,6 +41,15 @@ export default function TasksPage() {
     const [appliedMap, setAppliedMap] = useState<Record<string, string>>({})
     const { user } = useAuth()
     const isStudent = user?.role === 'student'
+    const searchParams = useSearchParams()
+
+    useEffect(() => {
+        const sort = searchParams.get('sort')
+        if (sort === 'recommended' && isStudent) {
+            setFilters((p) => ({ ...p, sortBy: 'recommended', sortOrder: 'desc' }))
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isStudent])
 
     const selectedTask = tasks.find((t) => t._id === selectedTaskId) ?? null
     const appliedApplicationId = selectedTask ? appliedMap[selectedTask._id] : null
@@ -67,23 +77,46 @@ export default function TasksPage() {
         fetchTasks()
     }, [currentPage, filters])
 
+    const isRecommendedSort = filters.sortBy === 'recommended'
+
     const fetchTasks = async () => {
         try {
             setLoading(true)
-            const response = await taskService.getTasks(currentPage, LIMIT, {
-                ...filters,
-                search: searchQuery || undefined,
-            })
-            setTasks(response.tasks)
-            setTotalPages(response.pagination.totalPages)
-            setTotalTasks(response.pagination.totalTasks)
-            if (response.tasks.length > 0 && !selectedTaskId) {
-                setSelectedTaskId(response.tasks[0]._id)
+
+            let nextTasks: Task[]
+            let nextTotalPages: number
+            let nextTotalTasks: number
+
+            if (isRecommendedSort && isStudent) {
+                // AI-ranked recommendations — one "page" of up to LIMIT items, already sorted by matchScore desc.
+                const recs = await taskService.getRecommendedTasks(LIMIT)
+                const q = (searchQuery || '').toLowerCase()
+                nextTasks = q
+                    ? recs.filter((t) => t.title.toLowerCase().includes(q))
+                    : recs
+                nextTotalPages = 1
+                nextTotalTasks = nextTasks.length
+            } else {
+                const response = await taskService.getTasks(currentPage, LIMIT, {
+                    ...filters,
+                    search: searchQuery || undefined,
+                })
+                nextTasks = response.tasks
+                nextTotalPages = response.pagination.totalPages
+                nextTotalTasks = response.pagination.totalTasks
+            }
+
+            setTasks(nextTasks)
+            setTotalPages(nextTotalPages)
+            setTotalTasks(nextTotalTasks)
+
+            if (nextTasks.length > 0 && !selectedTaskId) {
+                setSelectedTaskId(nextTasks[0]._id)
             } else if (
                 selectedTaskId &&
-                !response.tasks.some((t) => t._id === selectedTaskId)
+                !nextTasks.some((t) => t._id === selectedTaskId)
             ) {
-                setSelectedTaskId(response.tasks[0]?._id ?? null)
+                setSelectedTaskId(nextTasks[0]?._id ?? null)
             }
         } catch (error) {
             toast.error('Failed to load tasks')
@@ -173,6 +206,11 @@ export default function TasksPage() {
                                     <SelectValue placeholder="Sort" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    {isStudent && (
+                                        <SelectItem value="recommended-desc">
+                                            ✨ Recommended (AI)
+                                        </SelectItem>
+                                    )}
                                     <SelectItem value="createdAt-desc">Most recent</SelectItem>
                                     <SelectItem value="createdAt-asc">Oldest first</SelectItem>
                                     <SelectItem value="views-desc">Most viewed</SelectItem>

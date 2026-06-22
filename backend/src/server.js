@@ -48,11 +48,12 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Rate limiting
+// Rate limiting — skipped in development so hot-reload / multi-call pages don't trip it
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    message: 'Too many requests from this IP, please try again later'
+    message: 'Too many requests from this IP, please try again later',
+    skip: () => process.env.NODE_ENV === 'development'
 });
 app.use('/api/', limiter);
 
@@ -78,6 +79,8 @@ app.use('/api/students', require('./routes/studentRoutes'));
 app.use('/api/companies', require('./routes/companyRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/applications', require('./routes/applicationRoutes'));
+app.use('/api/interviews', require('./routes/interviewRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health check route
 app.get('/health', (req, res) => {

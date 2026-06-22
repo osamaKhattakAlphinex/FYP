@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import MatchScoreBadge from '@/components/match/MatchScoreBadge'
 import {
     Select,
     SelectContent,
@@ -53,9 +54,9 @@ const STATUS_FILTERS: Array<{ value: 'all' | ApplicationStatus; label: string }>
 type SortOption = 'newest' | 'oldest' | 'match'
 
 const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
+    { value: 'match', label: '✨ Best match' },
     { value: 'newest', label: 'Newest first' },
     { value: 'oldest', label: 'Oldest first' },
-    { value: 'match', label: 'Highest match score' },
 ]
 
 const sortToApi = (sort: SortOption) => {
@@ -75,13 +76,6 @@ const daysAgo = (iso?: string) => {
     }
     if (days === 1) return 'Yesterday'
     return `${days}d ago`
-}
-
-const matchScoreColor = (score?: number | null) => {
-    if (score == null) return 'text-muted-foreground'
-    if (score >= 80) return 'text-success'
-    if (score >= 50) return 'text-warning'
-    return 'text-destructive'
 }
 
 const initials = (first?: string, last?: string) =>
@@ -425,13 +419,11 @@ export default function CompanyCandidatesPage() {
                                         </p>
                                     </div>
                                     {app.matchScore != null && (
-                                        <div className="text-right">
-                                            <p className={cn('text-lg font-bold', matchScoreColor(app.matchScore))}>
-                                                {app.matchScore}%
-                                            </p>
-                                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                                                match
-                                            </p>
+                                        <div className="flex-shrink-0">
+                                            <MatchScoreBadge
+                                                score={app.matchScore}
+                                                size="md"
+                                            />
                                         </div>
                                     )}
                                 </div>

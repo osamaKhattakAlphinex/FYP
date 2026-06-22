@@ -7,7 +7,6 @@ import {
     Award,
     Bell,
     CheckCircle2,
-    ClipboardList,
     FileText,
     Newspaper,
     Send,
@@ -19,6 +18,7 @@ import StatStrip from '@/components/shared/StatStrip'
 import ComingSoonCard from '@/components/shared/ComingSoonCard'
 import WelcomeBanner from '@/components/student/dashboard/WelcomeBanner'
 import RecommendedTasksCard from '@/components/student/dashboard/RecommendedTasksCard'
+import UpcomingInterviewsCard from '@/components/student/dashboard/UpcomingInterviewsCard'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -326,12 +326,7 @@ export default function StudentDashboard() {
                 </CardContent>
             </Card>
 
-            {/* Module 5 placeholder */}
-            <ComingSoonCard
-                title="Upcoming interviews"
-                description="Once you're shortlisted, scheduled interviews will appear here."
-                icon={ClipboardList}
-            />
+            <UpcomingInterviewsCard />
 
             {/* Module 6 / certificates placeholder */}
             <ComingSoonCard

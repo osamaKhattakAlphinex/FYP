@@ -304,11 +304,159 @@ const getApplicationWithdrawnTemplate = ({
   `;
 };
 
+const formatWhen = (scheduledAt, timezone) => {
+    try {
+        return `${new Date(scheduledAt).toLocaleString('en-US', {
+            dateStyle: 'full',
+            timeStyle: 'short'
+        })} (${timezone || 'UTC'})`;
+    } catch {
+        return `${scheduledAt} (${timezone || 'UTC'})`;
+    }
+};
+
+const modeLine = ({ mode, meetingLink, meetingLocation, meetingPhoneNumber }) => {
+    if (mode === 'video' && meetingLink) return `Join link: ${meetingLink}`;
+    if (mode === 'phone' && meetingPhoneNumber) return `Phone: ${meetingPhoneNumber}`;
+    if (mode === 'onsite' && meetingLocation) return `Location: ${meetingLocation}`;
+    return `Mode: ${mode}`;
+};
+
+const interviewShell = (headerColor, headerTitle, bodyHtml) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: ${headerColor}; color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .meta { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0; }
+        .meta-row { padding: 6px 0; font-size: 14px; }
+        .meta-row strong { color: #111; }
+        .reason { background: #fff7ed; border-left: 4px solid #f97316; padding: 12px 16px; margin: 20px 0; border-radius: 5px; font-size: 14px; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header"><h1>${headerTitle}</h1></div>
+        <div class="content">${bodyHtml}</div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Smart AI Platform. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+`;
+
+const interviewScheduled = ({
+    studentName,
+    companyName,
+    taskTitle,
+    scheduledAt,
+    timezone,
+    mode,
+    meetingLink,
+    meetingLocation,
+    meetingPhoneNumber,
+    agenda
+}) => {
+    const when = formatWhen(scheduledAt, timezone);
+    const connect = modeLine({ mode, meetingLink, meetingLocation, meetingPhoneNumber });
+    const subject = `Interview scheduled for "${taskTitle}"`;
+    const html = interviewShell(
+        'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+        'Interview Scheduled',
+        `
+          <p>Hi ${studentName || 'there'},</p>
+          <p><strong>${companyName}</strong> has scheduled an interview with you for the task <strong>${taskTitle}</strong>.</p>
+          <div class="meta">
+            <div class="meta-row"><strong>When:</strong> ${when}</div>
+            <div class="meta-row"><strong>Mode:</strong> ${mode}</div>
+            <div class="meta-row"><strong>${connect}</strong></div>
+          </div>
+          ${agenda ? `<div class="reason"><strong>Agenda:</strong><br>${agenda}</div>` : ''}
+          <p>Please be available a few minutes early. Good luck!</p>
+        `
+    );
+    const text = `Hi ${studentName || 'there'},
+${companyName} scheduled an interview for "${taskTitle}".
+When: ${when}
+Mode: ${mode}
+${connect}
+${agenda ? `Agenda: ${agenda}` : ''}`;
+    return { subject, html, text };
+};
+
+const interviewRescheduled = ({
+    recipientName,
+    companyName,
+    taskTitle,
+    scheduledAt,
+    timezone,
+    mode,
+    meetingLink,
+    meetingLocation,
+    meetingPhoneNumber,
+    reason
+}) => {
+    const when = formatWhen(scheduledAt, timezone);
+    const connect = modeLine({ mode, meetingLink, meetingLocation, meetingPhoneNumber });
+    const subject = `Interview rescheduled for "${taskTitle}"`;
+    const html = interviewShell(
+        'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+        'Interview Rescheduled',
+        `
+          <p>Hi ${recipientName || 'there'},</p>
+          <p>The interview for <strong>${taskTitle}</strong>${
+              companyName ? ` with <strong>${companyName}</strong>` : ''
+          } has been rescheduled.</p>
+          <div class="meta">
+            <div class="meta-row"><strong>New time:</strong> ${when}</div>
+            <div class="meta-row"><strong>Mode:</strong> ${mode}</div>
+            <div class="meta-row"><strong>${connect}</strong></div>
+          </div>
+          ${reason ? `<div class="reason"><strong>Reason:</strong><br>${reason}</div>` : ''}
+        `
+    );
+    const text = `Hi ${recipientName || 'there'},
+The interview for "${taskTitle}" has been rescheduled.
+New time: ${when}
+Mode: ${mode}
+${connect}
+${reason ? `Reason: ${reason}` : ''}`;
+    return { subject, html, text };
+};
+
+const interviewCancelled = ({ recipientName, companyName, taskTitle, reason }) => {
+    const subject = `Interview cancelled for "${taskTitle}"`;
+    const html = interviewShell(
+        'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+        'Interview Cancelled',
+        `
+          <p>Hi ${recipientName || 'there'},</p>
+          <p>The interview for <strong>${taskTitle}</strong>${
+              companyName ? ` with <strong>${companyName}</strong>` : ''
+          } has been cancelled.</p>
+          ${reason ? `<div class="reason"><strong>Reason:</strong><br>${reason}</div>` : ''}
+          <p>If a new interview is arranged, you will receive another notification.</p>
+        `
+    );
+    const text = `Hi ${recipientName || 'there'},
+The interview for "${taskTitle}" has been cancelled.
+${reason ? `Reason: ${reason}` : ''}`;
+    return { subject, html, text };
+};
+
 module.exports = {
     getEmailVerificationTemplate,
     getOTPTemplate,
     getPasswordResetTemplate,
     getWelcomeTemplate,
     getApplicationStatusChangeTemplate,
-    getApplicationWithdrawnTemplate
+    getApplicationWithdrawnTemplate,
+    interviewScheduled,
+    interviewRescheduled,
+    interviewCancelled
 };

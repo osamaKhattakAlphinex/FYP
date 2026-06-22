@@ -37,7 +37,13 @@ const connectDB = async () => {
         await sequelize.sync(syncOptions);
         console.log('Database synchronized');
     } catch (error) {
-        console.error(`Database error: ${error.message}`);
+        console.error('Database error:', error.message || '(no message)');
+        if (error.original) console.error('  → original:', error.original.sqlMessage || error.original.message);
+        if (error.sql) console.error('  → sql:', error.sql);
+        if (error.parent && error.parent !== error.original) {
+            console.error('  → parent:', error.parent.sqlMessage || error.parent.message);
+        }
+        if (!error.message && !error.original) console.error(error);
         process.exit(1);
     }
 };

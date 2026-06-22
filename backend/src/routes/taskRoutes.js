@@ -9,7 +9,8 @@ const {
     getTaskStats,
     searchTasks,
     getRecommendedTasks,
-    trackTaskView
+    trackTaskView,
+    recomputeMatchesForTask
 } = require('../controllers/taskController');
 
 const {
@@ -43,5 +44,6 @@ router.post('/', authorize('company'), validateTaskCreation, createTask);
 router.get('/company/my-tasks', authorize('company'), getMyTasks);
 router.put('/:id', authorize('company'), validateTaskUpdate, updateTask);
 router.delete('/:id', authorize('company'), deleteTask);
+router.post('/:id/recompute-matches', authorize('company'), recomputeMatchesForTask);
 
 module.exports = router;

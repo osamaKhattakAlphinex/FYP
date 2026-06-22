@@ -4,9 +4,16 @@ const {
     Task,
     TaskSkill,
     TaskAttachment,
-    Company
+    Company,
+    Student,
+    StudentSkill,
+    StudentExperience,
+    StudentEducation,
+    Application
 } = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
+const aiService = require('../services/aiService');
+const { AIServiceUnavailableError } = aiService;
 
 // Translate Mongo-style body fields into Sequelize columns
 const flattenTaskBody = (body = {}) => {
@@ -518,31 +525,181 @@ exports.searchTasks = async (req, res, next) => {
     }
 };
 
-// @desc    Get recommended tasks
+// Naive fallback used when the AI service is unavailable.
+const naiveRecommendationFallback = (tasks, limit) =>
+    tasks.slice(0, limit).map((t) => {
+        const json = t.toJSON();
+        delete json.applications; // strip the left-join probe rows
+        if (json.company) json.companyId = json.company;
+        json.matchScore = null;
+        json.matchReasons = [];
+        return json;
+    });
+
+// @desc    Get AI-ranked recommended tasks for the current student
 exports.getRecommendedTasks = async (req, res, next) => {
     try {
-        const { limit = 10 } = req.query;
+        const limit = parseInt(req.query.limit, 10) || 10;
 
-        const tasks = await Task.findAll({
+        const student = await Student.findOne({
+            where: { userId: req.user.id },
+            include: [
+                { model: StudentSkill, as: 'skills' },
+                { model: StudentExperience, as: 'experience' },
+                { model: StudentEducation, as: 'education' }
+            ]
+        });
+        if (!student) return next(new ErrorResponse('Student profile not found', 404));
+
+        // Up to 100 candidates: active, public, deadline > now, NOT already applied to.
+        // Left-join Application filtered by this student, then keep rows where the join is empty.
+        const candidates = await Task.findAll({
             where: {
                 status: 'active',
                 isPublic: true,
                 applicationDeadline: { [Op.gt]: new Date() }
             },
-            include: taskIncludes(),
+            include: [
+                { model: TaskSkill, as: 'skillsRequired' },
+                {
+                    model: Application,
+                    as: 'applications',
+                    required: false,
+                    where: { studentId: student.id },
+                    attributes: ['id']
+                }
+            ],
             order: [['createdAt', 'DESC']],
-            limit: parseInt(limit, 10),
+            limit: 100,
             subQuery: false
         });
 
-        res.status(200).json({
-            success: true,
-            data: tasks.map((t) => {
+        const notApplied = candidates.filter(
+            (t) => !Array.isArray(t.applications) || t.applications.length === 0
+        );
+
+        if (notApplied.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
+        let topScores;
+        try {
+            const studentDto = aiService.mapStudentToDto(student);
+            const taskDtos = notApplied.map(aiService.mapTaskToDto);
+            const results = await aiService.matchTasksForStudent(studentDto, taskDtos);
+            topScores = results.slice(0, limit);
+        } catch (err) {
+            if (err instanceof AIServiceUnavailableError) {
+                console.warn('[getRecommendedTasks] AI service unavailable — falling back to latest createdAt ordering:', err.message);
+                return res.status(200).json({
+                    success: true,
+                    data: naiveRecommendationFallback(notApplied, limit)
+                });
+            }
+            throw err;
+        }
+
+        if (topScores.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
+        // Re-fetch the top N with the full includes used everywhere else.
+        const topIds = topScores.map((s) => s.task_id);
+        const fullTasks = await Task.findAll({
+            where: { id: { [Op.in]: topIds } },
+            include: taskIncludes()
+        });
+        const taskById = new Map(fullTasks.map((t) => [String(t.id), t]));
+
+        const merged = topScores
+            .map((s) => {
+                const t = taskById.get(String(s.task_id));
+                if (!t) return null;
                 const json = t.toJSON();
                 if (json.company) json.companyId = json.company;
+                json.matchScore = s.score;
+                json.matchReasons = Array.isArray(s.reasons) ? s.reasons : [];
                 return json;
             })
+            .filter(Boolean);
+
+        res.status(200).json({ success: true, data: merged });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Force recomputation of match scores for every application of a task
+// @route   POST /api/tasks/:id/recompute-matches
+// @access  Private (company)
+exports.recomputeMatchesForTask = async (req, res, next) => {
+    try {
+        const company = await Company.findOne({ where: { userId: req.user.id } });
+        if (!company) return next(new ErrorResponse('Company profile not found', 404));
+
+        const task = await Task.findByPk(req.params.id, {
+            include: [{ model: TaskSkill, as: 'skillsRequired' }]
         });
+        if (!task) return next(new ErrorResponse('Task not found', 404));
+        if (String(task.companyId) !== String(company.id)) {
+            return next(new ErrorResponse('Not authorized to recompute matches for this task', 403));
+        }
+
+        const applications = await Application.findAll({
+            where: { taskId: task.id },
+            include: [{
+                model: Student,
+                as: 'student',
+                include: [
+                    { model: StudentSkill, as: 'skills' },
+                    { model: StudentExperience, as: 'experience' },
+                    { model: StudentEducation, as: 'education' }
+                ]
+            }]
+        });
+
+        if (applications.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No applications to score',
+                data: { updated: 0, total: 0 }
+            });
+        }
+
+        try {
+            const ranking = await aiService.rankCandidates(
+                aiService.mapTaskToDto(task),
+                applications
+                    .filter((a) => a.student)
+                    .map((a) => aiService.mapStudentToDto(a.student))
+            );
+            const scoreByStudentId = new Map(
+                ranking.map((r) => [String(r.student_id), r.score])
+            );
+
+            let updated = 0;
+            await Promise.all(applications.map(async (app) => {
+                const score = scoreByStudentId.get(String(app.studentId));
+                if (typeof score === 'number') {
+                    await Application.update(
+                        { matchScore: score },
+                        { where: { id: app.id } }
+                    );
+                    updated += 1;
+                }
+            }));
+
+            res.status(200).json({
+                success: true,
+                message: 'Match scores recomputed',
+                data: { updated, total: applications.length }
+            });
+        } catch (err) {
+            if (err instanceof AIServiceUnavailableError) {
+                return next(new ErrorResponse('AI service unavailable, please retry shortly', 503));
+            }
+            throw err;
+        }
     } catch (error) {
         next(error);
     }
