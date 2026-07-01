@@ -5,6 +5,11 @@ class StudentProject extends Model {
     toJSON() {
         const values = { ...this.get() };
         values._id = values.id;
+        // MySQL JSON columns can come back as strings — normalise to an array.
+        if (typeof values.techStack === 'string') {
+            try { values.techStack = JSON.parse(values.techStack); } catch { values.techStack = []; }
+        }
+        if (!Array.isArray(values.techStack)) values.techStack = [];
         return values;
     }
 }

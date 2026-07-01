@@ -112,16 +112,55 @@ const buildListWhere = (q) => {
     return where;
 };
 
+// Real Task columns we allow DB-level ordering on. The virtual match sorts
+// ('recommended'/'matchScore'/'match') are handled in memory after scoring.
+const TASK_SORT_COLUMNS = ['createdAt', 'updatedAt', 'views', 'applicationDeadline', 'applicationCount'];
+const MATCH_SORT_KEYS = ['recommended', 'matchScore', 'match'];
+
+// Load a Student row with the includes the matcher needs, or null.
+const loadStudentForMatching = async (userId) =>
+    Student.findOne({
+        where: { userId },
+        include: [
+            { model: StudentSkill, as: 'skills' },
+            { model: StudentExperience, as: 'experience' },
+            { model: StudentEducation, as: 'education' }
+        ]
+    });
+
+// Score Task instances for a student. Returns Map<String(task.id), {score, reasons}>.
+// Throws AIServiceUnavailableError if the AI service can't be reached.
+const scoreTasksForStudent = async (student, tasks) => {
+    if (!Array.isArray(tasks) || tasks.length === 0) return new Map();
+    const studentDto = aiService.mapStudentToDto(student);
+    const taskDtos = tasks.map(aiService.mapTaskToDto);
+    const results = await aiService.matchTasksForStudent(studentDto, taskDtos);
+    return new Map(results.map((r) => [String(r.task_id), r]));
+};
+
+// Serialise a task and attach its matchScore/matchReasons from a score map.
+const withMatch = (task, scoreMap, { defaultZero = false } = {}) => {
+    const json = task.toJSON();
+    if (json.company) json.companyId = json.company;
+    const s = scoreMap.get(String(task.id));
+    if (s) {
+        json.matchScore = s.score;
+        json.matchReasons = Array.isArray(s.reasons) ? s.reasons : [];
+    } else if (defaultZero) {
+        json.matchScore = 0;
+        json.matchReasons = [];
+    }
+    return json;
+};
+
 // @desc    Get all public tasks with filtering and pagination
+// For a logged-in student, every task carries an AI matchScore + matchReasons,
+// and the 'recommended'/'matchScore' sorts rank the whole candidate pool by score.
 exports.getTasks = async (req, res, next) => {
     try {
-        const {
-            page = 1,
-            limit = 12,
-            skills,
-            sortBy = 'createdAt',
-            sortOrder = 'desc'
-        } = req.query;
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 12;
+        const { skills, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
         const where = buildListWhere(req.query);
         const include = taskIncludes();
@@ -136,35 +175,100 @@ exports.getTasks = async (req, res, next) => {
             };
         }
 
-        const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+        const isStudent = !!(req.user && req.user.role === 'student');
+        const wantsMatchSort = MATCH_SORT_KEYS.includes(sortBy);
+        let student = null;
+        if (isStudent) {
+            try { student = await loadStudentForMatching(req.user.id); } catch (e) { student = null; }
+        }
+
+        // --- Match-ranked path: score a candidate pool, sort by score, paginate in memory ---
+        if (isStudent && student && wantsMatchSort) {
+            const POOL_LIMIT = 100;
+            const candidates = await Task.findAll({
+                where,
+                include,
+                order: [['createdAt', 'DESC']],
+                limit: POOL_LIMIT,
+                subQuery: false
+            });
+
+            try {
+                const scoreMap = await scoreTasksForStudent(student, candidates);
+                const sorted = [...candidates].sort((a, b) => {
+                    const sa = scoreMap.get(String(a.id));
+                    const sb = scoreMap.get(String(b.id));
+                    return (sb ? sb.score : -1) - (sa ? sa.score : -1);
+                });
+
+                const total = sorted.length;
+                const totalPages = Math.ceil(total / limit) || 1;
+                const offset = (page - 1) * limit;
+                const tasks = sorted
+                    .slice(offset, offset + limit)
+                    .map((t) => withMatch(t, scoreMap, { defaultZero: true }));
+
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        tasks,
+                        pagination: {
+                            currentPage: page,
+                            totalPages,
+                            totalTasks: total,
+                            hasNextPage: page < totalPages,
+                            hasPrevPage: page > 1,
+                            limit
+                        }
+                    }
+                });
+            } catch (err) {
+                if (!(err instanceof AIServiceUnavailableError)) throw err;
+                // AI service down — fall through to the standard listing below.
+            }
+        }
+
+        // --- Standard path: DB sort + paginate, then best-effort attach scores ---
+        const orderField = TASK_SORT_COLUMNS.includes(sortBy) ? sortBy : 'createdAt';
+        const offset = (page - 1) * limit;
 
         const { rows, count } = await Task.findAndCountAll({
             where,
             include,
-            order: [[sortBy, sortOrder === 'desc' ? 'DESC' : 'ASC']],
+            order: [[orderField, sortOrder === 'desc' ? 'DESC' : 'ASC']],
             offset,
-            limit: parseInt(limit, 10),
+            limit,
             distinct: true,
             subQuery: false
         });
 
-        const totalPages = Math.ceil(count / parseInt(limit, 10));
+        const totalPages = Math.ceil(count / limit) || 1;
+
+        let scoreMap = new Map();
+        if (isStudent && student && rows.length > 0) {
+            try {
+                scoreMap = await scoreTasksForStudent(student, rows);
+            } catch (err) {
+                if (!(err instanceof AIServiceUnavailableError)) throw err;
+                scoreMap = new Map();
+            }
+        }
+
+        const tasks = rows.map((t) =>
+            withMatch(t, scoreMap, { defaultZero: scoreMap.size > 0 })
+        );
 
         res.status(200).json({
             success: true,
             data: {
-                tasks: rows.map((t) => {
-                    const json = t.toJSON();
-                    if (json.company) json.companyId = json.company;
-                    return json;
-                }),
+                tasks,
                 pagination: {
-                    currentPage: parseInt(page, 10),
+                    currentPage: page,
                     totalPages,
                     totalTasks: count,
-                    hasNextPage: parseInt(page, 10) < totalPages,
-                    hasPrevPage: parseInt(page, 10) > 1,
-                    limit: parseInt(limit, 10)
+                    hasNextPage: page < totalPages,
+                    hasPrevPage: page > 1,
+                    limit
                 }
             }
         });
@@ -191,6 +295,25 @@ exports.getTask = async (req, res, next) => {
 
         const json = task.toJSON();
         if (json.company) json.companyId = json.company;
+
+        // Personalise with an AI match score when a student is viewing.
+        if (req.user && req.user.role === 'student') {
+            try {
+                const student = await loadStudentForMatching(req.user.id);
+                if (student) {
+                    const scoreMap = await scoreTasksForStudent(student, [task]);
+                    const s = scoreMap.get(String(task.id));
+                    if (s) {
+                        json.matchScore = s.score;
+                        json.matchReasons = Array.isArray(s.reasons) ? s.reasons : [];
+                    }
+                }
+            } catch (err) {
+                if (!(err instanceof AIServiceUnavailableError)) throw err;
+                // AI service down — return the task without a score.
+            }
+        }
+
         res.status(200).json({ success: true, data: json });
     } catch (error) {
         next(error);

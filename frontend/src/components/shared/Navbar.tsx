@@ -92,6 +92,7 @@ export default function Navbar() {
         user?.role === 'company' ? '/company/profile' : '/student/profile'
     const interviewsHref =
         user?.role === 'company' ? '/company/interviews' : '/student/interviews'
+    const tasksHref = user?.role === 'company' ? '/company/tasks' : '/tasks'
 
     const userName =
         user?.firstName && user?.lastName
@@ -130,10 +131,10 @@ export default function Navbar() {
                             active={pathname?.includes('/dashboard')}
                         />
                         <NavIconLink
-                            href="/tasks"
+                            href={tasksHref}
                             icon={Briefcase}
                             label="Tasks"
-                            active={pathname?.startsWith('/tasks')}
+                            active={pathname?.startsWith(tasksHref)}
                         />
                         <NavIconLink
                             href={interviewsHref}
@@ -253,7 +254,7 @@ export default function Navbar() {
                                     <Home className="h-4 w-4" /> Home
                                 </Link>
                                 <Link
-                                    href="/tasks"
+                                    href={tasksHref}
                                     onClick={() => setMobileOpen(false)}
                                     className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                                 >

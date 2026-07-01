@@ -91,7 +91,7 @@ export default function CompanyCandidatesPage() {
     const [tasksLoading, setTasksLoading] = useState(true)
     const [selectedTaskId, setSelectedTaskId] = useState<string>(taskIdParam || 'all')
     const [statusFilter, setStatusFilter] = useState<'all' | ApplicationStatus>('all')
-    const [sort, setSort] = useState<SortOption>('newest')
+    const [sort, setSort] = useState<SortOption>('match')
 
     const [stats, setStats] = useState<ApplicationStats | null>(null)
     const [statsLoading, setStatsLoading] = useState(true)

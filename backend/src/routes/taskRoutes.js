@@ -15,6 +15,7 @@ const {
 
 const {
     protect,
+    optionalAuth,
     authorize
 } = require('../middleware/auth');
 const {
@@ -24,11 +25,11 @@ const {
 
 const router = express.Router();
 
-// Public routes
-router.get('/', getTasks);
+// Public routes (optionalAuth: personalise with AI match scores when logged in)
+router.get('/', optionalAuth, getTasks);
 router.get('/stats', getTaskStats);
 router.post('/search', searchTasks);
-router.get('/:id', getTask);
+router.get('/:id', optionalAuth, getTask);
 
 // Protected routes
 router.use(protect);

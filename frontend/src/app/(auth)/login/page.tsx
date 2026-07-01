@@ -6,10 +6,12 @@ import AuthLayout from '@/components/auth/AuthLayout';
 import LoginForm from '@/components/auth/LoginForm';
 import { LoginCredentials } from '@/types/auth.types';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { login, logout } = useAuth();
 
     // Redirect if already logged in
     useEffect(() => {
@@ -29,13 +31,13 @@ export default function LoginPage() {
 
     const handleLogin = async (credentials: LoginCredentials): Promise<void> => {
         try {
-            const data = await authService.login({
-                email: credentials.email,
-                password: credentials.password
-            });
+            // Go through the auth context so the app (navbar, guards) reacts
+            // to the new session immediately — no hard reload needed.
+            const user = await login(credentials.email, credentials.password);
 
             // Check if email is verified
-            if (!data.user.isEmailVerified) {
+            if (!user.isEmailVerified) {
+                await logout(); // undo the session we just created
                 toast.error('Please verify your email before logging in');
                 router.push(`/verify-email?email=${encodeURIComponent(credentials.email)}`);
                 return;
@@ -51,7 +53,7 @@ export default function LoginPage() {
                 admin: '/admin/analytics'
             };
 
-            router.push(roleRoutes[data.user.role] || '/student/dashboard');
+            router.push(roleRoutes[user.role] || '/student/dashboard');
         } catch (err: any) {
             const errorMessage = err.response?.data?.error || err.message || 'Login failed. Please try again.';
             toast.error(errorMessage);

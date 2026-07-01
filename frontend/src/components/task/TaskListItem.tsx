@@ -4,6 +4,7 @@ import { Task, taskService } from '@/services/taskService'
 import { Bookmark, BadgeCheck, MapPin, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import MatchScoreBadge from '@/components/match/MatchScoreBadge'
 import { cn, formatRelativeTime, getInitials } from '@/lib/utils'
 
 interface TaskListItemProps {
@@ -55,18 +56,27 @@ export default function TaskListItem({ task, selected, onClick }: TaskListItemPr
                         <h3 className="line-clamp-1 text-base font-semibold text-foreground group-hover:text-brand-700">
                             {task.title}
                         </h3>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setIsSaved(!isSaved)
-                            }}
-                            className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                        >
-                            <Bookmark
-                                className={cn('h-4 w-4', isSaved && 'fill-foreground text-foreground')}
-                            />
-                        </button>
+                        <div className="flex flex-shrink-0 items-center gap-1.5">
+                            {typeof task.matchScore === 'number' && (
+                                <MatchScoreBadge
+                                    score={task.matchScore}
+                                    reasons={task.matchReasons}
+                                    size="sm"
+                                />
+                            )}
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setIsSaved(!isSaved)
+                                }}
+                                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
+                                <Bookmark
+                                    className={cn('h-4 w-4', isSaved && 'fill-foreground text-foreground')}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground">

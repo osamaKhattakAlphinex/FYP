@@ -24,6 +24,7 @@ import ApplyModal from '@/components/applications/ApplyModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import MatchScoreBadge from '@/components/match/MatchScoreBadge'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'react-hot-toast'
@@ -37,8 +38,15 @@ export default function TaskDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [showApply, setShowApply] = useState(false)
     const [myApplicationId, setMyApplicationId] = useState<string | null>(null)
-    const { user } = useAuth()
+    const { user, loading: authLoading } = useAuth()
     const isStudent = user?.role === 'student'
+
+    // Companies don't browse the student task feed — send them to their own view.
+    useEffect(() => {
+        if (!authLoading && user?.role === 'company') {
+            router.replace('/company/tasks')
+        }
+    }, [authLoading, user, router])
 
     useEffect(() => {
         fetchTask()
@@ -138,9 +146,19 @@ export default function TaskDetailPage() {
                                     )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
-                                        {task.title}
-                                    </h1>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
+                                            {task.title}
+                                        </h1>
+                                        {typeof task.matchScore === 'number' && (
+                                            <MatchScoreBadge
+                                                score={task.matchScore}
+                                                reasons={task.matchReasons}
+                                                size="lg"
+                                                className="mt-1 flex-shrink-0"
+                                            />
+                                        )}
+                                    </div>
                                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                                         <Link
                                             href={`/company/${company._id}`}
@@ -324,6 +342,29 @@ export default function TaskDetailPage() {
                     {/* Right rail */}
                     <aside className="space-y-4">
                         <div className="lg:sticky lg:top-[4.5rem] space-y-4">
+                            {typeof task.matchScore === 'number' &&
+                                (task.matchReasons?.length ?? 0) > 0 && (
+                                    <Card className="p-5">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                Why this match
+                                            </h3>
+                                            <MatchScoreBadge
+                                                score={task.matchScore}
+                                                size="sm"
+                                            />
+                                        </div>
+                                        <ul className="mt-3 space-y-1.5 text-sm text-foreground/80">
+                                            {task.matchReasons!.map((reason, i) => (
+                                                <li key={i} className="flex gap-2">
+                                                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-brand-600" />
+                                                    {reason}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </Card>
+                                )}
+
                             <Card className="p-5">
                                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                     Task details

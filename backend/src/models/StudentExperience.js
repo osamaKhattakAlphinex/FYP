@@ -5,6 +5,11 @@ class StudentExperience extends Model {
     toJSON() {
         const values = { ...this.get() };
         values._id = values.id;
+        // MySQL JSON columns can come back as strings — normalise to an array.
+        if (typeof values.skills === 'string') {
+            try { values.skills = JSON.parse(values.skills); } catch { values.skills = []; }
+        }
+        if (!Array.isArray(values.skills)) values.skills = [];
         return values;
     }
 }

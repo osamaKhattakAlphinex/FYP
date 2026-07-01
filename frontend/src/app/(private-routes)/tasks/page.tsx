@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { taskService, Task, TaskFilters } from '@/services/taskService'
 import TaskListItem from '@/components/task/TaskListItem'
 import TaskFiltersComponent from '@/components/task/TaskFilters'
@@ -39,13 +39,24 @@ export default function TasksPage() {
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
     const [applyOpen, setApplyOpen] = useState(false)
     const [appliedMap, setAppliedMap] = useState<Record<string, string>>({})
-    const { user } = useAuth()
+    const { user, loading: authLoading } = useAuth()
     const isStudent = user?.role === 'student'
     const searchParams = useSearchParams()
+    const router = useRouter()
+
+    // Companies don't browse the student task feed — send them to their own
+    // task management view instead.
+    useEffect(() => {
+        if (!authLoading && user?.role === 'company') {
+            router.replace('/company/tasks')
+        }
+    }, [authLoading, user, router])
 
     useEffect(() => {
+        // Students default to the AI "Recommended" ranking unless the URL asks
+        // for a specific sort. Companies/guests keep the "Most recent" default.
         const sort = searchParams.get('sort')
-        if (sort === 'recommended' && isStudent) {
+        if (isStudent && (sort === 'recommended' || !sort)) {
             setFilters((p) => ({ ...p, sortBy: 'recommended', sortOrder: 'desc' }))
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,34 +88,20 @@ export default function TasksPage() {
         fetchTasks()
     }, [currentPage, filters])
 
-    const isRecommendedSort = filters.sortBy === 'recommended'
-
     const fetchTasks = async () => {
         try {
             setLoading(true)
 
-            let nextTasks: Task[]
-            let nextTotalPages: number
-            let nextTotalTasks: number
-
-            if (isRecommendedSort && isStudent) {
-                // AI-ranked recommendations — one "page" of up to LIMIT items, already sorted by matchScore desc.
-                const recs = await taskService.getRecommendedTasks(LIMIT)
-                const q = (searchQuery || '').toLowerCase()
-                nextTasks = q
-                    ? recs.filter((t) => t.title.toLowerCase().includes(q))
-                    : recs
-                nextTotalPages = 1
-                nextTotalTasks = nextTasks.length
-            } else {
-                const response = await taskService.getTasks(currentPage, LIMIT, {
-                    ...filters,
-                    search: searchQuery || undefined,
-                })
-                nextTasks = response.tasks
-                nextTotalPages = response.pagination.totalPages
-                nextTotalTasks = response.pagination.totalTasks
-            }
+            // The backend personalises every task with an AI matchScore for
+            // students and handles the 'recommended' sort (whole-pool ranking +
+            // pagination), so a single getTasks call covers all sort modes.
+            const response = await taskService.getTasks(currentPage, LIMIT, {
+                ...filters,
+                search: searchQuery || undefined,
+            })
+            const nextTasks = response.tasks
+            const nextTotalPages = response.pagination.totalPages
+            const nextTotalTasks = response.pagination.totalTasks
 
             setTasks(nextTasks)
             setTotalPages(nextTotalPages)

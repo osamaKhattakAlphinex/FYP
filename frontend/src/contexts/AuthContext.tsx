@@ -6,7 +6,7 @@ import { authService, User } from '@/services/authService';
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (email: string, password: string, role?: string) => Promise<void>;
+    login: (email: string, password: string, role?: string) => Promise<User>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
@@ -36,9 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initAuth();
     }, []);
 
-    const login = async (email: string, password: string, role?: string) => {
-        const data = await authService.login({ email, password, role: role as any });
+    const login = async (email: string, password: string, _role?: string) => {
+        // Backend login authenticates by email/password only; role is ignored.
+        const data = await authService.login({ email, password });
         setUser(data.user);
+        return data.user;
     };
 
     const logout = async () => {

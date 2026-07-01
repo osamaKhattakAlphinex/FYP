@@ -2,6 +2,7 @@
 
 import { Task, taskService } from '@/services/taskService'
 import { Badge } from '@/components/ui/badge'
+import MatchScoreBadge from '@/components/match/MatchScoreBadge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -75,9 +76,19 @@ export default function TaskDetailPane({
                         )}
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h2 className="text-xl font-semibold leading-tight text-foreground">
-                            {task.title}
-                        </h2>
+                        <div className="flex items-start justify-between gap-2">
+                            <h2 className="text-xl font-semibold leading-tight text-foreground">
+                                {task.title}
+                            </h2>
+                            {typeof task.matchScore === 'number' && (
+                                <MatchScoreBadge
+                                    score={task.matchScore}
+                                    reasons={task.matchReasons}
+                                    size="md"
+                                    className="flex-shrink-0"
+                                />
+                            )}
+                        </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm">
                             <Link
                                 href={`/company/${company?._id}`}

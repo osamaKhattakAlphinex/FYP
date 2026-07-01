@@ -34,6 +34,35 @@ exports.protect = async (req, res, next) => {
     }
 };
 
+// Optional auth - decode the token if one is present, but never block the
+// request when it's missing/invalid. Used on public routes that personalise
+// their response for a logged-in user (e.g. AI match scores on task listings).
+exports.optionalAuth = async (req, res, next) => {
+    try {
+        let token;
+
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+            token = req.headers.authorization.split(' ')[1];
+        } else if (req.cookies && req.cookies.token) {
+            token = req.cookies.token;
+        }
+
+        if (!token) return next();
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findByPk(decoded.id);
+            if (user && user.isActive) req.user = user;
+        } catch (error) {
+            // Invalid/expired token on a public route — treat as anonymous.
+        }
+
+        next();
+    } catch (error) {
+        next();
+    }
+};
+
 // Grant access to specific roles
 exports.authorize = (...roles) => {
     return (req, res, next) => {
