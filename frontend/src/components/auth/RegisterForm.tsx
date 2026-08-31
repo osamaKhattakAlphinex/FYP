@@ -29,7 +29,7 @@ const getValidationSchema = (role: UserRole): Yup.ObjectSchema<any> => {
             .oneOf([Yup.ref('password')], 'Passwords must match')
             .required('Please confirm your password'),
         role: Yup.string()
-            .oneOf(['student', 'company', 'admin'], 'Invalid role')
+            .oneOf(['student', 'company', 'admin', 'mentor'], 'Invalid role')
             .required('Role is required'),
         agreeToTerms: Yup.boolean()
             .oneOf([true], 'You must agree to the terms')
@@ -48,6 +48,18 @@ const getValidationSchema = (role: UserRole): Yup.ObjectSchema<any> => {
                     /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/,
                     'Invalid phone number'
                 )
+                .nullable(),
+        })
+    }
+
+    if (role === 'mentor') {
+        return Yup.object().shape({
+            ...baseSchema,
+            name: Yup.string().min(2).required('Full name is required'),
+            headline: Yup.string().max(255).nullable(),
+            yearsOfExperience: Yup.number()
+                .min(0, 'Cannot be negative')
+                .max(60, 'That seems too high')
                 .nullable(),
         })
     }
@@ -81,6 +93,10 @@ export default function RegisterForm({ onSubmit }: RegisterFormProps) {
         companySize: '',
         website: '',
         phone: '',
+        headline: '',
+        currentPosition: '',
+        currentCompany: '',
+        yearsOfExperience: undefined,
     }
 
     const handleFormSubmit = async (
@@ -255,21 +271,85 @@ export default function RegisterForm({ onSubmit }: RegisterFormProps) {
                                 </div>
                             </>
                         ) : (
-                            <div>
-                                <Label htmlFor="name">Full name</Label>
-                                <Field
-                                    id="name"
-                                    name="name"
-                                    type="text"
-                                    placeholder="Jane Doe"
-                                    className={inputClass(!!(errors.name && touched.name))}
-                                />
-                                <ErrorMessage
-                                    name="name"
-                                    component="p"
-                                    className="mt-1 text-xs text-destructive"
-                                />
-                            </div>
+                            <>
+                                <div>
+                                    <Label htmlFor="name">Full name</Label>
+                                    <Field
+                                        id="name"
+                                        name="name"
+                                        type="text"
+                                        placeholder="Jane Doe"
+                                        className={inputClass(!!(errors.name && touched.name))}
+                                    />
+                                    <ErrorMessage
+                                        name="name"
+                                        component="p"
+                                        className="mt-1 text-xs text-destructive"
+                                    />
+                                </div>
+
+                                {values.role === 'mentor' && (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="sm:col-span-2">
+                                            <Label htmlFor="headline">
+                                                Professional headline{' '}
+                                                <span className="font-normal text-muted-foreground">
+                                                    (optional)
+                                                </span>
+                                            </Label>
+                                            <Field
+                                                id="headline"
+                                                name="headline"
+                                                type="text"
+                                                placeholder="Senior Frontend Engineer at Acme"
+                                                className={inputClass(
+                                                    !!(errors.headline && touched.headline)
+                                                )}
+                                            />
+                                            <ErrorMessage
+                                                name="headline"
+                                                component="p"
+                                                className="mt-1 text-xs text-destructive"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="yearsOfExperience">
+                                                Years of experience{' '}
+                                                <span className="font-normal text-muted-foreground">
+                                                    (optional)
+                                                </span>
+                                            </Label>
+                                            <Field
+                                                id="yearsOfExperience"
+                                                name="yearsOfExperience"
+                                                type="number"
+                                                min={0}
+                                                max={60}
+                                                placeholder="5"
+                                                className={inputClass(
+                                                    !!(
+                                                        errors.yearsOfExperience &&
+                                                        touched.yearsOfExperience
+                                                    )
+                                                )}
+                                            />
+                                            <ErrorMessage
+                                                name="yearsOfExperience"
+                                                component="p"
+                                                className="mt-1 text-xs text-destructive"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {values.role === 'mentor' && (
+                                    <p className="rounded-md bg-accent-50 px-3 py-2 text-xs text-foreground">
+                                        Mentor accounts are reviewed by an administrator before you
+                                        can be assigned to a student. You can complete your profile
+                                        while you wait.
+                                    </p>
+                                )}
+                            </>
                         )}
 
                         <div>

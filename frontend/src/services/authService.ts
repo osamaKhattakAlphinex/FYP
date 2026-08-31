@@ -22,7 +22,7 @@ export interface LoginData {
 export interface User {
   _id: string;
   email: string;
-  role: "student" | "company" | "admin";
+  role: "student" | "company" | "admin" | "mentor";
   firstName?: string;
   lastName?: string;
   companyName?: string;

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { authService } from "@/services/authService";
 import toast from "react-hot-toast";
+import { homeForRole } from "@/lib/roleRoutes";
 
 type UserRole = "student" | "company" | "admin" | "mentor";
 
@@ -61,13 +62,7 @@ export function useRoleProtection({
         if (redirectTo) {
           router.push(redirectTo);
         } else {
-          const roleRoutes: Record<string, string> = {
-            student: "/student/dashboard",
-            company: "/company/dashboard",
-            mentor: "/mentor/students",
-            admin: "/admin/analytics",
-          };
-          router.push(roleRoutes[user.role] || "/");
+          router.push(homeForRole(user.role));
         }
       }
     }

@@ -18,6 +18,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from app.models.schemas import (
     MatchScore,
+    MentorProfile,
+    MentorRank,
     SkillIn,
     StudentProfile,
     TaskInput,
@@ -298,4 +300,148 @@ def compute_match(student: StudentProfile, task: TaskInput) -> MatchScore:
         matched_skills=matched,
         missing_skills=missing,
         reasons=reasons,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Mentor <-> task scoring (Module 7)
+#
+# Deliberately NOT reusing compute_match(). Its _experience_fit penalises a
+# candidate for having more experience than the task level calls for, which is
+# right for applicants but backwards for mentors: on an entry-level task a
+# 12-year engineer would score 0.3 and be ranked below a junior. Mentor
+# experience is monotonic — more is never worse.
+# ---------------------------------------------------------------------------
+
+_MENTOR_WEIGHTS = {
+    "skill_match": 0.55,
+    "experience_fit": 0.20,
+    "specialization_overlap": 0.15,
+    "text_similarity": 0.10,
+}
+
+# Years of experience at which a mentor is considered fully seasoned.
+_MENTOR_EXPERIENCE_PLATEAU = 8.0
+
+
+def _mentor_experience_fit(years: float) -> float:
+    """Monotonic non-decreasing: more experience never lowers the score.
+
+    Saturates at _MENTOR_EXPERIENCE_PLATEAU so a 20-year veteran and a
+    10-year veteran are treated as equivalently seasoned.
+    """
+    y = max(0.0, float(years))
+    return min(1.0, y / _MENTOR_EXPERIENCE_PLATEAU)
+
+
+def _specialization_overlap(specializations: list[str], task: TaskInput) -> float:
+    """Overlap of a mentor's declared specializations with the task's tags
+    and category. Neutral (0.5) when the task publishes neither."""
+    targets = {_norm(t) for t in task.tags if t}
+    if task.category:
+        targets.add(_norm(task.category))
+    if not targets:
+        return 0.5
+    mine = {_norm(s) for s in specializations if s}
+    if not mine:
+        return 0.0
+    return len(mine & targets) / len(targets)
+
+
+def _mentor_text(mentor: MentorProfile) -> str:
+    parts: list[str] = []
+    if mentor.bio:
+        parts.append(mentor.bio)
+    if mentor.specializations:
+        parts.append(" ".join(mentor.specializations))
+    parts.append(" ".join(s.name for s in mentor.expertise))
+    return " ".join(p for p in parts if p).strip()
+
+
+def _mentor_text_similarity(mentor: MentorProfile, task: TaskInput) -> float:
+    a = _mentor_text(mentor)
+    b = _task_text(task)
+    if not a or not b:
+        return 0.0
+    try:
+        vec = TfidfVectorizer(stop_words="english")
+        matrix = vec.fit_transform([a, b])
+        sim = float(cosine_similarity(matrix[0:1], matrix[1:2])[0][0])
+    except ValueError:
+        # Vocabulary empty after stop-word removal.
+        return 0.0
+    return max(0.0, min(1.0, sim))
+
+
+def _build_mentor_reasons(
+    *,
+    matched: list[str],
+    missing: list[str],
+    total_required: int,
+    breakdown: dict[str, float],
+    mentor: MentorProfile,
+) -> list[str]:
+    reasons: list[str] = []
+
+    if total_required:
+        reasons.append(
+            f"Covers {len(matched)}/{total_required} of the task's required skills"
+        )
+    if matched:
+        reasons.append("Strong on " + ", ".join(matched[:3]))
+    for name in missing[:2]:
+        reasons.append(f"No declared expertise in {name}")
+
+    years = int(round(mentor.experience_years))
+    if breakdown["experience_fit"] >= 0.95:
+        reasons.append(f"Highly seasoned — {years}+ years of experience")
+    elif breakdown["experience_fit"] >= 0.5:
+        reasons.append(f"{years} years of professional experience")
+    elif years > 0:
+        reasons.append(f"Relatively early career — {years} year(s) of experience")
+
+    if breakdown["specialization_overlap"] >= 0.5:
+        reasons.append("Specialises in this task's domain")
+
+    remaining = max(0, mentor.max_mentees - mentor.active_mentees)
+    reasons.append(f"{remaining} mentee slot(s) free")
+
+    return reasons
+
+
+def compute_mentor_match(mentor: MentorProfile, task: TaskInput) -> MentorRank:
+    """Deterministic mentor-suitability score for a task, 0..100."""
+    skill_score, matched, missing = _skill_match(mentor.expertise, task.required_skills)
+    experience_score = _mentor_experience_fit(mentor.experience_years)
+    specialization_score = _specialization_overlap(mentor.specializations, task)
+    text_score = _mentor_text_similarity(mentor, task)
+
+    breakdown = {
+        "skill_match": round(skill_score, 4),
+        "experience_fit": round(experience_score, 4),
+        "specialization_overlap": round(specialization_score, 4),
+        "text_similarity": round(text_score, 4),
+    }
+
+    weighted = (
+        skill_score * _MENTOR_WEIGHTS["skill_match"]
+        + experience_score * _MENTOR_WEIGHTS["experience_fit"]
+        + specialization_score * _MENTOR_WEIGHTS["specialization_overlap"]
+        + text_score * _MENTOR_WEIGHTS["text_similarity"]
+    )
+    final = int(round(max(0.0, min(1.0, weighted)) * 100))
+
+    return MentorRank(
+        mentor_id=mentor.id,
+        score=final,
+        breakdown=breakdown,
+        matched_skills=matched,
+        missing_skills=missing,
+        reasons=_build_mentor_reasons(
+            matched=matched,
+            missing=missing,
+            total_required=len(task.required_skills),
+            breakdown=breakdown,
+            mentor=mentor,
+        ),
     )

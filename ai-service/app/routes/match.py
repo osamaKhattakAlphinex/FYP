@@ -6,10 +6,12 @@ from app.models.schemas import (
     CandidateRank,
     MatchRequest,
     MatchResponse,
+    RankMentorsRequest,
+    RankMentorsResponse,
     RankRequest,
     RankResponse,
 )
-from app.services.matcher import compute_match
+from app.services.matcher import compute_match, compute_mentor_match
 
 
 router = APIRouter(tags=["match"])
@@ -37,3 +39,16 @@ def rank_candidates_for_task(payload: RankRequest) -> RankResponse:
         )
     ranking.sort(key=lambda r: r.score, reverse=True)
     return RankResponse(task_id=payload.task.id, ranking=ranking)
+
+
+@router.post("/rank-mentors", response_model=RankMentorsResponse)
+def rank_mentors_for_task(payload: RankMentorsRequest) -> RankMentorsResponse:
+    """Rank mentors by suitability to guide a student through a given task.
+
+    Uses compute_mentor_match rather than compute_match: mentor experience is
+    scored monotonically, so a senior mentor is never ranked below a junior one
+    on an entry-level task.
+    """
+    ranking = [compute_mentor_match(mentor, payload.task) for mentor in payload.mentors]
+    ranking.sort(key=lambda r: r.score, reverse=True)
+    return RankMentorsResponse(task_id=payload.task.id, ranking=ranking)

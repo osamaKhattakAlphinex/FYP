@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { User, Student, Company, Admin } = require('../models');
+const { User, Student, Company, Admin, Mentor } = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
 const sendEmail = require('../utils/sendEmail');
 const {
@@ -41,6 +41,30 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
         });
 };
 
+
+// Role -> profile model. One place, so a new role can never be half-wired again.
+const ROLE_PROFILE_MODELS = {
+    student: Student,
+    company: Company,
+    admin: Admin,
+    mentor: Mentor
+};
+
+// Returns the role-specific profile row for a user, or null if the role has none.
+const resolveRoleProfile = async (user) => {
+    if (!user) return null;
+    const Profile = ROLE_PROFILE_MODELS[user.role];
+    if (!Profile) return null;
+    return Profile.findOne({ where: { userId: user.id } });
+};
+
+// Human-friendly name for emails. Falls back to the supplied value (usually the email).
+const getDisplayName = async (user, fallback) => {
+    const profile = await resolveRoleProfile(user);
+    if (!profile) return fallback;
+    return profile.companyName || profile.firstName || fallback;
+};
+
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
@@ -57,7 +81,11 @@ exports.register = async (req, res, next) => {
             industry,
             companySize,
             website,
-            phone
+            phone,
+            headline,
+            currentPosition,
+            currentCompany,
+            yearsOfExperience
         } = req.body;
 
         console.log('Registration request:', { email, role, companyName, industry, companySize, website, phone });
@@ -107,6 +135,30 @@ exports.register = async (req, res, next) => {
 
                 await Admin.create({ userId: user.id, firstName, lastName });
                 userName = firstName;
+            } else if (role === 'mentor') {
+                if (!name) throw new Error('Name is required for mentors');
+                const nameParts = name.trim().split(' ');
+                const firstName = nameParts[0];
+                const lastName = nameParts.slice(1).join(' ') || firstName;
+
+                await Mentor.create({
+                    userId: user.id,
+                    firstName,
+                    lastName,
+                    headline: headline || null,
+                    currentPosition: currentPosition || null,
+                    currentCompany: currentCompany || null,
+                    yearsOfExperience: Number.isFinite(Number(yearsOfExperience))
+                        ? Number(yearsOfExperience)
+                        : 0
+                    // verificationStatus defaults to pending — an admin must approve
+                    // the mentor before they can be assigned to a student.
+                });
+                userName = firstName;
+            } else {
+                // Without this, an unknown role would create a User row with no
+                // profile and still return 201. The catch below destroys the user.
+                throw new Error('Invalid role');
             }
         } catch (roleError) {
             console.error('Role profile creation error:', roleError);
@@ -196,14 +248,7 @@ exports.getMe = async (req, res, next) => {
     try {
         const user = await User.findByPk(req.user.id);
 
-        let roleData = null;
-        if (user.role === 'student') {
-            roleData = await Student.findOne({ where: { userId: user.id } });
-        } else if (user.role === 'company') {
-            roleData = await Company.findOne({ where: { userId: user.id } });
-        } else if (user.role === 'admin') {
-            roleData = await Admin.findOne({ where: { userId: user.id } });
-        }
+        const roleData = await resolveRoleProfile(user);
 
         res.status(200).json({
             success: true,
@@ -241,14 +286,7 @@ exports.verifyEmail = async (req, res, next) => {
         user.emailVerificationExpire = null;
         await user.save();
 
-        let userName = user.email;
-        if (user.role === 'student') {
-            const student = await Student.findOne({ where: { userId: user.id } });
-            if (student) userName = student.firstName;
-        } else if (user.role === 'company') {
-            const company = await Company.findOne({ where: { userId: user.id } });
-            if (company) userName = company.companyName;
-        }
+        const userName = await getDisplayName(user, user.email);
 
         try {
             await sendEmail({
@@ -282,14 +320,7 @@ exports.resendVerification = async (req, res, next) => {
 
         const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-        let userName = user.email;
-        if (user.role === 'student') {
-            const student = await Student.findOne({ where: { userId: user.id } });
-            if (student) userName = student.firstName;
-        } else if (user.role === 'company') {
-            const company = await Company.findOne({ where: { userId: user.id } });
-            if (company) userName = company.companyName;
-        }
+        const userName = await getDisplayName(user, user.email);
 
         await sendEmail({
             email: user.email,
@@ -321,17 +352,7 @@ exports.sendOTP = async (req, res, next) => {
         const otp = user.generateOTP();
         await user.save();
 
-        let userName = email;
-        if (user.role === 'student') {
-            const student = await Student.findOne({ where: { userId: user.id } });
-            if (student && student.firstName) userName = student.firstName;
-        } else if (user.role === 'company') {
-            const company = await Company.findOne({ where: { userId: user.id } });
-            if (company && company.companyName) userName = company.companyName;
-        } else if (user.role === 'admin') {
-            const admin = await Admin.findOne({ where: { userId: user.id } });
-            if (admin && admin.firstName) userName = admin.firstName;
-        }
+        const userName = await getDisplayName(user, email);
 
         try {
             await sendEmail({
@@ -379,17 +400,7 @@ exports.verifyOTP = async (req, res, next) => {
         user.isEmailVerified = true;
         await user.save();
 
-        let userName = email;
-        if (user.role === 'student') {
-            const student = await Student.findOne({ where: { userId: user.id } });
-            if (student && student.firstName) userName = student.firstName;
-        } else if (user.role === 'company') {
-            const company = await Company.findOne({ where: { userId: user.id } });
-            if (company && company.companyName) userName = company.companyName;
-        } else if (user.role === 'admin') {
-            const admin = await Admin.findOne({ where: { userId: user.id } });
-            if (admin && admin.firstName) userName = admin.firstName;
-        }
+        const userName = await getDisplayName(user, email);
 
         try {
             await sendEmail({
@@ -421,14 +432,7 @@ exports.forgotPassword = async (req, res, next) => {
 
         const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-        let userName = user.email;
-        if (user.role === 'student') {
-            const student = await Student.findOne({ where: { userId: user.id } });
-            if (student) userName = student.firstName;
-        } else if (user.role === 'company') {
-            const company = await Company.findOne({ where: { userId: user.id } });
-            if (company) userName = company.companyName;
-        }
+        const userName = await getDisplayName(user, user.email);
 
         try {
             await sendEmail({

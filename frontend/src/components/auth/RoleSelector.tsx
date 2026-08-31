@@ -1,7 +1,7 @@
 'use client'
 
 import { UserRole } from '@/types/auth.types'
-import { Briefcase, GraduationCap, Check } from 'lucide-react'
+import { Briefcase, GraduationCap, Compass, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface RoleSelectorProps {
@@ -22,11 +22,17 @@ const roles = [
         description: 'Post tasks, hire talent',
         icon: Briefcase,
     },
+    {
+        value: 'mentor' as UserRole,
+        label: 'I\'m a mentor',
+        description: 'Guide students through tasks',
+        icon: Compass,
+    },
 ]
 
 export default function RoleSelector({ selectedRole, onRoleSelect }: RoleSelectorProps) {
     return (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {roles.map((role) => {
                 const Icon = role.icon
                 const isSelected = selectedRole === role.value

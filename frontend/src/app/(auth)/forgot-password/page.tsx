@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import AuthLayout from '@/components/auth/AuthLayout';
 import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 import { authService } from '@/services/authService';
+import { homeForRole } from '@/lib/roleRoutes'
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -14,13 +15,8 @@ export default function ForgotPasswordPage() {
         if (authService.isAuthenticated()) {
             const user = authService.getStoredUser();
             if (user) {
-                const roleRoutes: Record<string, string> = {
-                    student: '/student/dashboard',
-                    company: '/company/dashboard',
-                    mentor: '/mentor/students',
-                    admin: '/admin/analytics'
-                };
-                router.push(roleRoutes[user.role] || '/student/dashboard');
+                
+                router.push(homeForRole(user.role));
             }
         }
     }, [router]);

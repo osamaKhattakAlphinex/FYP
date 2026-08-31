@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User, LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { homeForRole } from '@/lib/roleRoutes'
 
 export default function UserDropdown() {
     const [isOpen, setIsOpen] = useState(false);
@@ -36,15 +37,7 @@ export default function UserDropdown() {
         }
     };
 
-    const getDashboardRoute = () => {
-        const routes: Record<string, string> = {
-            student: '/student/dashboard',
-            company: '/company/dashboard',
-            mentor: '/mentor/students',
-            admin: '/admin/analytics'
-        };
-        return routes[user.role] || '/student/dashboard';
-    };
+    const getDashboardRoute = () => homeForRole(user.role);
 
     const getUserName = () => {
         if (user.firstName && user.lastName) {

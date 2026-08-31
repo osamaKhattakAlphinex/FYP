@@ -161,6 +161,11 @@ const getWelcomeTemplate = (userName, role) => {
               <div class="feature-item">📝 Post your first micro-internship task</div>
               <div class="feature-item">👥 Find talented students for your projects</div>
               <div class="feature-item">📊 Track applications and manage candidates</div>
+            ` : role === 'mentor' ? `
+              <div class="feature-item">Complete your mentor profile and add your areas of expertise</div>
+              <div class="feature-item">Wait for admin verification &mdash; it unlocks mentorship assignments</div>
+              <div class="feature-item">Accept mentorship requests from companies</div>
+              <div class="feature-item">Guide students through their micro-internships</div>
             ` : ''}
           </div>
           <p style="text-align: center;">
@@ -449,6 +454,172 @@ ${reason ? `Reason: ${reason}` : ''}`;
     return { subject, html, text };
 };
 
+// ---------------------------------------------------------------------------
+// Mentor assignment templates (Module 7). These reuse interviewShell above.
+// ---------------------------------------------------------------------------
+
+const MENTOR_HEADER_COLOR = '#0a66c2';
+
+const mentorMetaRows = (rows) =>
+    rows
+        .filter((r) => r && r.value)
+        .map((r) => `<div class="meta-row"><strong>${r.label}:</strong> ${r.value}</div>`)
+        .join('');
+
+const mentorAssignmentRequested = ({
+    mentorName,
+    companyName,
+    studentName,
+    taskTitle,
+    assignmentNote,
+    dashboardUrl
+}) => {
+    const subject = `Mentorship request from ${companyName}`;
+    const html = interviewShell(
+        MENTOR_HEADER_COLOR,
+        'New mentorship request',
+        `
+        <p>Hi ${mentorName},</p>
+        <p><strong>${companyName}</strong> has asked you to mentor a student through a micro-internship.</p>
+        <div class="meta">
+          ${mentorMetaRows([
+              { label: 'Student', value: studentName },
+              { label: 'Task', value: taskTitle },
+              { label: 'Company', value: companyName }
+          ])}
+        </div>
+        ${assignmentNote ? `<div class="reason"><strong>Note from the company:</strong><br/>${assignmentNote}</div>` : ''}
+        <p>Open your dashboard to accept or decline this request.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">View the request</a></p>` : ''}
+        `
+    );
+    const text = `Mentorship request from ${companyName}
+Student: ${studentName}
+Task: ${taskTitle}
+${assignmentNote ? `Note: ${assignmentNote}` : ''}`;
+    return { subject, html, text };
+};
+
+const mentorAssignmentAccepted = ({
+    recipientName,
+    mentorName,
+    studentName,
+    taskTitle,
+    dashboardUrl
+}) => {
+    const subject = `${mentorName} accepted the mentorship for "${taskTitle}"`;
+    const html = interviewShell(
+        '#047857',
+        'Mentorship confirmed',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${mentorName}</strong> has accepted the mentorship and will be guiding
+        <strong>${studentName}</strong> through <strong>${taskTitle}</strong>.</p>
+        <div class="meta">
+          ${mentorMetaRows([
+              { label: 'Mentor', value: mentorName },
+              { label: 'Student', value: studentName },
+              { label: 'Task', value: taskTitle }
+          ])}
+        </div>
+        <p>You can now exchange guidance notes from the mentorship page.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the mentorship</a></p>` : ''}
+        `
+    );
+    const text = `${mentorName} accepted the mentorship for "${taskTitle}" with ${studentName}.`;
+    return { subject, html, text };
+};
+
+const mentorAssignmentDeclined = ({ recipientName, mentorName, taskTitle, reason, dashboardUrl }) => {
+    const subject = `${mentorName} declined the mentorship for "${taskTitle}"`;
+    const html = interviewShell(
+        '#b91c1c',
+        'Mentorship declined',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${mentorName}</strong> is unable to take on the mentorship for
+        <strong>${taskTitle}</strong>.</p>
+        ${reason ? `<div class="reason"><strong>Reason:</strong><br/>${reason}</div>` : ''}
+        <p>You can assign a different mentor to this internship at any time.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Assign another mentor</a></p>` : ''}
+        `
+    );
+    const text = `${mentorName} declined the mentorship for "${taskTitle}".
+${reason ? `Reason: ${reason}` : ''}`;
+    return { subject, html, text };
+};
+
+const mentorAssignmentCancelled = ({ recipientName, companyName, taskTitle, reason }) => {
+    const subject = `Mentorship for "${taskTitle}" was cancelled`;
+    const html = interviewShell(
+        '#b91c1c',
+        'Mentorship cancelled',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${companyName}</strong> has cancelled the mentorship for
+        <strong>${taskTitle}</strong>.</p>
+        ${reason ? `<div class="reason"><strong>Reason:</strong><br/>${reason}</div>` : ''}
+        `
+    );
+    const text = `The mentorship for "${taskTitle}" was cancelled by ${companyName}.
+${reason ? `Reason: ${reason}` : ''}`;
+    return { subject, html, text };
+};
+
+const mentorNoteAdded = ({ recipientName, authorName, taskTitle, preview, dashboardUrl }) => {
+    const subject = `New guidance note from ${authorName}`;
+    const html = interviewShell(
+        MENTOR_HEADER_COLOR,
+        'New guidance note',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${authorName}</strong> posted a note on your mentorship for
+        <strong>${taskTitle}</strong>.</p>
+        ${preview ? `<div class="meta"><div class="meta-row">${preview}</div></div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the conversation</a></p>` : ''}
+        `
+    );
+    const text = `${authorName} posted a note on "${taskTitle}".
+${preview || ''}`;
+    return { subject, html, text };
+};
+
+const mentorVerificationDecision = ({ mentorName, status, note, dashboardUrl }) => {
+    const approved = status === 'approved';
+    const subject = approved
+        ? 'Your mentor account has been approved'
+        : status === 'rejected'
+            ? 'Update on your mentor application'
+            : 'Your mentor account is under review again';
+
+    const headline = approved
+        ? 'You are verified'
+        : status === 'rejected'
+            ? 'Mentor application not approved'
+            : 'Verification reset to pending';
+
+    const body = approved
+        ? '<p>Your mentor profile has been verified. Companies can now assign you to guide students through their micro-internships.</p>'
+        : status === 'rejected'
+            ? '<p>Your mentor profile was not approved at this time. You can update your profile and it will be reviewed again.</p>'
+            : '<p>Your mentor profile has been returned to the review queue.</p>';
+
+    const html = interviewShell(
+        approved ? '#047857' : '#b91c1c',
+        headline,
+        `
+        <p>Hi ${mentorName},</p>
+        ${body}
+        ${note ? `<div class="reason"><strong>Reviewer note:</strong><br/>${note}</div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Go to your dashboard</a></p>` : ''}
+        `
+    );
+    const text = `Mentor verification: ${status}.
+${note ? `Note: ${note}` : ''}`;
+    return { subject, html, text };
+};
+
+
 module.exports = {
     getEmailVerificationTemplate,
     getOTPTemplate,
@@ -458,5 +629,11 @@ module.exports = {
     getApplicationWithdrawnTemplate,
     interviewScheduled,
     interviewRescheduled,
-    interviewCancelled
+    interviewCancelled,
+    mentorAssignmentRequested,
+    mentorAssignmentAccepted,
+    mentorAssignmentDeclined,
+    mentorAssignmentCancelled,
+    mentorNoteAdded,
+    mentorVerificationDecision
 };

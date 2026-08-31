@@ -80,6 +80,8 @@ app.use('/api/companies', require('./routes/companyRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/applications', require('./routes/applicationRoutes'));
 app.use('/api/interviews', require('./routes/interviewRoutes'));
+app.use('/api/mentors', require('./routes/mentorRoutes'));
+app.use('/api/mentor-assignments', require('./routes/mentorAssignmentRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health check route

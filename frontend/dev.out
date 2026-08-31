@@ -1,0 +1,69 @@
+
+> smart-ai-micro-internship-frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.0
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.1s
+ ✓ Compiled /src/middleware in 258ms (71 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 3.3s (991 modules)
+ GET / 200 in 4123ms
+ GET / 200 in 4061ms
+ ✓ Compiled in 876ms (444 modules)
+ GET / 200 in 83ms
+ GET / 200 in 71ms
+ ○ Compiling /mentor/students ...
+ ✓ Compiled /mentor/students in 1268ms (1001 modules)
+ GET /mentor/students 200 in 1536ms
+ GET /mentor/students 200 in 1531ms
+ ○ Compiling /mentor/students/[assignmentId] ...
+ ✓ Compiled /mentor/students/[assignmentId] in 594ms (1031 modules)
+ GET /mentor/students/1 200 in 1202ms
+ GET /mentor/students/1 200 in 1196ms
+ ✓ Compiled /mentor/profile in 504ms (1083 modules)
+ GET /mentor/profile 200 in 716ms
+ GET /mentor/profile 200 in 721ms
+ ✓ Compiled /mentor/feedback in 380ms (1091 modules)
+ GET /mentor/feedback 200 in 547ms
+ GET /mentor/feedback 200 in 543ms
+ ✓ Compiled /student/mentorship in 378ms (1103 modules)
+ GET /student/mentorship 200 in 549ms
+ GET /student/mentorship 200 in 553ms
+ ✓ Compiled /student/mentorship/[assignmentId] in 422ms (1111 modules)
+ GET /student/mentorship/1 200 in 994ms
+ GET /student/mentorship/1 200 in 994ms
+ ○ Compiling /company/mentors ...
+ ✓ Compiled /company/mentors in 758ms (1143 modules)
+ GET /company/mentors 200 in 955ms
+ GET /company/mentors 200 in 961ms
+ ○ Compiling /admin/mentors ...
+ ✓ Compiled /admin/mentors in 530ms (1153 modules)
+ GET /admin/mentors 200 in 686ms
+ GET /admin/mentors 200 in 691ms
+ ○ Compiling /company/candidates/[applicationId] ...
+ ✓ Compiled /company/candidates/[applicationId] in 935ms (1211 modules)
+ GET /company/candidates/1 200 in 1463ms
+ GET /company/candidates/1 200 in 1467ms
+ ○ Compiling /student/applications/[applicationId] ...
+ ✓ Compiled /student/applications/[applicationId] in 2.4s (1229 modules)
+ GET /student/applications/1 200 in 2982ms
+ GET /student/applications/1 200 in 2983ms
+ ○ Compiling /register ...
+ ✓ Compiled /register in 775ms (1511 modules)
+ GET /register 200 in 938ms
+ GET /register 200 in 942ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 613ms (1519 modules)
+ GET /login 200 in 776ms
+ GET /login 200 in 781ms
+ GET /register 200 in 67ms
+ GET /register 200 in 67ms
+ GET /mentor/students 200 in 109ms
+ GET /mentor/students 200 in 113ms
+ ✓ Compiled / in 432ms (547 modules)
+ GET / 200 in 733ms
+ GET / 200 in 728ms

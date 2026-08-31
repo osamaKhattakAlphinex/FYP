@@ -45,7 +45,13 @@ passport.use(
                     return done(null, user);
                 }
 
-                const role = req.session.oauthRole || 'student';
+                // Only these two roles can self-serve through Google. Mentors are
+                // admin-verified and admins are seeded, so both must use email signup;
+                // allowing them here would create a User with no profile row.
+                const requestedRole = req.session.oauthRole || 'student';
+                const role = ['student', 'company'].includes(requestedRole)
+                    ? requestedRole
+                    : 'student';
 
                 user = await User.create({
                     email: profile.emails[0].value,
@@ -60,15 +66,15 @@ passport.use(
                 const firstName = names[0] || '';
                 const lastName = names.slice(1).join(' ') || firstName;
 
-                if (role === 'student') {
-                    await Student.create({ userId: user.id, firstName, lastName });
-                } else if (role === 'company') {
+                if (role === 'company') {
                     await Company.create({
                         userId: user.id,
                         companyName: profile.displayName,
                         industry: 'Unknown',
                         contactEmail: profile.emails[0].value
                     });
+                } else {
+                    await Student.create({ userId: user.id, firstName, lastName });
                 }
 
                 done(null, user);

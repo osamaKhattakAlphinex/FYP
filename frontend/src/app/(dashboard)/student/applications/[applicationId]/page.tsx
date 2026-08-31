@@ -35,6 +35,7 @@ import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { applicationService } from '@/services/applicationService'
 import type { Application } from '@/types/application.types'
 import { cn, getInitials } from '@/lib/utils'
+import YourMentorCard from '@/components/student/YourMentorCard'
 
 const formatDateTime = (iso?: string | null) => {
     if (!iso) return '—'
@@ -139,6 +140,8 @@ export default function StudentApplicationDetailPage() {
     return (
         <AppShell
             rightRail={
+                <>
+                <YourMentorCard applicationId={applicationId} />
                 <Card className="p-4">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Timeline
@@ -172,6 +175,7 @@ export default function StudentApplicationDetailPage() {
                         </ol>
                     )}
                 </Card>
+                </>
             }
         >
             <button

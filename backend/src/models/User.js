@@ -106,7 +106,6 @@ User.init(
         email: {
             type: DataTypes.STRING(191),
             allowNull: false,
-            unique: true,
             validate: {
                 isEmail: { msg: 'Please provide a valid email' },
                 notEmpty: { msg: 'Please provide an email' }
@@ -130,7 +129,10 @@ User.init(
             }
         },
         role: {
-            type: DataTypes.ENUM('student', 'company', 'admin'),
+            // NOTE: 'mentor' is appended LAST on purpose. MySQL can add a new ENUM
+            // member in-place only when it is appended; inserting mid-list forces a
+            // full table copy on every `sequelize.sync({ alter: true })` boot.
+            type: DataTypes.ENUM('student', 'company', 'admin', 'mentor'),
             allowNull: false
         },
         isEmailVerified: {
@@ -143,8 +145,7 @@ User.init(
         },
         googleId: {
             type: DataTypes.STRING(191),
-            allowNull: true,
-            unique: true
+            allowNull: true
         },
         avatar: {
             type: DataTypes.STRING(500),
@@ -165,6 +166,16 @@ User.init(
         modelName: 'User',
         tableName: 'users',
         timestamps: true,
+        // Declared as named indexes rather than attribute-level `unique: true`.
+        // Under DB_SYNC=alter Sequelize re-runs changeColumn on every boot and
+        // MySQL/MariaDB re-appends an attribute-level UNIQUE each time, so the
+        // table gained email_2, email_3 ... two new indexes per restart until the
+        // 64-key limit stopped the server booting. Index sync is diffed by name,
+        // so these are idempotent. Names match the original indexes on purpose.
+        indexes: [
+            { unique: true, fields: ['email'], name: 'email' },
+            { unique: true, fields: ['googleId'], name: 'googleId' }
+        ],
         defaultScope: {
             attributes: { exclude: ['password'] }
         },

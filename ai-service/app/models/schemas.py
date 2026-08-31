@@ -74,3 +74,39 @@ class CandidateRank(BaseModel):
 class RankResponse(BaseModel):
     task_id: str
     ranking: list[CandidateRank]
+
+
+# ---------------------------------------------------------------------------
+# Mentor ranking (Module 7)
+# ---------------------------------------------------------------------------
+
+
+class MentorProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    expertise: list[SkillIn] = Field(default_factory=list)
+    experience_years: float = 0
+    bio: Optional[str] = None
+    specializations: list[str] = Field(default_factory=list)
+    active_mentees: int = 0
+    max_mentees: int = 5
+
+
+class RankMentorsRequest(BaseModel):
+    task: TaskInput
+    mentors: list[MentorProfile]
+
+
+class MentorRank(BaseModel):
+    mentor_id: str
+    score: int = Field(ge=0, le=100)
+    breakdown: dict[str, float]
+    matched_skills: list[str]
+    missing_skills: list[str]
+    reasons: list[str]
+
+
+class RankMentorsResponse(BaseModel):
+    task_id: str
+    ranking: list[MentorRank]

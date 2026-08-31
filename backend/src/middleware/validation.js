@@ -30,7 +30,7 @@ exports.registerValidation = [
         })
         .withMessage('Password must be at least 6 characters'),
     body('role')
-        .isIn(['student', 'company', 'admin'])
+        .isIn(['student', 'company', 'admin', 'mentor'])
         .withMessage('Invalid role'),
     body('firstName')
         .optional({
@@ -454,5 +454,138 @@ exports.validateApplicationStatusChange = [
         .isString()
         .isLength({ max: 500 })
         .withMessage('Reason cannot exceed 500 characters'),
+    exports.validate
+];
+
+// ---------------------------------------------------------------------------
+// Mentor validation rules (Module 7)
+// ---------------------------------------------------------------------------
+
+const EXPERTISE_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+const AVAILABILITY_STATUSES = ['available', 'limited', 'unavailable'];
+const VERIFICATION_STATUSES = ['pending', 'approved', 'rejected'];
+
+exports.validateMentorProfileUpdate = [
+    body('firstName')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('First name must be between 2 and 100 characters'),
+    body('lastName')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('Last name must be between 2 and 100 characters'),
+    body('headline')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ max: 255 })
+        .withMessage('Headline cannot exceed 255 characters'),
+    body('bio')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ max: 2000 })
+        .withMessage('Bio cannot exceed 2000 characters'),
+    body('yearsOfExperience')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 0, max: 60 })
+        .withMessage('Years of experience must be between 0 and 60'),
+    exports.validate
+];
+
+exports.validateMentorExpertise = [
+    body('name')
+        .trim()
+        .isLength({ min: 1, max: 150 })
+        .withMessage('Expertise name must be between 1 and 150 characters'),
+    body('level')
+        .optional({ values: 'falsy' })
+        .isIn(EXPERTISE_LEVELS)
+        .withMessage('Invalid expertise level'),
+    body('yearsOfExperience')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 0, max: 60 })
+        .withMessage('Years of experience must be between 0 and 60'),
+    exports.validate
+];
+
+exports.validateMentorAvailability = [
+    body('availabilityStatus')
+        .optional({ values: 'falsy' })
+        .isIn(AVAILABILITY_STATUSES)
+        .withMessage('Invalid availability status'),
+    body('maxActiveMentees')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 1, max: 50 })
+        .withMessage('Capacity must be between 1 and 50'),
+    exports.validate
+];
+
+exports.validateMentorVerificationReview = [
+    body('status')
+        .isIn(VERIFICATION_STATUSES)
+        .withMessage('Status must be pending, approved or rejected'),
+    body('note')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Note cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateMentorAssignment = [
+    body('mentorId')
+        .notEmpty()
+        .withMessage('A mentor must be selected'),
+    body('assignmentNote')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 2000 })
+        .withMessage('Note cannot exceed 2000 characters'),
+    exports.validate
+];
+
+exports.validateAssignmentResponse = [
+    body('action')
+        .isIn(['accept', 'decline'])
+        .withMessage('Action must be accept or decline'),
+    body('reason')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Reason cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateMentorNote = [
+    body('body')
+        .trim()
+        .isLength({ min: 1, max: 4000 })
+        .withMessage('Note must be between 1 and 4000 characters'),
+    exports.validate
+];
+
+exports.validateMentorshipRating = [
+    body('studentRating')
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Rating must be between 1 and 5'),
+    body('studentFeedback')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 2000 })
+        .withMessage('Feedback cannot exceed 2000 characters'),
+    exports.validate
+];
+
+exports.validateMentorshipCompletion = [
+    body('mentorRating')
+        .optional({ values: 'falsy' })
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Rating must be between 1 and 5'),
+    body('mentorFeedback')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 2000 })
+        .withMessage('Feedback cannot exceed 2000 characters'),
     exports.validate
 ];

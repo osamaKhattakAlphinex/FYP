@@ -4,6 +4,7 @@ import { useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { authService } from '@/services/authService'
+import { homeForRole } from '@/lib/roleRoutes'
 
 function LoadingScreen({ label }: { label: string }) {
     return (
@@ -35,12 +36,7 @@ function CallbackContent() {
                 .getCurrentUser()
                 .then((user) => {
                     localStorage.setItem('user', JSON.stringify(user))
-                    const routes = {
-                        student: '/student/dashboard',
-                        company: '/company/dashboard',
-                        admin: '/admin/analytics',
-                    } as Record<string, string>
-                    router.push(routes[user.role] || '/student/dashboard')
+                    router.push(homeForRole(user.role))
                 })
                 .catch(() => router.push('/login?error=authentication_failed'))
         } else {

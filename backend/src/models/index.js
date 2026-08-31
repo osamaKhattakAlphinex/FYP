@@ -19,6 +19,11 @@ const Application = require('./Application');
 const ApplicationAttachment = require('./ApplicationAttachment');
 const ApplicationStatusHistory = require('./ApplicationStatusHistory');
 const Interview = require('./Interview');
+const Mentor = require('./Mentor');
+const MentorExpertise = require('./MentorExpertise');
+const MentorAssignment = require('./MentorAssignment');
+const MentorAssignmentHistory = require('./MentorAssignmentHistory');
+const MentorNote = require('./MentorNote');
 
 // User <-> role profiles
 User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile', onDelete: 'CASCADE' });
@@ -29,6 +34,9 @@ Company.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 User.hasOne(Admin, { foreignKey: 'userId', as: 'adminProfile', onDelete: 'CASCADE' });
 Admin.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+
+User.hasOne(Mentor, { foreignKey: 'userId', as: 'mentorProfile', onDelete: 'CASCADE' });
+Mentor.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
 // Student child tables
 Student.hasMany(StudentEducation, { foreignKey: 'studentId', as: 'education', onDelete: 'CASCADE' });
@@ -112,6 +120,64 @@ Interview.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
 
 User.hasMany(Interview, { foreignKey: 'createdByUserId', as: 'createdInterviews' });
 
+// Mentor associations
+Mentor.hasMany(MentorExpertise, { foreignKey: 'mentorId', as: 'expertise', onDelete: 'CASCADE' });
+MentorExpertise.belongsTo(Mentor, { foreignKey: 'mentorId' });
+
+User.hasMany(Mentor, { foreignKey: 'verifiedByUserId', as: 'verifiedMentors' });
+
+// Mentor assignment associations
+Mentor.hasMany(MentorAssignment, { foreignKey: 'mentorId', as: 'assignments', onDelete: 'CASCADE' });
+MentorAssignment.belongsTo(Mentor, { foreignKey: 'mentorId', as: 'mentor' });
+
+Application.hasMany(MentorAssignment, {
+    foreignKey: 'applicationId',
+    as: 'mentorAssignments',
+    onDelete: 'CASCADE'
+});
+MentorAssignment.belongsTo(Application, { foreignKey: 'applicationId', as: 'application' });
+
+Student.hasMany(MentorAssignment, {
+    foreignKey: 'studentId',
+    as: 'mentorAssignments',
+    onDelete: 'CASCADE'
+});
+MentorAssignment.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+
+Task.hasMany(MentorAssignment, { foreignKey: 'taskId', as: 'mentorAssignments', onDelete: 'CASCADE' });
+MentorAssignment.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+
+Company.hasMany(MentorAssignment, {
+    foreignKey: 'companyId',
+    as: 'mentorAssignments',
+    onDelete: 'CASCADE'
+});
+MentorAssignment.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+
+User.hasMany(MentorAssignment, { foreignKey: 'assignedByUserId', as: 'mentorAssignmentsMade' });
+
+MentorAssignment.hasMany(MentorAssignmentHistory, {
+    foreignKey: 'assignmentId',
+    as: 'statusHistory',
+    onDelete: 'CASCADE'
+});
+MentorAssignmentHistory.belongsTo(MentorAssignment, { foreignKey: 'assignmentId' });
+
+User.hasMany(MentorAssignmentHistory, {
+    foreignKey: 'changedByUserId',
+    as: 'mentorAssignmentStatusChanges'
+});
+
+MentorAssignment.hasMany(MentorNote, {
+    foreignKey: 'assignmentId',
+    as: 'notes',
+    onDelete: 'CASCADE'
+});
+MentorNote.belongsTo(MentorAssignment, { foreignKey: 'assignmentId' });
+
+User.hasMany(MentorNote, { foreignKey: 'authorUserId', as: 'mentorNotes' });
+MentorNote.belongsTo(User, { foreignKey: 'authorUserId', as: 'author' });
+
 // Student profile completion hook (needs counts of associated rows)
 const recalcStudentCompletion = async (student) => {
     if (!student) return;
@@ -155,6 +221,81 @@ const recalcCompanyCompletion = async (company) => {
     }
 };
 
+const recalcMentorCompletion = async (mentor) => {
+    if (!mentor) return;
+    const expertiseCount = await MentorExpertise.count({ where: { mentorId: mentor.id } });
+
+    let completion = 0;
+    if (mentor.firstName && mentor.lastName && mentor.headline) completion += 20;
+    if (mentor.bio) completion += 15;
+    if (mentor.currentPosition && mentor.currentCompany) completion += 15;
+    if (mentor.yearsOfExperience > 0) completion += 10;
+    if (expertiseCount >= 3) completion += 20;
+    else if (expertiseCount > 0) completion += 10;
+    if (mentor.locationCity || mentor.locationCountry) completion += 10;
+    if (mentor.socialLinkedin) completion += 10;
+
+    if (mentor.profileCompletion !== completion) {
+        mentor.profileCompletion = completion;
+        await mentor.save();
+    }
+};
+
+// Keeps Mentor.activeMenteeCount in step with reality. The count is authoritative;
+// the column is a display cache, so capacity checks must COUNT rather than read it.
+const recalcMentorActiveCount = async (mentorId, options = {}) => {
+    if (mentorId == null) return 0;
+    const activeCount = await MentorAssignment.count({
+        where: { mentorId, status: 'active' },
+        transaction: options.transaction
+    });
+    await Mentor.update(
+        { activeMenteeCount: activeCount },
+        { where: { id: mentorId }, transaction: options.transaction }
+    );
+    return activeCount;
+};
+
+// Recomputes the mentor's rating aggregate from the ratings students actually left.
+const recalcMentorRating = async (mentorId, options = {}) => {
+    if (mentorId == null) return;
+    const [completed, rated] = await Promise.all([
+        MentorAssignment.count({
+            where: { mentorId, status: 'completed' },
+            transaction: options.transaction
+        }),
+        MentorAssignment.findAll({
+            where: { mentorId, status: 'completed' },
+            attributes: ['studentRating'],
+            transaction: options.transaction
+        })
+    ]);
+
+    const ratings = rated
+        .map((r) => r.studentRating)
+        .filter((r) => r != null);
+    const average = ratings.length
+        ? ratings.reduce((sum, r) => sum + Number(r), 0) / ratings.length
+        : 0;
+
+    const totalMentees = await MentorAssignment.count({
+        where: { mentorId },
+        distinct: true,
+        col: 'studentId',
+        transaction: options.transaction
+    });
+
+    await Mentor.update(
+        {
+            statCompletedMentorships: completed,
+            statTotalRatings: ratings.length,
+            statAverageRating: Number(average.toFixed(2)),
+            statTotalMentees: totalMentees
+        },
+        { where: { id: mentorId }, transaction: options.transaction }
+    );
+};
+
 module.exports = {
     sequelize,
     User,
@@ -176,6 +317,14 @@ module.exports = {
     ApplicationAttachment,
     ApplicationStatusHistory,
     Interview,
+    Mentor,
+    MentorExpertise,
+    MentorAssignment,
+    MentorAssignmentHistory,
+    MentorNote,
     recalcStudentCompletion,
-    recalcCompanyCompletion
+    recalcCompanyCompletion,
+    recalcMentorCompletion,
+    recalcMentorActiveCount,
+    recalcMentorRating
 };

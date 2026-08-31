@@ -8,6 +8,7 @@ import { LoginCredentials } from '@/types/auth.types';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { homeForRole } from '@/lib/roleRoutes'
 
 export default function LoginPage() {
     const router = useRouter();
@@ -18,13 +19,8 @@ export default function LoginPage() {
         if (authService.isAuthenticated()) {
             const user = authService.getStoredUser();
             if (user) {
-                const roleRoutes: Record<string, string> = {
-                    student: '/student/dashboard',
-                    company: '/company/dashboard',
-                    mentor: '/mentor/students',
-                    admin: '/admin/analytics'
-                };
-                router.push(roleRoutes[user.role] || '/student/dashboard');
+                
+                router.push(homeForRole(user.role));
             }
         }
     }, [router]);
@@ -46,14 +42,9 @@ export default function LoginPage() {
             toast.success('Login successful!');
 
             // Redirect based on role from backend
-            const roleRoutes: Record<string, string> = {
-                student: '/student/dashboard',
-                company: '/company/dashboard',
-                mentor: '/mentor/students',
-                admin: '/admin/analytics'
-            };
+            
 
-            router.push(roleRoutes[user.role] || '/student/dashboard');
+            router.push(homeForRole(user.role));
         } catch (err: any) {
             const errorMessage = err.response?.data?.error || err.message || 'Login failed. Please try again.';
             toast.error(errorMessage);

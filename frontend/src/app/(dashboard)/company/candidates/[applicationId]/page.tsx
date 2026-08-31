@@ -67,6 +67,7 @@ import type {
 } from '@/types/application.types'
 import type { Interview } from '@/types/interview.types'
 import ScheduleInterviewModal from '@/components/interviews/ScheduleInterviewModal'
+import CandidateMentorTab from '@/components/company/CandidateMentorTab'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
@@ -124,7 +125,11 @@ export default function CandidateDetailPage() {
     const searchParams = useSearchParams()
     const applicationId = params?.applicationId
     const initialTab =
-        searchParams.get('tab') === 'interview' ? 'interview' : 'application'
+        searchParams.get('tab') === 'mentor'
+            ? 'mentor'
+            : searchParams.get('tab') === 'interview'
+              ? 'interview'
+              : 'application'
 
     const [application, setApplication] = useState<Application | null>(null)
     const [loading, setLoading] = useState(true)
@@ -560,6 +565,7 @@ export default function CandidateDetailPage() {
                                 </TabsTrigger>
                                 <TabsTrigger value="notes">Notes</TabsTrigger>
                                 <TabsTrigger value="history">History</TabsTrigger>
+                                <TabsTrigger value="mentor">Mentor</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="application" className="space-y-4">
@@ -912,6 +918,16 @@ export default function CandidateDetailPage() {
                                         ))}
                                     </ol>
                                 )}
+                            </TabsContent>
+
+                            <TabsContent value="mentor">
+                                <CandidateMentorTab
+                                    applicationId={String(application._id)}
+                                    applicationStatus={application.status}
+                                    studentName={[s?.firstName, s?.lastName]
+                                        .filter(Boolean)
+                                        .join(' ')}
+                                />
                             </TabsContent>
                         </Tabs>
                     </Card>

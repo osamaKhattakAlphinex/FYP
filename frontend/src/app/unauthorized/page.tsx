@@ -5,6 +5,7 @@ import { ShieldAlert } from 'lucide-react'
 import { authService } from '@/services/authService'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { homeForRole } from '@/lib/roleRoutes'
 
 export default function UnauthorizedPage() {
     const router = useRouter()
@@ -12,12 +13,7 @@ export default function UnauthorizedPage() {
     const handleGoBack = () => {
         const user = authService.getStoredUser()
         if (user) {
-            const routes: Record<string, string> = {
-                student: '/student/dashboard',
-                company: '/company/dashboard',
-                admin: '/admin/analytics',
-            }
-            router.push(routes[user.role] || '/')
+            router.push(homeForRole(user.role))
         } else {
             router.push('/login')
         }

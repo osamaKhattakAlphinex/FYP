@@ -32,6 +32,11 @@ export interface RegisterData {
   // Student-specific fields (for future use)
   firstName?: string;
   lastName?: string;
+  // Mentor-specific fields
+  headline?: string;
+  currentPosition?: string;
+  currentCompany?: string;
+  yearsOfExperience?: number;
 }
 
 export interface AuthResponse {

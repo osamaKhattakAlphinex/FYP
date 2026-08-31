@@ -7,6 +7,7 @@ import EmailVerificationForm from '@/components/auth/EmailVerificationForm';
 import { authService } from '@/services/authService';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { homeForRole } from '@/lib/roleRoutes'
 
 function EmailVerificationContent() {
     const router = useRouter();
@@ -17,13 +18,8 @@ function EmailVerificationContent() {
         if (authService.isAuthenticated()) {
             const user = authService.getStoredUser();
             if (user && user.isEmailVerified) {
-                const roleRoutes: Record<string, string> = {
-                    student: '/student/dashboard',
-                    company: '/company/dashboard',
-                    mentor: '/mentor/students',
-                    admin: '/admin/analytics'
-                };
-                router.push(roleRoutes[user.role] || '/student/dashboard');
+                
+                router.push(homeForRole(user.role));
             }
         }
     }, [router]);
@@ -50,13 +46,7 @@ function EmailVerificationContent() {
             toast.success('Email verified successfully!');
 
             // Redirect based on role
-            const roleRoutes: Record<string, string> = {
-                student: '/student/dashboard',
-                company: '/company/dashboard',
-                admin: '/admin/analytics'
-            };
-
-            router.push(roleRoutes[data.user.role] || '/student/dashboard');
+            router.push(homeForRole(data.user.role));
         } catch (err: any) {
             const errorMessage = err.response?.data?.error || 'Invalid OTP';
             toast.error(errorMessage);

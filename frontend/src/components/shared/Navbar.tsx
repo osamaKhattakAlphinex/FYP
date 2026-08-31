@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn, getInitials } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import { navForRole } from '@/lib/roleRoutes'
 
 function Wordmark() {
     return (
@@ -86,13 +87,13 @@ export default function Navbar() {
         }
     }
 
-    const dashboardHref =
-        user?.role === 'company' ? '/company/dashboard' : '/student/dashboard'
-    const profileHref =
-        user?.role === 'company' ? '/company/profile' : '/student/profile'
-    const interviewsHref =
-        user?.role === 'company' ? '/company/interviews' : '/student/interviews'
-    const tasksHref = user?.role === 'company' ? '/company/tasks' : '/tasks'
+    const nav = navForRole(user?.role)
+    const dashboardHref = nav.dashboard
+    const profileHref = nav.profile
+    const interviewsHref = nav.work.href
+    const interviewsLabel = nav.work.label
+    const tasksHref = nav.tasks.href
+    const tasksLabel = nav.tasks.label
 
     const userName =
         user?.firstName && user?.lastName
@@ -133,13 +134,13 @@ export default function Navbar() {
                         <NavIconLink
                             href={tasksHref}
                             icon={Briefcase}
-                            label="Tasks"
+                            label={tasksLabel}
                             active={pathname?.startsWith(tasksHref)}
                         />
                         <NavIconLink
                             href={interviewsHref}
                             icon={CalendarClock}
-                            label="Interviews"
+                            label={interviewsLabel}
                             active={pathname?.includes('/interviews')}
                         />
                         <NavIconLink
@@ -258,14 +259,14 @@ export default function Navbar() {
                                     onClick={() => setMobileOpen(false)}
                                     className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                                 >
-                                    <Briefcase className="h-4 w-4" /> Tasks
+                                    <Briefcase className="h-4 w-4" /> {tasksLabel}
                                 </Link>
                                 <Link
                                     href={interviewsHref}
                                     onClick={() => setMobileOpen(false)}
                                     className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                                 >
-                                    <CalendarClock className="h-4 w-4" /> Interviews
+                                    <CalendarClock className="h-4 w-4" /> {interviewsLabel}
                                 </Link>
                                 <Link
                                     href={profileHref}

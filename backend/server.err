@@ -1,0 +1,5 @@
+ErrorResponse: Not authorized for this application
+    at exports.getAssignmentsForApplication (C:\Users\user\Desktop\FYP\smart-ai-micro-internship\backend\src\controllers\mentorAssignmentController.js:744:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  statusCode: 403
+}

@@ -273,12 +273,55 @@ const rankCandidates = async (taskDto, studentDtos) => {
     }
 };
 
+
+// ---------------------------------------------------------------------------
+// Mentor ranking (Module 7)
+// ---------------------------------------------------------------------------
+
+// Mentor expertise is stored capitalised (Beginner..Expert) to match student_skills,
+// but the AI service contract is lowercase beginner|intermediate|advanced.
+const mapMentorToDto = (mentor) => {
+    const expertise = (mentor.expertise || []).map((e) => ({
+        name: e.name,
+        level: normalizeSkillLevel(e.level)
+    }));
+
+    return {
+        id: String(mentor.id),
+        expertise,
+        experience_years: Number(mentor.yearsOfExperience) || 0,
+        bio: plainify(mentor.bio) || null,
+        // Specializations double as the mentor-side equivalent of task tags.
+        specializations: expertise.map((e) => e.name),
+        active_mentees: Number(mentor.activeMenteeCount) || 0,
+        max_mentees: Number(mentor.maxActiveMentees) || 5
+    };
+};
+
+const rankMentors = async (taskDto, mentorDtos) => {
+    if (!Array.isArray(mentorDtos) || mentorDtos.length === 0) return [];
+    try {
+        const data = await instrument('POST /rank-mentors', async () => {
+            const res = await http.post('/rank-mentors', {
+                task: taskDto,
+                mentors: mentorDtos
+            });
+            return res.data;
+        });
+        return Array.isArray(data && data.ranking) ? data.ranking : [];
+    } catch (err) {
+        throw wrap('POST /rank-mentors', err);
+    }
+};
+
 module.exports = {
     AIServiceUnavailableError,
     matchTasksForStudent,
     rankCandidates,
+    rankMentors,
     mapStudentToDto,
     mapTaskToDto,
+    mapMentorToDto,
     getAIHealth,
     // Exposed for tests / diagnostics
     _internal: {

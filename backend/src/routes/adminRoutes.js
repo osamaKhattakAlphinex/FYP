@@ -3,6 +3,11 @@ const axios = require('axios');
 
 const { protect, authorize } = require('../middleware/auth');
 const aiService = require('../services/aiService');
+const {
+    listMentorsForAdmin,
+    reviewMentorVerification
+} = require('../controllers/mentorController');
+const { validateMentorVerificationReview } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -38,5 +43,9 @@ router.get('/ai-health', async (req, res, next) => {
         next(error);
     }
 });
+
+// Mentor verification queue (Module 7)
+router.get('/mentors', listMentorsForAdmin);
+router.put('/mentors/:mentorId/verify', validateMentorVerificationReview, reviewMentorVerification);
 
 module.exports = router;
