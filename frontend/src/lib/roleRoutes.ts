@@ -18,11 +18,18 @@ export const ROLE_HOME: Record<UserRole, string> = {
 export const homeForRole = (role?: string | null): string =>
   (role && ROLE_HOME[role as UserRole]) || "/";
 
-/** The four primary nav destinations per role, used by the Navbar. */
+/**
+ * The primary nav destinations per role, used by the Navbar.
+ *
+ * `progress` is optional because only the three roles that actually work on an
+ * internship (student, company, mentor) have a progress surface — an admin has
+ * no per-internship view to link to.
+ */
 export interface RoleNav {
   dashboard: string;
   tasks: { href: string; label: string };
   work: { href: string; label: string };
+  progress?: { href: string; label: string };
   profile: string;
 }
 
@@ -31,18 +38,21 @@ export const ROLE_NAV: Record<UserRole, RoleNav> = {
     dashboard: "/student/dashboard",
     tasks: { href: "/tasks", label: "Tasks" },
     work: { href: "/student/interviews", label: "Interviews" },
+    progress: { href: "/student/internships", label: "Internships" },
     profile: "/student/profile",
   },
   company: {
     dashboard: "/company/dashboard",
     tasks: { href: "/company/tasks", label: "Tasks" },
     work: { href: "/company/interviews", label: "Interviews" },
+    progress: { href: "/company/progress", label: "Progress" },
     profile: "/company/profile",
   },
   mentor: {
     dashboard: "/mentor/students",
     tasks: { href: "/mentor/students", label: "Mentees" },
     work: { href: "/mentor/feedback", label: "Feedback" },
+    progress: { href: "/mentor/progress", label: "Progress" },
     profile: "/mentor/profile",
   },
   admin: {

@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 
 const User = require('./User');
@@ -24,6 +25,12 @@ const MentorExpertise = require('./MentorExpertise');
 const MentorAssignment = require('./MentorAssignment');
 const MentorAssignmentHistory = require('./MentorAssignmentHistory');
 const MentorNote = require('./MentorNote');
+const InternshipProgress = require('./InternshipProgress');
+const ProgressMilestone = require('./ProgressMilestone');
+const MilestoneSubmission = require('./MilestoneSubmission');
+const ProgressTimeLog = require('./ProgressTimeLog');
+const ProgressUpdate = require('./ProgressUpdate');
+const ProgressStatusHistory = require('./ProgressStatusHistory');
 
 // User <-> role profiles
 User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile', onDelete: 'CASCADE' });
@@ -178,6 +185,112 @@ MentorNote.belongsTo(MentorAssignment, { foreignKey: 'assignmentId' });
 User.hasMany(MentorNote, { foreignKey: 'authorUserId', as: 'mentorNotes' });
 MentorNote.belongsTo(User, { foreignKey: 'authorUserId', as: 'author' });
 
+// ---------------------------------------------------------------------------
+// Progress tracking (Module 8)
+// ---------------------------------------------------------------------------
+
+// One progress record per accepted application — the internship itself.
+Application.hasOne(InternshipProgress, {
+    foreignKey: 'applicationId',
+    as: 'progress',
+    onDelete: 'CASCADE'
+});
+InternshipProgress.belongsTo(Application, { foreignKey: 'applicationId', as: 'application' });
+
+Student.hasMany(InternshipProgress, {
+    foreignKey: 'studentId',
+    as: 'internshipProgress',
+    onDelete: 'CASCADE'
+});
+InternshipProgress.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+
+Task.hasMany(InternshipProgress, {
+    foreignKey: 'taskId',
+    as: 'internshipProgress',
+    onDelete: 'CASCADE'
+});
+InternshipProgress.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+
+Company.hasMany(InternshipProgress, {
+    foreignKey: 'companyId',
+    as: 'internshipProgress',
+    onDelete: 'CASCADE'
+});
+InternshipProgress.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+
+Mentor.hasMany(InternshipProgress, { foreignKey: 'mentorId', as: 'internshipProgress' });
+InternshipProgress.belongsTo(Mentor, { foreignKey: 'mentorId', as: 'mentor' });
+
+InternshipProgress.hasMany(ProgressMilestone, {
+    foreignKey: 'progressId',
+    as: 'milestones',
+    onDelete: 'CASCADE'
+});
+ProgressMilestone.belongsTo(InternshipProgress, { foreignKey: 'progressId', as: 'progress' });
+
+User.hasMany(ProgressMilestone, { foreignKey: 'createdByUserId', as: 'authoredMilestones' });
+User.hasMany(ProgressMilestone, { foreignKey: 'reviewedByUserId', as: 'reviewedMilestones' });
+
+ProgressMilestone.hasMany(MilestoneSubmission, {
+    foreignKey: 'milestoneId',
+    as: 'submissions',
+    onDelete: 'CASCADE'
+});
+MilestoneSubmission.belongsTo(ProgressMilestone, { foreignKey: 'milestoneId', as: 'milestone' });
+
+InternshipProgress.hasMany(MilestoneSubmission, {
+    foreignKey: 'progressId',
+    as: 'submissions',
+    onDelete: 'CASCADE'
+});
+MilestoneSubmission.belongsTo(InternshipProgress, { foreignKey: 'progressId', as: 'progress' });
+
+Student.hasMany(MilestoneSubmission, { foreignKey: 'studentId', as: 'milestoneSubmissions' });
+MilestoneSubmission.belongsTo(User, { foreignKey: 'reviewedByUserId', as: 'reviewer' });
+
+InternshipProgress.hasMany(ProgressTimeLog, {
+    foreignKey: 'progressId',
+    as: 'timeLogs',
+    onDelete: 'CASCADE'
+});
+ProgressTimeLog.belongsTo(InternshipProgress, { foreignKey: 'progressId', as: 'progress' });
+
+ProgressMilestone.hasMany(ProgressTimeLog, { foreignKey: 'milestoneId', as: 'timeLogs' });
+ProgressTimeLog.belongsTo(ProgressMilestone, { foreignKey: 'milestoneId', as: 'milestone' });
+
+Student.hasMany(ProgressTimeLog, { foreignKey: 'studentId', as: 'timeLogs', onDelete: 'CASCADE' });
+
+InternshipProgress.hasMany(ProgressUpdate, {
+    foreignKey: 'progressId',
+    as: 'updates',
+    onDelete: 'CASCADE'
+});
+ProgressUpdate.belongsTo(InternshipProgress, { foreignKey: 'progressId', as: 'progress' });
+
+ProgressMilestone.hasMany(ProgressUpdate, { foreignKey: 'milestoneId', as: 'updates' });
+ProgressUpdate.belongsTo(ProgressMilestone, { foreignKey: 'milestoneId', as: 'milestone' });
+
+User.hasMany(ProgressUpdate, { foreignKey: 'authorUserId', as: 'progressUpdates' });
+ProgressUpdate.belongsTo(User, { foreignKey: 'authorUserId', as: 'author' });
+
+InternshipProgress.hasMany(ProgressStatusHistory, {
+    foreignKey: 'progressId',
+    as: 'statusHistory',
+    onDelete: 'CASCADE'
+});
+ProgressStatusHistory.belongsTo(InternshipProgress, { foreignKey: 'progressId' });
+
+ProgressMilestone.hasMany(ProgressStatusHistory, {
+    foreignKey: 'milestoneId',
+    as: 'statusHistory',
+    onDelete: 'CASCADE'
+});
+
+User.hasMany(ProgressStatusHistory, {
+    foreignKey: 'changedByUserId',
+    as: 'progressStatusChanges'
+});
+
 // Student profile completion hook (needs counts of associated rows)
 const recalcStudentCompletion = async (student) => {
     if (!student) return;
@@ -296,6 +409,136 @@ const recalcMentorRating = async (mentorId, options = {}) => {
     );
 };
 
+// ---------------------------------------------------------------------------
+// Progress recomputation (Module 8)
+//
+// Every cached number on internship_progress / progress_milestones is derived,
+// exactly like Mentor.activeMenteeCount above: the rows are authoritative, the
+// columns are a display cache. Nothing is ever incremented in place, so a
+// crashed request or a manual DB edit can never leave the totals drifting.
+// ---------------------------------------------------------------------------
+
+const toDateOnly = (d) => new Date(d).toISOString().slice(0, 10);
+
+const recalcMilestoneHours = async (milestoneId, options = {}) => {
+    if (milestoneId == null) return 0;
+    const total = await ProgressTimeLog.sum('hours', {
+        where: { milestoneId },
+        transaction: options.transaction
+    });
+    const hours = Number(total) || 0;
+    await ProgressMilestone.update(
+        { actualHours: hours },
+        { where: { id: milestoneId }, transaction: options.transaction }
+    );
+    return hours;
+};
+
+// Recomputes percentage, counts, hours and health for one internship, and
+// auto-advances 'not_started' the first time any real work is recorded.
+// Returns the saved instance (or null when the row is gone).
+const recalcProgressMetrics = async (progressId, options = {}) => {
+    if (progressId == null) return null;
+    const { transaction, touchActivity = false } = options;
+    const now = options.now || new Date();
+
+    const progress = await InternshipProgress.findByPk(progressId, { transaction });
+    if (!progress) return null;
+
+    const [milestones, hoursSum, openUpdateBlockers] = await Promise.all([
+        ProgressMilestone.findAll({ where: { progressId }, transaction }),
+        ProgressTimeLog.sum('hours', { where: { progressId }, transaction }),
+        ProgressUpdate.count({
+            where: {
+                progressId,
+                type: { [Op.in]: ProgressUpdate.RESOLVABLE_TYPES },
+                resolvedAt: null
+            },
+            transaction
+        })
+    ]);
+
+    // Cancelled milestones drop out of the denominator entirely — cancelling
+    // work must not make a student look further behind than they are.
+    const counted = milestones.filter((m) => m.countsTowardsTotal());
+    const totalWeight = counted.reduce((sum, m) => sum + (Number(m.weight) || 1), 0);
+    const earnedWeight = counted
+        .filter((m) => m.earnsWeight())
+        .reduce((sum, m) => sum + (Number(m.weight) || 1), 0);
+
+    const progressPercent = totalWeight
+        ? Math.round((earnedWeight / totalWeight) * 100)
+        : 0;
+
+    const completedMilestoneCount = counted.filter((m) => m.earnsWeight()).length;
+    const overdueMilestoneCount = counted.filter((m) => m.isOverdue(now)).length;
+    const blockedMilestoneCount = counted.filter((m) => m.status === 'blocked').length;
+    const openBlockerCount = blockedMilestoneCount + Number(openUpdateBlockers || 0);
+    const totalHoursLogged = Number(hoursSum) || 0;
+
+    progress.progressPercent = progressPercent;
+    progress.milestoneCount = counted.length;
+    progress.completedMilestoneCount = completedMilestoneCount;
+    progress.overdueMilestoneCount = overdueMilestoneCount;
+    progress.openBlockerCount = openBlockerCount;
+    progress.totalHoursLogged = totalHoursLogged;
+
+    // The first time anything actually happens, the internship is under way.
+    // Closed and paused records are left exactly as the supervisor set them.
+    const hasRealActivity =
+        totalHoursLogged > 0 || counted.some((m) => m.status !== 'pending');
+    if (progress.status === 'not_started' && hasRealActivity) {
+        progress.status = 'in_progress';
+        progress.startedAt = progress.startedAt || now;
+        if (!progress.startDate) progress.startDate = toDateOnly(now);
+    }
+
+    if (touchActivity) progress.lastActivityAt = now;
+
+    progress.healthStatus = InternshipProgress.deriveHealth({
+        status: progress.status,
+        startDate: progress.startDate,
+        targetEndDate: progress.targetEndDate,
+        progressPercent,
+        overdueMilestoneCount,
+        openBlockerCount,
+        lastActivityAt: progress.lastActivityAt,
+        now
+    });
+
+    await progress.save({ transaction });
+    return progress;
+};
+
+// Keeps InternshipProgress.mentorId pointing at whoever is currently guiding
+// the internship. Called on every load so Module 7 needs no changes: an
+// assignment accepted, declined or cancelled after the fact is picked up here.
+const syncProgressMentor = async (progress, options = {}) => {
+    if (!progress) return null;
+    const { transaction } = options;
+
+    const live = await MentorAssignment.findOne({
+        where: {
+            applicationId: progress.applicationId,
+            status: { [Op.in]: ['active', 'completed'] }
+        },
+        order: [
+            // Prefer a live mentorship over a finished one.
+            [sequelize.literal("CASE WHEN `MentorAssignment`.`status` = 'active' THEN 0 ELSE 1 END"), 'ASC'],
+            ['createdAt', 'DESC']
+        ],
+        attributes: ['id', 'mentorId', 'status'],
+        transaction
+    });
+
+    const mentorId = live ? live.mentorId : null;
+    if (String(progress.mentorId || '') !== String(mentorId || '')) {
+        progress.mentorId = mentorId;
+        await progress.save({ transaction });
+    }
+    return live;
+};
+
 module.exports = {
     sequelize,
     User,
@@ -322,9 +565,18 @@ module.exports = {
     MentorAssignment,
     MentorAssignmentHistory,
     MentorNote,
+    InternshipProgress,
+    ProgressMilestone,
+    MilestoneSubmission,
+    ProgressTimeLog,
+    ProgressUpdate,
+    ProgressStatusHistory,
     recalcStudentCompletion,
     recalcCompanyCompletion,
     recalcMentorCompletion,
     recalcMentorActiveCount,
-    recalcMentorRating
+    recalcMentorRating,
+    recalcMilestoneHours,
+    recalcProgressMetrics,
+    syncProgressMentor
 };

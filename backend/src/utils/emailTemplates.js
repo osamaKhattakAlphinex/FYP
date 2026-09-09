@@ -620,6 +620,310 @@ ${note ? `Note: ${note}` : ''}`;
 };
 
 
+// ---------------------------------------------------------------------------
+// Progress tracking templates (Module 8). These reuse interviewShell above.
+// ---------------------------------------------------------------------------
+
+const PROGRESS_HEADER_COLOR = '#0a66c2';
+const PROGRESS_GOOD_COLOR = '#047857';
+const PROGRESS_WARN_COLOR = '#b45309';
+const PROGRESS_BAD_COLOR = '#b91c1c';
+
+const progressMetaRows = (rows) =>
+    rows
+        .filter((r) => r && (r.value || r.value === 0))
+        .map((r) => `<div class="meta-row"><strong>${r.label}:</strong> ${r.value}</div>`)
+        .join('');
+
+const bulletList = (items) => {
+    const clean = (items || []).filter(Boolean);
+    if (clean.length === 0) return '';
+    return `<ul>${clean.map((i) => `<li>${i}</li>`).join('')}</ul>`;
+};
+
+const milestoneAssigned = ({
+    studentName,
+    taskTitle,
+    milestoneTitle,
+    dueDate,
+    authorName,
+    dashboardUrl
+}) => {
+    const subject = `New milestone on "${taskTitle}": ${milestoneTitle}`;
+    const html = interviewShell(
+        PROGRESS_HEADER_COLOR,
+        'New milestone added',
+        `
+        <p>Hi ${studentName},</p>
+        <p>${authorName || 'Your supervisor'} added a milestone to your internship
+        <strong>${taskTitle}</strong>.</p>
+        <div class="meta">
+          ${progressMetaRows([
+              { label: 'Milestone', value: milestoneTitle },
+              { label: 'Due', value: dueDate }
+          ])}
+        </div>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open your internship workspace</a></p>` : ''}
+        `
+    );
+    const text = `New milestone on "${taskTitle}": ${milestoneTitle}${dueDate ? ` (due ${dueDate})` : ''}`;
+    return { subject, html, text };
+};
+
+const milestoneSubmitted = ({
+    recipientName,
+    studentName,
+    taskTitle,
+    milestoneTitle,
+    attemptNumber,
+    summary,
+    dashboardUrl
+}) => {
+    const subject = `${studentName} submitted "${milestoneTitle}" for review`;
+    const html = interviewShell(
+        PROGRESS_HEADER_COLOR,
+        'Milestone submitted for review',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${studentName}</strong> submitted a milestone on
+        <strong>${taskTitle}</strong> and is waiting on your review.</p>
+        <div class="meta">
+          ${progressMetaRows([
+              { label: 'Milestone', value: milestoneTitle },
+              { label: 'Attempt', value: attemptNumber }
+          ])}
+        </div>
+        ${summary ? `<div class="reason"><strong>What they delivered:</strong><br/>${summary}</div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Review the submission</a></p>` : ''}
+        `
+    );
+    const text = `${studentName} submitted "${milestoneTitle}" on "${taskTitle}" (attempt ${attemptNumber}).`;
+    return { subject, html, text };
+};
+
+const milestoneReviewed = ({
+    studentName,
+    taskTitle,
+    milestoneTitle,
+    approved,
+    reviewerName,
+    reviewNote,
+    dashboardUrl
+}) => {
+    const subject = approved
+        ? `"${milestoneTitle}" approved`
+        : `Changes requested on "${milestoneTitle}"`;
+    const html = interviewShell(
+        approved ? PROGRESS_GOOD_COLOR : PROGRESS_WARN_COLOR,
+        approved ? 'Milestone approved' : 'Changes requested',
+        `
+        <p>Hi ${studentName},</p>
+        <p>${reviewerName || 'Your reviewer'} ${
+            approved ? 'approved' : 'asked for changes on'
+        } <strong>${milestoneTitle}</strong> for <strong>${taskTitle}</strong>.</p>
+        ${reviewNote ? `<div class="reason"><strong>Reviewer note:</strong><br/>${reviewNote}</div>` : ''}
+        ${
+            approved
+                ? '<p>Nice work — move on to your next milestone.</p>'
+                : '<p>Make the requested changes and submit the milestone again.</p>'
+        }
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open your internship workspace</a></p>` : ''}
+        `
+    );
+    const text = `${milestoneTitle} on "${taskTitle}" was ${
+        approved ? 'approved' : 'sent back for changes'
+    }.${reviewNote ? ` Note: ${reviewNote}` : ''}`;
+    return { subject, html, text };
+};
+
+const progressBlockerRaised = ({
+    recipientName,
+    studentName,
+    taskTitle,
+    milestoneTitle,
+    body,
+    dashboardUrl
+}) => {
+    const subject = `${studentName} is blocked on "${taskTitle}"`;
+    const html = interviewShell(
+        PROGRESS_BAD_COLOR,
+        'Blocker raised',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${studentName}</strong> has flagged a blocker on
+        <strong>${taskTitle}</strong>${milestoneTitle ? ` (${milestoneTitle})` : ''}.</p>
+        ${body ? `<div class="reason">${body}</div>` : ''}
+        <p>Blocked work stalls quickly — a quick reply usually unsticks it.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the internship</a></p>` : ''}
+        `
+    );
+    const text = `${studentName} raised a blocker on "${taskTitle}". ${body || ''}`;
+    return { subject, html, text };
+};
+
+const progressBlockerResolved = ({
+    recipientName,
+    taskTitle,
+    milestoneTitle,
+    resolutionNote,
+    dashboardUrl
+}) => {
+    const subject = `Blocker cleared on "${taskTitle}"`;
+    const html = interviewShell(
+        PROGRESS_GOOD_COLOR,
+        'Blocker cleared',
+        `
+        <p>Hi ${recipientName},</p>
+        <p>The blocker on <strong>${taskTitle}</strong>${
+            milestoneTitle ? ` (${milestoneTitle})` : ''
+        } has been marked resolved.</p>
+        ${resolutionNote ? `<div class="reason">${resolutionNote}</div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the internship</a></p>` : ''}
+        `
+    );
+    const text = `The blocker on "${taskTitle}" was resolved. ${resolutionNote || ''}`;
+    return { subject, html, text };
+};
+
+const progressAtRisk = ({
+    recipientName,
+    studentName,
+    taskTitle,
+    health,
+    progressPercent,
+    reasons,
+    dashboardUrl
+}) => {
+    const overdue = health === 'overdue';
+    const subject = overdue
+        ? `"${taskTitle}" is overdue`
+        : `"${taskTitle}" is falling behind`;
+    const html = interviewShell(
+        overdue ? PROGRESS_BAD_COLOR : PROGRESS_WARN_COLOR,
+        overdue ? 'Internship overdue' : 'Internship at risk',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${studentName}</strong>'s internship on <strong>${taskTitle}</strong>
+        has moved to <strong>${overdue ? 'overdue' : 'at risk'}</strong>.</p>
+        <div class="meta">
+          ${progressMetaRows([{ label: 'Progress', value: `${progressPercent}%` }])}
+        </div>
+        ${reasons && reasons.length ? `<div class="reason"><strong>Why:</strong>${bulletList(reasons)}</div>` : ''}
+        <p>Stepping in now is usually enough to bring it back on track.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Review the progress report</a></p>` : ''}
+        `
+    );
+    const text = `${studentName}'s internship on "${taskTitle}" is ${
+        overdue ? 'overdue' : 'at risk'
+    } at ${progressPercent}%.`;
+    return { subject, html, text };
+};
+
+const progressUpdatePosted = ({
+    recipientName,
+    authorName,
+    taskTitle,
+    updateType,
+    preview,
+    dashboardUrl
+}) => {
+    const label = updateType === 'checkin' ? 'check-in' : updateType.replace('_', ' ');
+    const subject = `New ${label} on "${taskTitle}"`;
+    const html = interviewShell(
+        PROGRESS_HEADER_COLOR,
+        'New progress update',
+        `
+        <p>Hi ${recipientName},</p>
+        <p><strong>${authorName}</strong> posted a ${label} on <strong>${taskTitle}</strong>.</p>
+        ${preview ? `<div class="meta"><div class="meta-row">${preview}</div></div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the internship</a></p>` : ''}
+        `
+    );
+    const text = `${authorName} posted a ${label} on "${taskTitle}". ${preview || ''}`;
+    return { subject, html, text };
+};
+
+const internshipStatusChanged = ({
+    recipientName,
+    taskTitle,
+    status,
+    reason,
+    progressPercent,
+    dashboardUrl
+}) => {
+    const titles = {
+        paused: 'Internship paused',
+        in_progress: 'Internship resumed',
+        abandoned: 'Internship closed',
+        completed: 'Internship completed'
+    };
+    const colors = {
+        paused: PROGRESS_WARN_COLOR,
+        in_progress: PROGRESS_HEADER_COLOR,
+        abandoned: PROGRESS_BAD_COLOR,
+        completed: PROGRESS_GOOD_COLOR
+    };
+    const headline = titles[status] || 'Internship updated';
+    const subject = `${headline}: "${taskTitle}"`;
+    const html = interviewShell(
+        colors[status] || PROGRESS_HEADER_COLOR,
+        headline,
+        `
+        <p>Hi ${recipientName},</p>
+        <p>The internship <strong>${taskTitle}</strong> is now <strong>${String(status).replace('_', ' ')}</strong>.</p>
+        <div class="meta">
+          ${progressMetaRows([{ label: 'Progress at this point', value: `${progressPercent}%` }])}
+        </div>
+        ${reason ? `<div class="reason"><strong>Reason:</strong><br/>${reason}</div>` : ''}
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the internship</a></p>` : ''}
+        `
+    );
+    const text = `"${taskTitle}" is now ${status} (${progressPercent}% complete).${
+        reason ? ` Reason: ${reason}` : ''
+    }`;
+    return { subject, html, text };
+};
+
+const internshipCompleted = ({
+    recipientName,
+    studentName,
+    taskTitle,
+    progressPercent,
+    hoursLogged,
+    performanceRating,
+    completionNote,
+    outstandingWork,
+    dashboardUrl
+}) => {
+    const subject = `Internship completed: "${taskTitle}"`;
+    const html = interviewShell(
+        PROGRESS_GOOD_COLOR,
+        'Internship completed',
+        `
+        <p>Hi ${recipientName},</p>
+        <p>The internship <strong>${taskTitle}</strong>${
+            studentName ? ` with <strong>${studentName}</strong>` : ''
+        } has been marked complete.</p>
+        <div class="meta">
+          ${progressMetaRows([
+              { label: 'Milestones complete', value: `${progressPercent}%` },
+              { label: 'Hours logged', value: hoursLogged },
+              { label: 'Performance rating', value: performanceRating ? `${performanceRating}/5` : null }
+          ])}
+        </div>
+        ${completionNote ? `<div class="reason"><strong>Closing note:</strong><br/>${completionNote}</div>` : ''}
+        ${
+            outstandingWork
+                ? '<div class="reason">Note: this internship was closed with required milestones still outstanding.</div>'
+                : ''
+        }
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">View the final report</a></p>` : ''}
+        `
+    );
+    const text = `"${taskTitle}" completed at ${progressPercent}% with ${hoursLogged} hours logged.`;
+    return { subject, html, text };
+};
+
 module.exports = {
     getEmailVerificationTemplate,
     getOTPTemplate,
@@ -635,5 +939,14 @@ module.exports = {
     mentorAssignmentDeclined,
     mentorAssignmentCancelled,
     mentorNoteAdded,
-    mentorVerificationDecision
+    mentorVerificationDecision,
+    milestoneAssigned,
+    milestoneSubmitted,
+    milestoneReviewed,
+    progressBlockerRaised,
+    progressBlockerResolved,
+    progressAtRisk,
+    progressUpdatePosted,
+    internshipStatusChanged,
+    internshipCompleted
 };

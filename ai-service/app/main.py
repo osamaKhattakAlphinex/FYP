@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.routes import match as match_routes
+from app.routes import progress as progress_routes
 from app.services.matcher import is_model_loaded, warm_embedder
 
 
@@ -52,3 +53,4 @@ def health() -> dict:
 
 
 app.include_router(match_routes.router)
+app.include_router(progress_routes.router)

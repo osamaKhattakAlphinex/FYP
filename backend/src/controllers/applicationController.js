@@ -21,6 +21,8 @@ const {
 } = require('../utils/applicationNotifications');
 const aiService = require('../services/aiService');
 const { AIServiceUnavailableError } = aiService;
+// Module 8: opening the internship record is part of accepting an application.
+const { ensureProgressForApplication } = require('./progressController');
 
 // Fire-and-forget match calc for a single new application.
 // Never blocks the API response; logs on failure.
@@ -636,6 +638,24 @@ exports.updateApplicationStatus = async (req, res, next) => {
         }, { transaction: t });
 
         await t.commit();
+
+        // Acceptance is the moment the internship itself begins, so the
+        // Module 8 progress record is opened here rather than lazily. Failure
+        // is logged, never fatal — every progress read back-fills anyway.
+        if (status === 'accepted') {
+            try {
+                const withTask = await Application.findByPk(application.id, {
+                    include: [{ model: Task, as: 'task' }]
+                });
+                await ensureProgressForApplication(withTask);
+            } catch (err) {
+                console.warn(
+                    '[applications] could not open progress record for',
+                    application.id,
+                    err.message
+                );
+            }
+        }
 
         notifyStudentOfStatusChange(application.id, fromStatus, status, reason || null);
 

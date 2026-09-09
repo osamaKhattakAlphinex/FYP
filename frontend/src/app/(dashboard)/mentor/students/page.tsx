@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import AssignmentCard from '@/components/mentor/AssignmentCard'
 import RespondToAssignmentModal from '@/components/mentor/RespondToAssignmentModal'
+import ActiveInternshipsCard from '@/components/progress/ActiveInternshipsCard'
 import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { mentorAssignmentService } from '@/services/mentorAssignmentService'
 import { mentorService } from '@/services/mentorService'
@@ -137,6 +138,8 @@ export default function MentorStudentsPage() {
                     Manage mentorship requests and guide your active mentees.
                 </p>
             </div>
+
+            <ActiveInternshipsCard perspective="mentor" />
 
             {isRejectedOrPending && (
                 <Card className="flex items-start gap-3 border-amber-200 bg-amber-50 p-4">

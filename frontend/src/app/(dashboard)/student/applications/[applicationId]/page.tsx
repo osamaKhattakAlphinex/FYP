@@ -36,6 +36,7 @@ import { applicationService } from '@/services/applicationService'
 import type { Application } from '@/types/application.types'
 import { cn, getInitials } from '@/lib/utils'
 import YourMentorCard from '@/components/student/YourMentorCard'
+import InternshipProgressLink from '@/components/progress/InternshipProgressLink'
 
 const formatDateTime = (iso?: string | null) => {
     if (!iso) return '—'
@@ -142,6 +143,11 @@ export default function StudentApplicationDetailPage() {
             rightRail={
                 <>
                 <YourMentorCard applicationId={applicationId} />
+                <InternshipProgressLink
+                    applicationId={applicationId}
+                    perspective="student"
+                    applicationStatus={application.status}
+                />
                 <Card className="p-4">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Timeline

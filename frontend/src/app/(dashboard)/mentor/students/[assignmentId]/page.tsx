@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import GuidanceNotesPanel from '@/components/mentor/GuidanceNotesPanel'
 import CompleteMentorshipModal from '@/components/mentor/CompleteMentorshipModal'
+import InternshipProgressLink from '@/components/progress/InternshipProgressLink'
 import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { useAuth } from '@/contexts/AuthContext'
 import { mentorAssignmentService } from '@/services/mentorAssignmentService'
@@ -212,8 +213,15 @@ export default function MentorMenteeDetailPage() {
                     )}
                 </div>
 
-                {/* Right: guidance notes */}
-                <div className="lg:col-span-2">
+                {/* Right: internship progress, then guidance notes */}
+                <div className="space-y-3 lg:col-span-2">
+                    {assignment.applicationId && (
+                        <InternshipProgressLink
+                            applicationId={String(assignment.applicationId)}
+                            perspective="mentor"
+                            applicationStatus={assignment.application?.status}
+                        />
+                    )}
                     {canPostNotes || assignment.status === 'declined' ? (
                         <GuidanceNotesPanel
                             assignmentId={assignment.id}

@@ -11,7 +11,8 @@
     "seed:tasks": "node src/scripts/seedTasks.js",
     "seed:applications": "node src/scripts/seedApplications.js",
     "check:companies": "node src/scripts/checkCompanies.js",
-    "seed:mentors": "node src/scripts/seedMentors.js"
+    "seed:mentors": "node src/scripts/seedMentors.js",
+    "seed:progress": "node src/scripts/seedProgress.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

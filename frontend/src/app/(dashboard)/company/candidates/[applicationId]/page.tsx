@@ -68,6 +68,7 @@ import type {
 import type { Interview } from '@/types/interview.types'
 import ScheduleInterviewModal from '@/components/interviews/ScheduleInterviewModal'
 import CandidateMentorTab from '@/components/company/CandidateMentorTab'
+import InternshipProgressLink from '@/components/progress/InternshipProgressLink'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
@@ -566,6 +567,7 @@ export default function CandidateDetailPage() {
                                 <TabsTrigger value="notes">Notes</TabsTrigger>
                                 <TabsTrigger value="history">History</TabsTrigger>
                                 <TabsTrigger value="mentor">Mentor</TabsTrigger>
+                                <TabsTrigger value="progress">Progress</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="application" className="space-y-4">
@@ -917,6 +919,21 @@ export default function CandidateDetailPage() {
                                             </li>
                                         ))}
                                     </ol>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="progress">
+                                {application.status === 'accepted' ? (
+                                    <InternshipProgressLink
+                                        applicationId={applicationId}
+                                        perspective="company"
+                                        applicationStatus={application.status}
+                                    />
+                                ) : (
+                                    <p className="py-8 text-center text-sm text-muted-foreground">
+                                        Progress tracking starts once you accept this
+                                        application.
+                                    </p>
                                 )}
                             </TabsContent>
 

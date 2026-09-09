@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { taskService, Task, TaskFilters } from '@/services/taskService'
 import TaskListItem from '@/components/task/TaskListItem'
@@ -25,7 +25,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const LIMIT = 12
 
-export default function TasksPage() {
+function TasksPageInner() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [loading, setLoading] = useState(true)
     const [currentPage, setCurrentPage] = useState(1)
@@ -308,5 +308,15 @@ export default function TasksPage() {
                 />
             )}
         </div>
+    )
+}
+
+// useSearchParams() opts the tree into client-side rendering, which Next 14
+// requires to sit behind a Suspense boundary or the page cannot be prerendered.
+export default function TasksPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen surface-canvas" />}>
+            <TasksPageInner />
+        </Suspense>
     )
 }

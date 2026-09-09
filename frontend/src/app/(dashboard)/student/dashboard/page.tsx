@@ -19,6 +19,7 @@ import ComingSoonCard from '@/components/shared/ComingSoonCard'
 import WelcomeBanner from '@/components/student/dashboard/WelcomeBanner'
 import RecommendedTasksCard from '@/components/student/dashboard/RecommendedTasksCard'
 import UpcomingInterviewsCard from '@/components/student/dashboard/UpcomingInterviewsCard'
+import ActiveInternshipsCard from '@/components/progress/ActiveInternshipsCard'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -327,6 +328,8 @@ export default function StudentDashboard() {
             </Card>
 
             <UpcomingInterviewsCard />
+
+            <ActiveInternshipsCard perspective="student" />
 
             {/* Module 6 / certificates placeholder */}
             <ComingSoonCard

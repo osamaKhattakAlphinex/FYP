@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -81,7 +81,7 @@ const daysAgo = (iso?: string) => {
 const initials = (first?: string, last?: string) =>
     `${(first || '').charAt(0)}${(last || '').charAt(0)}`.toUpperCase() || '?'
 
-export default function CompanyCandidatesPage() {
+function CompanyCandidatesPageInner() {
     useRoleProtection({ allowedRoles: ['company'] })
     const router = useRouter()
     const searchParams = useSearchParams()
@@ -478,5 +478,15 @@ export default function CompanyCandidatesPage() {
                 </div>
             )}
         </AppShell>
+    )
+}
+
+// useSearchParams() opts the tree into client-side rendering, which Next 14
+// requires to sit behind a Suspense boundary or the page cannot be prerendered.
+export default function CompanyCandidatesPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen surface-canvas" />}>
+            <CompanyCandidatesPageInner />
+        </Suspense>
     )
 }

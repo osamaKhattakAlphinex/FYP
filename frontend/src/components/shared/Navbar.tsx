@@ -14,6 +14,7 @@ import {
     Settings,
     LayoutDashboard,
     CalendarClock,
+    ListChecks,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -94,6 +95,8 @@ export default function Navbar() {
     const interviewsLabel = nav.work.label
     const tasksHref = nav.tasks.href
     const tasksLabel = nav.tasks.label
+    // Module 8 — only the roles that work on an internship get this entry.
+    const progressNav = nav.progress
 
     const userName =
         user?.firstName && user?.lastName
@@ -143,6 +146,14 @@ export default function Navbar() {
                             label={interviewsLabel}
                             active={pathname?.includes('/interviews')}
                         />
+                        {progressNav && (
+                            <NavIconLink
+                                href={progressNav.href}
+                                icon={ListChecks}
+                                label={progressNav.label}
+                                active={pathname?.startsWith(progressNav.href)}
+                            />
+                        )}
                         <NavIconLink
                             href={profileHref}
                             icon={UserIcon}
@@ -268,6 +279,15 @@ export default function Navbar() {
                                 >
                                     <CalendarClock className="h-4 w-4" /> {interviewsLabel}
                                 </Link>
+                                {progressNav && (
+                                    <Link
+                                        href={progressNav.href}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                    >
+                                        <ListChecks className="h-4 w-4" /> {progressNav.label}
+                                    </Link>
+                                )}
                                 <Link
                                     href={profileHref}
                                     onClick={() => setMobileOpen(false)}

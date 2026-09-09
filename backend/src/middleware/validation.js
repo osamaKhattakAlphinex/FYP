@@ -589,3 +589,269 @@ exports.validateMentorshipCompletion = [
         .withMessage('Feedback cannot exceed 2000 characters'),
     exports.validate
 ];
+
+// ---------------------------------------------------------------------------
+// Progress tracking validation rules (Module 8)
+// ---------------------------------------------------------------------------
+
+const MILESTONE_STATUSES = [
+    'pending',
+    'in_progress',
+    'submitted',
+    'changes_requested',
+    'completed',
+    'blocked',
+    'cancelled'
+];
+const PROGRESS_STATUSES = ['not_started', 'in_progress', 'paused', 'completed', 'abandoned'];
+const UPDATE_TYPES = ['checkin', 'blocker', 'risk_flag', 'note'];
+
+exports.validateProgressPlanUpdate = [
+    body('startDate')
+        .optional({ values: 'null' })
+        .isISO8601()
+        .withMessage('Start date must be a valid date'),
+    body('targetEndDate')
+        .optional({ values: 'null' })
+        .isISO8601()
+        .withMessage('Target end date must be a valid date'),
+    body('objective')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Objective cannot exceed 4000 characters'),
+    body('expectedHoursPerWeek')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 80 })
+        .withMessage('Expected hours per week must be between 1 and 80'),
+    exports.validate
+];
+
+exports.validateProgressStatusChange = [
+    body('status')
+        .isIn(PROGRESS_STATUSES)
+        .withMessage('Invalid internship status'),
+    body('reason')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Reason cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateProgressCompletion = [
+    body('completionNote')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Completion note cannot exceed 4000 characters'),
+    body('performanceRating')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Performance rating must be between 1 and 5'),
+    body('acknowledgeIncomplete')
+        .optional()
+        .isBoolean()
+        .withMessage('acknowledgeIncomplete must be true or false'),
+    exports.validate
+];
+
+exports.validateMilestoneCreate = [
+    body('title')
+        .trim()
+        .isLength({ min: 3, max: 200 })
+        .withMessage('Milestone title must be between 3 and 200 characters'),
+    body('description')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Description cannot exceed 4000 characters'),
+    body('weight')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 10 })
+        .withMessage('Weight must be between 1 and 10'),
+    body('isRequired')
+        .optional()
+        .isBoolean()
+        .withMessage('isRequired must be true or false'),
+    body('dueDate')
+        .optional({ values: 'null' })
+        .isISO8601()
+        .withMessage('Due date must be a valid date'),
+    body('estimatedHours')
+        .optional({ values: 'null' })
+        .isFloat({ min: 0, max: 500 })
+        .withMessage('Estimated hours must be between 0 and 500'),
+    body('orderIndex')
+        .optional({ values: 'null' })
+        .isInt({ min: 0 })
+        .withMessage('Order index must be a non-negative integer'),
+    exports.validate
+];
+
+exports.validateMilestoneUpdate = [
+    body('title')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ min: 3, max: 200 })
+        .withMessage('Milestone title must be between 3 and 200 characters'),
+    body('description')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Description cannot exceed 4000 characters'),
+    body('weight')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 10 })
+        .withMessage('Weight must be between 1 and 10'),
+    body('isRequired')
+        .optional()
+        .isBoolean()
+        .withMessage('isRequired must be true or false'),
+    body('dueDate')
+        .optional({ values: 'null' })
+        .isISO8601()
+        .withMessage('Due date must be a valid date'),
+    body('estimatedHours')
+        .optional({ values: 'null' })
+        .isFloat({ min: 0, max: 500 })
+        .withMessage('Estimated hours must be between 0 and 500'),
+    body('orderIndex')
+        .optional({ values: 'null' })
+        .isInt({ min: 0 })
+        .withMessage('Order index must be a non-negative integer'),
+    exports.validate
+];
+
+exports.validateMilestoneReorder = [
+    body('milestoneIds')
+        .isArray({ min: 1 })
+        .withMessage('milestoneIds must be a non-empty array'),
+    exports.validate
+];
+
+exports.validateMilestoneSubmission = [
+    body('summary')
+        .trim()
+        .isLength({ min: 10, max: 5000 })
+        .withMessage('Tell your reviewer what you delivered (10-5000 characters)'),
+    body('deliverableUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Deliverable URL cannot exceed 500 characters'),
+    body('repositoryUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Repository URL cannot exceed 500 characters'),
+    body('demoUrl')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Demo URL cannot exceed 500 characters'),
+    body('hoursSpent')
+        .optional({ values: 'null' })
+        .isFloat({ min: 0, max: 500 })
+        .withMessage('Hours spent must be between 0 and 500'),
+    exports.validate
+];
+
+exports.validateMilestoneReview = [
+    body('action')
+        .isIn(['approve', 'request_changes'])
+        .withMessage('Action must be approve or request_changes'),
+    body('note')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Review note cannot exceed 4000 characters'),
+    body('score')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Score must be between 1 and 5'),
+    exports.validate
+];
+
+exports.validateMilestoneStatusChange = [
+    body('status')
+        .isIn(MILESTONE_STATUSES)
+        .withMessage('Invalid milestone status'),
+    body('reason')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Reason cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateTimeLog = [
+    body('hours')
+        .isFloat({ min: 0.25, max: 16 })
+        .withMessage('Log between 0.25 and 16 hours per entry'),
+    body('workDate')
+        .optional({ values: 'falsy' })
+        .isISO8601()
+        .withMessage('Work date must be a valid date'),
+    body('description')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Description cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateTimeLogUpdate = [
+    body('hours')
+        .optional({ values: 'null' })
+        .isFloat({ min: 0.25, max: 16 })
+        .withMessage('Log between 0.25 and 16 hours per entry'),
+    body('workDate')
+        .optional({ values: 'falsy' })
+        .isISO8601()
+        .withMessage('Work date must be a valid date'),
+    body('description')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Description cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateProgressUpdate = [
+    body('body')
+        .trim()
+        .isLength({ min: 1, max: 4000 })
+        .withMessage('Update must be between 1 and 4000 characters'),
+    body('type')
+        .optional({ values: 'falsy' })
+        .isIn(UPDATE_TYPES)
+        .withMessage('Invalid update type'),
+    body('percentSelfReported')
+        .optional({ values: 'null' })
+        .isInt({ min: 0, max: 100 })
+        .withMessage('Self-reported progress must be between 0 and 100'),
+    exports.validate
+];
+
+exports.validateProgressUpdateEdit = [
+    body('body')
+        .optional({ values: 'falsy' })
+        .trim()
+        .isLength({ min: 1, max: 4000 })
+        .withMessage('Update must be between 1 and 4000 characters'),
+    body('percentSelfReported')
+        .optional({ values: 'null' })
+        .isInt({ min: 0, max: 100 })
+        .withMessage('Self-reported progress must be between 0 and 100'),
+    exports.validate
+];
+
+exports.validateUpdateResolution = [
+    body('resolutionNote')
+        .optional({ values: 'falsy' })
+        .isString()
+        .isLength({ max: 1000 })
+        .withMessage('Resolution note cannot exceed 1000 characters'),
+    exports.validate
+];

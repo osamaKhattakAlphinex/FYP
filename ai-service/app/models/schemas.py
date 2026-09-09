@@ -110,3 +110,86 @@ class MentorRank(BaseModel):
 class RankMentorsResponse(BaseModel):
     task_id: str
     ranking: list[MentorRank]
+
+
+# ---------------------------------------------------------------------------
+# Progress insight (Module 8)
+# ---------------------------------------------------------------------------
+
+
+MilestoneStatus = Literal[
+    "pending",
+    "in_progress",
+    "submitted",
+    "changes_requested",
+    "completed",
+    "blocked",
+    "cancelled",
+]
+ProgressStatus = Literal["not_started", "in_progress", "paused", "completed", "abandoned"]
+RiskLevel = Literal["low", "medium", "high"]
+Severity = Literal["info", "warning", "critical"]
+
+
+class MilestoneSnapshot(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str = ""
+    status: MilestoneStatus = "pending"
+    weight: int = 1
+    is_required: bool = True
+    # Negative once the due date has passed. None when the milestone is undated.
+    due_in_days: Optional[int] = None
+    is_overdue: bool = False
+    submission_count: int = 0
+    estimated_hours: Optional[float] = None
+    actual_hours: float = 0
+
+
+class ProgressSnapshot(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    task_title: str = ""
+    status: ProgressStatus = "in_progress"
+    progress_percent: int = Field(default=0, ge=0, le=100)
+    # Fraction of the planned window consumed so far, 0..1. None when undated.
+    elapsed_ratio: Optional[float] = None
+    days_remaining: Optional[int] = None
+    days_since_last_activity: Optional[float] = None
+    expected_hours_per_week: Optional[int] = None
+    total_hours_logged: float = 0
+    open_blockers: int = 0
+    overdue_milestones: int = 0
+    recent_checkins: int = 0
+    # 0..1. None when the student has not submitted anything yet.
+    on_time_submission_rate: Optional[float] = None
+    rework_rate: Optional[float] = None
+    milestones: list[MilestoneSnapshot] = Field(default_factory=list)
+
+
+class ProgressInsightRequest(BaseModel):
+    progress: ProgressSnapshot
+
+
+class RiskSignal(BaseModel):
+    code: str
+    severity: Severity
+    message: str
+    # Contribution of this signal to the overall risk score, 0..100.
+    weight: int = 0
+
+
+class ProgressInsightResponse(BaseModel):
+    progress_id: str
+    risk_level: RiskLevel
+    risk_score: int = Field(ge=0, le=100)
+    # Where the current pace lands the student by the target end date.
+    projected_completion_percent: int = Field(ge=0, le=100)
+    # progress_percent minus the percentage the schedule says they should be at.
+    schedule_variance: float
+    summary: str
+    signals: list[RiskSignal] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+    indicators: dict[str, float] = Field(default_factory=dict)

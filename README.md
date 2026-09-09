@@ -113,6 +113,15 @@ cd frontend
 npm run dev
 ```
 
+**Optional - seed a demo dataset (run in order):**
+
+```bash
+cd backend
+node src/scripts/seedDemo.js   # users, tasks, applications
+npm run seed:mentors           # mentors + mentor assignments (Module 7)
+npm run seed:progress          # internship progress (Module 8)
+```
+
 5. **Access the application**
 
 - Frontend: http://localhost:3000
@@ -293,9 +302,26 @@ curl -X POST http://localhost:5000/api/auth/login \
 
 ### Phase 3: AI Integration
 
+- [x] Intelligent task matching (Module 6)
+- [x] AI-ranked mentor suggestions (Module 7)
+- [x] Progress risk assessment and performance indicators (Module 8)
 - [ ] AI-powered skill assessment
-- [ ] Intelligent task matching
 - [ ] Automated feedback generation
+
+### Module status
+
+| # | Module | Status | Docs |
+| - | ------ | ------ | ---- |
+| 4 | Application Tracking | ✅ | [QA plan](./docs/qa/module-4-application-tracking.md) |
+| 5 | Interview Scheduling | ✅ | — |
+| 6 | AI-Based Matching | ✅ | [Architecture](./docs/architecture/module-6-ai-matching.md) |
+| 7 | Mentor Assignment | ✅ | [QA plan](./docs/qa/module-7-mentor-assignment.md) |
+| 8 | Progress Tracking | ✅ | [Architecture](./docs/architecture/module-8-progress-tracking.md) · [QA plan](./docs/qa/module-8-progress-tracking.md) |
+| 9 | Automated Evaluation | ⏳ | — |
+| 10 | Feedback System | ⏳ | — |
+| 11 | Performance Analytics | ⏳ | — |
+| 12 | Payment Integration | ⏳ | — |
+| 13 | Document Verification | ⏳ | — |
 
 ### Phase 4: Advanced Features
 

@@ -314,14 +314,99 @@ const rankMentors = async (taskDto, mentorDtos) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Progress insight (Module 8)
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const daysBetween = (from, to) => {
+    if (!from || !to) return null;
+    return (new Date(to).getTime() - new Date(from).getTime()) / DAY_MS;
+};
+
+// Builds the snapshot the /progress-insight contract expects. Everything is
+// already computed on the backend side (percent, counts, hours) — this only
+// reshapes it, so the AI service stays a pure function of its input.
+const mapProgressToDto = (progress, milestones = [], extras = {}) => {
+    if (!progress) throw new Error('mapProgressToDto: progress is required');
+    const p = plainify(progress);
+    const now = extras.now || new Date();
+
+    const milestoneDtos = milestones.map(plainify).map((m) => ({
+        id: String(m.id),
+        title: m.title || '',
+        status: m.status || 'pending',
+        weight: Number(m.weight) || 1,
+        is_required: m.isRequired !== false,
+        due_in_days: m.dueDate == null
+            ? null
+            : Math.ceil(daysBetween(now, `${String(m.dueDate).slice(0, 10)}T00:00:00Z`)),
+        is_overdue: !!m.isOverdue,
+        submission_count: Number(m.submissionCount) || 0,
+        estimated_hours: m.estimatedHours != null ? Number(m.estimatedHours) : null,
+        actual_hours: Number(m.actualHours) || 0
+    }));
+
+    let elapsedRatio = null;
+    if (p.startDate && p.targetEndDate) {
+        const start = new Date(`${String(p.startDate).slice(0, 10)}T00:00:00Z`).getTime();
+        const end = new Date(`${String(p.targetEndDate).slice(0, 10)}T00:00:00Z`).getTime();
+        if (end > start) {
+            elapsedRatio = Math.max(0, Math.min(1, (now.getTime() - start) / (end - start)));
+            elapsedRatio = Math.round(elapsedRatio * 1000) / 1000;
+        }
+    }
+
+    const daysRemaining = p.targetEndDate
+        ? Math.ceil(daysBetween(now, `${String(p.targetEndDate).slice(0, 10)}T00:00:00Z`))
+        : null;
+
+    return {
+        id: String(p.id),
+        task_title: extras.taskTitle || '',
+        status: p.status || 'in_progress',
+        progress_percent: Number(p.progressPercent) || 0,
+        elapsed_ratio: elapsedRatio,
+        days_remaining: daysRemaining,
+        days_since_last_activity: p.lastActivityAt
+            ? Math.round(Math.max(0, daysBetween(p.lastActivityAt, now)) * 100) / 100
+            : null,
+        expected_hours_per_week: p.expectedHoursPerWeek != null
+            ? Number(p.expectedHoursPerWeek)
+            : null,
+        total_hours_logged: Number(p.totalHoursLogged) || 0,
+        open_blockers: Number(p.openBlockerCount) || 0,
+        overdue_milestones: Number(p.overdueMilestoneCount) || 0,
+        recent_checkins: Number(extras.recentCheckins) || 0,
+        on_time_submission_rate: extras.onTimeSubmissionRate ?? null,
+        rework_rate: extras.reworkRate ?? null,
+        milestones: milestoneDtos
+    };
+};
+
+const analyzeProgress = async (progressDto) => {
+    if (!progressDto) throw new Error('analyzeProgress: progress snapshot is required');
+    try {
+        return await instrument('POST /progress-insight', async () => {
+            const res = await http.post('/progress-insight', { progress: progressDto });
+            return res.data;
+        });
+    } catch (err) {
+        throw wrap('POST /progress-insight', err);
+    }
+};
+
 module.exports = {
     AIServiceUnavailableError,
     matchTasksForStudent,
     rankCandidates,
     rankMentors,
+    analyzeProgress,
     mapStudentToDto,
     mapTaskToDto,
     mapMentorToDto,
+    mapProgressToDto,
     getAIHealth,
     // Exposed for tests / diagnostics
     _internal: {

@@ -18,6 +18,7 @@ import ComingSoonCard from '@/components/shared/ComingSoonCard'
 import CompanyWelcomeBanner from '@/components/company/dashboard/CompanyWelcomeBanner'
 import ActiveTasksCard from '@/components/company/dashboard/ActiveTasksCard'
 import UpcomingInterviewsCard from '@/components/company/dashboard/UpcomingInterviewsCard'
+import ActiveInternshipsCard from '@/components/progress/ActiveInternshipsCard'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
@@ -253,6 +254,8 @@ export default function CompanyDashboard() {
             />
 
             <UpcomingInterviewsCard />
+
+            <ActiveInternshipsCard perspective="company" />
 
             {/* Certificates placeholder */}
             <ComingSoonCard
