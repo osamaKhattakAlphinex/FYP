@@ -9,6 +9,16 @@ const sequelize = new Sequelize(
         port: parseInt(process.env.DB_PORT, 10) || 3306,
         dialect: 'mysql',
         logging: process.env.NODE_ENV === 'development' ? console.log : false,
+        // Managed MySQL hosts (e.g. Aiven) require TLS. DB_SSL_CA holds the
+        // provider's CA certificate (PEM; "\n" escapes allowed) so the server
+        // certificate is verified; without it the connection is still encrypted.
+        ...(process.env.DB_SSL === 'true' && {
+            dialectOptions: {
+                ssl: process.env.DB_SSL_CA
+                    ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'), rejectUnauthorized: true }
+                    : { rejectUnauthorized: false }
+            }
+        }),
         define: {
             timestamps: true,
             underscored: false,

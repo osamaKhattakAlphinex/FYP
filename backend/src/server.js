@@ -22,6 +22,10 @@ connectDB();
 
 const app = express();
 
+// Behind a hosting proxy (Render, etc.) the client IP arrives in
+// X-Forwarded-For; without this every visitor shares one rate-limit bucket.
+if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
+
 // Body parser. The raw bytes are kept for payment-gateway webhooks (Module 12),
 // whose HMAC signature is computed over the body exactly as it was sent.
 app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
