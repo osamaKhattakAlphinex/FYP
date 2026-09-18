@@ -31,6 +31,8 @@ const MilestoneSubmission = require('./MilestoneSubmission');
 const ProgressTimeLog = require('./ProgressTimeLog');
 const ProgressUpdate = require('./ProgressUpdate');
 const ProgressStatusHistory = require('./ProgressStatusHistory');
+// Uploaded files kept in the database when FILE_STORAGE=db (no associations).
+const StoredFile = require('./StoredFile');
 const TaskEvaluationCriterion = require('./TaskEvaluationCriterion');
 const InternshipEvaluation = require('./InternshipEvaluation');
 const EvaluationCriterionScore = require('./EvaluationCriterionScore');
@@ -679,6 +681,7 @@ module.exports = {
     Payment,
     PaymentEvent,
     StudentPayoutMethod,
+    StoredFile,
     recalcStudentCompletion,
     recalcCompanyCompletion,
     recalcMentorCompletion,

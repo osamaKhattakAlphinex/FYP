@@ -1,4 +1,5 @@
 const multer = require('multer');
+const { storageFor } = require('./fileStorage');
 const path = require('path');
 const fs = require('fs');
 
@@ -36,7 +37,7 @@ const fileFilter = (req, file, cb) => {
 
 // Create multer upload instance
 const uploadLogo = multer({
-    storage: storage,
+    storage: storageFor('logos', 'logo-', storage),
     limits: {
         fileSize: 5 * 1024 * 1024 // 5MB limit
     },

@@ -1,4 +1,5 @@
 const multer = require('multer');
+const { storageFor } = require('./fileStorage');
 const path = require('path');
 const fs = require('fs');
 
@@ -29,7 +30,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const uploadApplicationAttachment = multer({
-    storage,
+    storage: storageFor('application-attachments', 'app-', storage),
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter
 });

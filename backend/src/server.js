@@ -33,7 +33,9 @@ app.use(express.urlencoded({
     extended: true
 }));
 
-// Serve static files (uploads)
+// Serve uploaded files: from the database first (FILE_STORAGE=db, for hosts
+// whose disk is wiped on deploy), then from the local uploads folder.
+app.use('/uploads', require('./utils/fileStorage').serveStoredFile);
 app.use('/uploads', express.static('uploads'));
 
 // Cookie parser
