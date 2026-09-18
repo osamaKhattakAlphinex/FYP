@@ -1,5 +1,6 @@
 const {
     body,
+    query,
     validationResult
 } = require('express-validator');
 
@@ -853,5 +854,356 @@ exports.validateUpdateResolution = [
         .isString()
         .isLength({ max: 1000 })
         .withMessage('Resolution note cannot exceed 1000 characters'),
+    exports.validate
+];
+
+// ---------------------------------------------------------------------------
+// Automated evaluation validation rules (Module 9)
+// ---------------------------------------------------------------------------
+
+const EVALUATION_METRICS = [
+    'quality',
+    'timeliness',
+    'completion',
+    'communication',
+    'effort',
+    'reliability'
+];
+
+// Shape only; uniqueness of names is checked by
+// TaskEvaluationCriterion.validateRubric in the controller.
+exports.validateEvaluationCriteria = [
+    body('criteria')
+        .isArray({ min: 1, max: 8 })
+        .withMessage('A rubric needs between 1 and 8 criteria'),
+    body('criteria.*.name')
+        .isString()
+        .trim()
+        .isLength({ min: 2, max: 100 })
+        .withMessage('Each criterion needs a name of 2-100 characters'),
+    body('criteria.*.metric')
+        .isIn(EVALUATION_METRICS)
+        .withMessage(`Metric must be one of ${EVALUATION_METRICS.join(', ')}`),
+    body('criteria.*.weight')
+        .isInt({ min: 1, max: 10 })
+        .withMessage('Weight must be a whole number between 1 and 10'),
+    body('criteria.*.description')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Description cannot exceed 500 characters'),
+    exports.validate
+];
+
+exports.validateEvaluationUpdate = [
+    body('criteria')
+        .optional()
+        .isArray({ max: 8 })
+        .withMessage('criteria must be an array'),
+    body('criteria.*.id')
+        .notEmpty()
+        .withMessage('Each adjusted criterion needs its id'),
+    body('criteria.*.finalScore')
+        .isFloat({ min: 0, max: 100 })
+        .withMessage('Scores must be between 0 and 100'),
+    body('criteria.*.adjustmentNote')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 500 })
+        .withMessage('Adjustment note cannot exceed 500 characters'),
+    body('summary')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Summary cannot exceed 4000 characters'),
+    body(['strengths', 'improvements'])
+        .optional({ values: 'null' })
+        .isArray({ max: 5 })
+        .withMessage('List at most 5 strengths or improvements'),
+    body(['strengths.*', 'improvements.*'])
+        .isString()
+        .trim()
+        .isLength({ min: 1, max: 300 })
+        .withMessage('Each strength or improvement must be 1-300 characters'),
+    body('reviewerNote')
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Reviewer note cannot exceed 4000 characters'),
+    exports.validate
+];
+
+exports.validateEvaluationReopen = [
+    body('reason')
+        .isString()
+        .trim()
+        .isLength({ min: 5, max: 500 })
+        .withMessage('Give a reason of 5-500 characters for reopening this evaluation'),
+    exports.validate
+];
+
+// ---------------------------------------------------------------------------
+// Feedback validation rules (Module 10)
+// ---------------------------------------------------------------------------
+
+const FEEDBACK_CONTEXTS = ['internship', 'interview'];
+const FEEDBACK_DIMENSIONS = ['technical', 'communication', 'professionalism', 'problemSolving', 'teamwork'];
+const FEEDBACK_MIN_COMBINED_TEXT = 20;
+
+const present = (v) => v !== undefined && v !== null && v !== '';
+const isIdLike = (v) => /^\d+$/.test(String(v));
+
+// Exactly one target, and it must match the context: an internship record
+// points at a progress row, an interview record at an interview.
+const feedbackTarget = body().custom((b) => {
+    const wanted = b.context === 'interview' ? 'interviewId' : 'progressId';
+    const other = wanted === 'interviewId' ? 'progressId' : 'interviewId';
+    if (!FEEDBACK_CONTEXTS.includes(b.context)) return true; // reported by the context rule
+    if (!present(b[wanted]) || present(b[other])) {
+        throw new Error(`${b.context === 'interview' ? 'Interview' : 'Internship'} feedback requires ${wanted} (and no ${other})`);
+    }
+    if (!isIdLike(b[wanted])) throw new Error(`${wanted} must be a numeric id`);
+    return true;
+});
+
+const feedbackContext = body('context')
+    .isIn(FEEDBACK_CONTEXTS)
+    .withMessage(`Context must be one of ${FEEDBACK_CONTEXTS.join(', ')}`);
+
+const feedbackRatings = body('ratings')
+    .optional({ values: 'null' })
+    .custom((ratings) => {
+        if (typeof ratings !== 'object' || Array.isArray(ratings)) {
+            throw new Error('Ratings must be an object of dimension: rating');
+        }
+        Object.entries(ratings).forEach(([key, value]) => {
+            if (!FEEDBACK_DIMENSIONS.includes(key)) {
+                throw new Error(`Unknown rating "${key}". Use ${FEEDBACK_DIMENSIONS.join(', ')}`);
+            }
+            if (value === null) return;
+            const n = Number(value);
+            if (typeof value === 'boolean' || !Number.isInteger(n) || n < 1 || n > 5) {
+                throw new Error(`The ${key} rating must be a whole number from 1 to 5`);
+            }
+        });
+        return true;
+    });
+
+const feedbackTextFields = [
+    body(['strengths', 'improvements'])
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Strengths and improvements are limited to 4000 characters each'),
+    body('suggestions')
+        .optional({ values: 'null' })
+        .isArray({ max: 5 })
+        .withMessage('List at most 5 suggestions'),
+    body('suggestions.*')
+        .isString()
+        .trim()
+        .isLength({ min: 5, max: 300 })
+        .withMessage('Each suggestion must be 5-300 characters'),
+    body('wouldRecommend')
+        .optional({ values: 'null' })
+        .isBoolean()
+        .withMessage('wouldRecommend must be true or false')
+        .toBoolean(true),
+    body('aiAssisted')
+        .optional({ values: 'null' })
+        .isBoolean()
+        .withMessage('aiAssisted must be true or false')
+        .toBoolean(true)
+];
+
+const combinedLength = (b) =>
+    String(b.strengths || '').trim().length + String(b.improvements || '').trim().length;
+
+exports.validateFeedbackCreate = [
+    feedbackContext,
+    feedbackTarget,
+    body('overallRating')
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Overall rating must be a whole number from 1 to 5'),
+    feedbackRatings,
+    ...feedbackTextFields,
+    body().custom((b) => {
+        const len = combinedLength(b);
+        if (len === 0) throw new Error('Write the strengths, the improvements, or both');
+        if (len < FEEDBACK_MIN_COMBINED_TEXT) {
+            throw new Error(`Write at least ${FEEDBACK_MIN_COMBINED_TEXT} characters across strengths and improvements`);
+        }
+        return true;
+    }),
+    exports.validate
+];
+
+// Partial update. The combined-length rule is checked by the controller on
+// the merged record, since either field may be omitted here.
+exports.validateFeedbackUpdate = [
+    body('overallRating')
+        .optional()
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Overall rating must be a whole number from 1 to 5'),
+    feedbackRatings,
+    ...feedbackTextFields,
+    exports.validate
+];
+
+exports.validateFeedbackAcknowledge = [
+    body('response')
+        .optional({ values: 'null' })
+        .isString()
+        .trim()
+        .isLength({ max: 2000 })
+        .withMessage('Your reply is limited to 2000 characters'),
+    exports.validate
+];
+
+exports.validateFeedbackAssist = [
+    feedbackContext,
+    feedbackTarget,
+    body('draft')
+        .optional({ values: 'null' })
+        .isObject()
+        .withMessage('draft must be an object'),
+    body(['draft.strengths', 'draft.improvements'])
+        .optional({ values: 'null' })
+        .isString()
+        .isLength({ max: 4000 })
+        .withMessage('Draft text is limited to 4000 characters per field'),
+    body('draft.suggestions')
+        .optional({ values: 'null' })
+        .isArray({ max: 5 })
+        .withMessage('List at most 5 suggestions'),
+    body('draft.suggestions.*')
+        .isString()
+        .isLength({ max: 300 })
+        .withMessage('Each suggestion is limited to 300 characters'),
+    body('draft.overallRating')
+        .optional({ values: 'null' })
+        .isInt({ min: 1, max: 5 })
+        .withMessage('Overall rating must be a whole number from 1 to 5'),
+    exports.validate
+];
+
+// ---------------------------------------------------------------------------
+// Module 11 — Performance analytics (query strings only)
+// ---------------------------------------------------------------------------
+
+exports.validateAnalyticsQuery = [
+    query('months')
+        .optional()
+        .isIn(['6', '12'])
+        .withMessage('months must be 6 or 12'),
+    exports.validate
+];
+
+// `limit` is clamped to 1..50 by the controller; here it only has to be a number.
+exports.validateTopPerformersQuery = [
+    query('limit')
+        .optional()
+        .isInt()
+        .withMessage('limit must be a whole number'),
+    query('scope')
+        .optional()
+        .isIn(['interns', 'applicants'])
+        .withMessage('scope must be interns or applicants'),
+    exports.validate
+];
+
+// ---------------------------------------------------------------------------
+// Payment validation rules (Module 12)
+//
+// Messages never repeat what was typed: card and account fields must not be
+// echoed back in responses or logs. The deep checks (Luhn, expiry, account
+// formats, the stipend cap) live in pure functions on the model / providers /
+// paymentService, which the controller calls.
+// ---------------------------------------------------------------------------
+
+const PAYMENT_STATUS_VALUES = ['pending', 'processing', 'succeeded', 'failed', 'cancelled', 'refunded'];
+
+exports.validatePaymentListQuery = [
+    query('status')
+        .optional()
+        .isIn(PAYMENT_STATUS_VALUES)
+        .withMessage(`status must be one of: ${PAYMENT_STATUS_VALUES.join(', ')}`),
+    query('provider')
+        .optional()
+        .isIn(['sandbox', 'stripe'])
+        .withMessage('provider must be sandbox or stripe'),
+    exports.validate
+];
+
+exports.validatePaymentCreate = [
+    body('amount')
+        .exists({ values: 'null' })
+        .withMessage('Amount is required')
+        .bail()
+        .isFloat({ min: 1, max: 1000000 })
+        .withMessage('Amount must be between 1 and 1,000,000'),
+    body('kind')
+        .optional({ values: 'null' })
+        .isIn(['stipend', 'bonus'])
+        .withMessage('kind must be stipend or bonus'),
+    body('description')
+        .optional({ values: 'null' })
+        .isString()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage('Description is limited to 500 characters'),
+    exports.validate
+];
+
+exports.validatePaymentCancel = [
+    body('reason')
+        .optional({ values: 'null' })
+        .isString()
+        .trim()
+        .isLength({ max: 500 })
+        .withMessage('Reason is limited to 500 characters'),
+    exports.validate
+];
+
+exports.validatePaymentRefund = [
+    body('reason')
+        .exists({ values: 'falsy' })
+        .withMessage('Give a reason for the refund')
+        .bail()
+        .isString()
+        .trim()
+        .isLength({ min: 5, max: 500 })
+        .withMessage('The refund reason must be 5-500 characters'),
+    exports.validate
+];
+
+exports.validateSandboxConfirm = [
+    body(['cardNumber', 'expMonth', 'expYear', 'cvc', 'cardholderName'])
+        .exists({ values: 'falsy' })
+        .withMessage('Enter the card number, expiry, security code and name on the card'),
+    exports.validate
+];
+
+exports.validatePayoutMethod = [
+    body('method')
+        .isIn(['bank_transfer', 'jazzcash', 'easypaisa', 'paypal'])
+        .withMessage('Payout method must be bank_transfer, jazzcash, easypaisa or paypal'),
+    body('accountTitle')
+        .isString()
+        .trim()
+        .isLength({ min: 2, max: 150 })
+        .withMessage('Account title must be 2-150 characters'),
+    body('account')
+        .isString()
+        .withMessage('Enter the account number, wallet number or PayPal email')
+        .bail()
+        .isLength({ min: 1, max: 320 })
+        .withMessage('Enter the account number, wallet number or PayPal email'),
+    body('bankName')
+        .optional({ values: 'null' })
+        .isString()
+        .trim()
+        .isLength({ max: 150 })
+        .withMessage('Bank name is limited to 150 characters'),
     exports.validate
 ];

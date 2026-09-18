@@ -924,6 +924,289 @@ const internshipCompleted = ({
     return { subject, html, text };
 };
 
+// ---------------------------------------------------------------------------
+// Automated evaluation templates (Module 9). These reuse interviewShell above.
+// ---------------------------------------------------------------------------
+
+const EVALUATION_HEADER_COLOR = '#0a66c2';
+
+// Sent to the company and the mentor when a completed internship's automated
+// draft is ready for them to review, adjust and finalize.
+const evaluationReady = ({
+    recipientName,
+    studentName,
+    taskTitle,
+    autoScore,
+    grade,
+    aiGenerated,
+    dashboardUrl
+}) => {
+    const subject = `Evaluation draft ready: ${studentName} on "${taskTitle}"`;
+    const html = interviewShell(
+        EVALUATION_HEADER_COLOR,
+        'Evaluation ready for review',
+        `
+        <p>Hi ${recipientName},</p>
+        <p>The internship <strong>${taskTitle}</strong> with <strong>${studentName}</strong>
+        is complete, and an automated evaluation has been drafted against the task's
+        evaluation criteria.</p>
+        <div class="meta">
+          ${progressMetaRows([
+              { label: 'Automated score', value: autoScore != null ? `${autoScore}/100` : null },
+              { label: 'Provisional grade', value: grade },
+              { label: 'Scored by', value: aiGenerated ? 'AI evaluation service' : 'Platform fallback rules' }
+          ])}
+        </div>
+        <p>Review each criterion, adjust anything that does not match what you saw (a
+        short note is required for every change), then finalize to release it to the
+        student. Nothing is shared with the student until you finalize.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Review the evaluation</a></p>` : ''}
+        `
+    );
+    const text = `An automated evaluation for ${studentName} on "${taskTitle}" is ready for review.`;
+    return { subject, html, text };
+};
+
+// Sent to the student when a reviewer finalizes (releases) their evaluation.
+const evaluationFinalized = ({
+    studentName,
+    taskTitle,
+    grade,
+    finalScore,
+    finalizedByName,
+    verificationCode,
+    verifyUrl,
+    dashboardUrl
+}) => {
+    const subject = `Your evaluation for "${taskTitle}" is ready: grade ${grade}`;
+    const html = interviewShell(
+        PROGRESS_GOOD_COLOR,
+        'Your evaluation is ready',
+        `
+        <p>Hi ${studentName},</p>
+        <p>Your internship <strong>${taskTitle}</strong> has been evaluated
+        ${finalizedByName ? ` and confirmed by <strong>${finalizedByName}</strong>` : ''}.</p>
+        <div class="meta">
+          ${progressMetaRows([
+              { label: 'Grade', value: grade },
+              { label: 'Final score', value: finalScore != null ? `${finalScore}/100` : null },
+              { label: 'Verification code', value: verificationCode }
+          ])}
+        </div>
+        <p>Each criterion comes with the reasons behind its score, plus strengths and
+        suggestions for what to work on next.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Read your full evaluation</a></p>` : ''}
+        ${verifyUrl ? `<p>Anyone can confirm this result at <a href="${verifyUrl}">${verifyUrl}</a>.</p>` : ''}
+        `
+    );
+    const text = `Your evaluation for "${taskTitle}" is ready: grade ${grade} (${finalScore}/100). Code ${verificationCode}.`;
+    return { subject, html, text };
+};
+
+// ---------------------------------------------------------------------------
+// Feedback templates (Module 10). These reuse interviewShell above.
+// ---------------------------------------------------------------------------
+
+const FEEDBACK_HEADER_COLOR = '#0a66c2';
+
+// Feedback and responses are free text written by users, so they are escaped
+// before going into the HTML body.
+const escapeHtml = (value) =>
+    String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+const stars = (rating) => (rating ? `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)} (${rating}/5)` : null);
+
+// Sent to the student when a company or mentor leaves structured feedback.
+const feedbackReceived = ({
+    studentName,
+    authorName,
+    authorRole,
+    taskTitle,
+    context,
+    overallRating,
+    dashboardUrl
+}) => {
+    const about = context === 'interview' ? 'your interview for' : 'your internship';
+    const subject = `New feedback on ${about} "${taskTitle}"`;
+    const html = interviewShell(
+        FEEDBACK_HEADER_COLOR,
+        'You have new feedback',
+        `
+        <p>Hi ${escapeHtml(studentName)},</p>
+        <p><strong>${escapeHtml(authorName)}</strong>${authorRole === 'mentor' ? ' (your mentor)' : ''}
+        left feedback on ${about} <strong>${escapeHtml(taskTitle)}</strong>.</p>
+        <div class="meta">
+          ${progressMetaRows([{ label: 'Overall rating', value: stars(overallRating) }])}
+        </div>
+        <p>It covers what went well, what to work on and specific suggestions for next
+        time. You can acknowledge it and reply if you would like to.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Read your feedback</a></p>` : ''}
+        `
+    );
+    const text = `${authorName} left feedback on ${about} "${taskTitle}" (${overallRating}/5).`;
+    return { subject, html, text };
+};
+
+// Sent to the author when the student acknowledges the feedback with a reply.
+const feedbackResponded = ({
+    authorName,
+    studentName,
+    taskTitle,
+    responseExcerpt,
+    dashboardUrl
+}) => {
+    const subject = `${studentName} replied to your feedback on "${taskTitle}"`;
+    const html = interviewShell(
+        FEEDBACK_HEADER_COLOR,
+        'Your feedback got a reply',
+        `
+        <p>Hi ${escapeHtml(authorName)},</p>
+        <p><strong>${escapeHtml(studentName)}</strong> read the feedback you left on
+        <strong>${escapeHtml(taskTitle)}</strong> and replied:</p>
+        <div class="reason">${escapeHtml(responseExcerpt)}</div>
+        <p>Your feedback is now locked, so it stays exactly as the student answered it.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">View the feedback</a></p>` : ''}
+        `
+    );
+    const text = `${studentName} replied to your feedback on "${taskTitle}": ${responseExcerpt}`;
+    return { subject, html, text };
+};
+
+// ---------------------------------------------------------------------------
+// Payment templates (Module 12). These reuse interviewShell above; every
+// user-supplied value (names, titles, descriptions, reasons) is escaped.
+// ---------------------------------------------------------------------------
+
+const PAYMENT_HEADER_COLOR = '#0a66c2';
+
+const money = (amount, currency) =>
+    amount == null ? null : `${Number(amount).toFixed(2)} ${escapeHtml(currency || '')}`.trim();
+
+const paymentMetaRows = (payment, extra = []) =>
+    progressMetaRows([
+        { label: 'Reference', value: escapeHtml(payment.reference) },
+        { label: 'Task', value: escapeHtml(payment.taskTitle) },
+        { label: 'Type', value: payment.kind === 'bonus' ? 'Bonus' : 'Stipend' },
+        ...extra
+    ]);
+
+// To the student: money is on its way (the net amount after the platform fee).
+const paymentReceivedStudent = ({ studentName, payment, dashboardUrl }) => {
+    const net = money(payment.netAmount, payment.currency);
+    const subject = `You have been paid ${net} for "${payment.taskTitle}"`;
+    const html = interviewShell(
+        PROGRESS_GOOD_COLOR,
+        'Payment received',
+        `
+        <p>Hi ${escapeHtml(studentName)},</p>
+        <p><strong>${escapeHtml(payment.companyName)}</strong> has paid you for your work on
+        <strong>${escapeHtml(payment.taskTitle)}</strong>.</p>
+        <div class="meta">
+          ${paymentMetaRows(payment, [
+              { label: 'Amount', value: money(payment.amount, payment.currency) },
+              { label: `Platform fee (${Number(payment.feePercent)}%)`, value: money(payment.platformFee, payment.currency) },
+              { label: 'You receive', value: net }
+          ])}
+        </div>
+        <p>The payout goes to the payout method saved on your account.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">View your payments</a></p>` : ''}
+        `
+    );
+    const text = `${payment.companyName} paid you ${net} for "${payment.taskTitle}" (ref ${payment.reference}).`;
+    return { subject, html, text };
+};
+
+// To the company: the receipt of a successful payment.
+const paymentReceiptCompany = ({ recipientName, payment, receiptUrl }) => {
+    const gross = money(payment.amount, payment.currency);
+    const subject = `Payment receipt ${payment.reference}: ${gross}`;
+    const html = interviewShell(
+        PAYMENT_HEADER_COLOR,
+        'Payment successful',
+        `
+        <p>Hi ${escapeHtml(recipientName)},</p>
+        <p>Your payment to <strong>${escapeHtml(payment.studentName)}</strong> went through.</p>
+        <div class="meta">
+          ${paymentMetaRows(payment, [
+              { label: 'Amount charged', value: gross },
+              { label: 'Card', value: payment.cardLast4 ? `${escapeHtml(payment.cardBrand)} •••• ${escapeHtml(payment.cardLast4)}` : null },
+              { label: 'Student receives', value: money(payment.netAmount, payment.currency) }
+          ])}
+        </div>
+        ${receiptUrl ? `<p><a href="${receiptUrl}">View or print the receipt</a></p>` : ''}
+        `
+    );
+    const text = `Payment ${payment.reference} of ${gross} to ${payment.studentName} succeeded.`;
+    return { subject, html, text };
+};
+
+// To the company: the gateway declined the payment.
+const paymentFailedCompany = ({ recipientName, payment, dashboardUrl }) => {
+    const subject = `Payment ${payment.reference} failed`;
+    const html = interviewShell(
+        PROGRESS_BAD_COLOR,
+        'Payment failed',
+        `
+        <p>Hi ${escapeHtml(recipientName)},</p>
+        <p>Your payment of <strong>${money(payment.amount, payment.currency)}</strong> to
+        <strong>${escapeHtml(payment.studentName)}</strong> did not go through.</p>
+        ${payment.failureReason ? `<div class="reason">${escapeHtml(payment.failureReason)}</div>` : ''}
+        <div class="meta">${paymentMetaRows(payment)}</div>
+        <p>No money was taken. You can create a new payment and try another card.</p>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">Open the internship's payments</a></p>` : ''}
+        `
+    );
+    const text = `Payment ${payment.reference} failed: ${payment.failureReason || 'declined'}.`;
+    return { subject, html, text };
+};
+
+// To the student and the company: a succeeded payment was refunded.
+const paymentRefunded = ({ recipientName, payment, audience, dashboardUrl }) => {
+    const subject = `Payment ${payment.reference} was refunded`;
+    const who = audience === 'student'
+        ? `The payment from <strong>${escapeHtml(payment.companyName)}</strong>`
+        : `Your payment to <strong>${escapeHtml(payment.studentName)}</strong>`;
+    const html = interviewShell(
+        PROGRESS_WARN_COLOR,
+        'Payment refunded',
+        `
+        <p>Hi ${escapeHtml(recipientName)},</p>
+        <p>${who} for <strong>${escapeHtml(payment.taskTitle)}</strong>
+        (${money(payment.amount, payment.currency)}) has been refunded to the company.</p>
+        ${payment.refundReason ? `<div class="reason">${escapeHtml(payment.refundReason)}</div>` : ''}
+        <div class="meta">${paymentMetaRows(payment)}</div>
+        ${dashboardUrl ? `<p><a href="${dashboardUrl}">View payments</a></p>` : ''}
+        `
+    );
+    const text = `Payment ${payment.reference} was refunded. Reason: ${payment.refundReason || '—'}`;
+    return { subject, html, text };
+};
+
+// To the student: a company wants to pay but has nowhere to send the money.
+const payoutDetailsNeeded = ({ studentName, companyName, taskTitle, settingsUrl }) => {
+    const subject = `Add your payout details to get paid for "${taskTitle}"`;
+    const html = interviewShell(
+        PAYMENT_HEADER_COLOR,
+        'Add your payout details',
+        `
+        <p>Hi ${escapeHtml(studentName)},</p>
+        <p><strong>${escapeHtml(companyName)}</strong> is ready to pay you for
+        <strong>${escapeHtml(taskTitle)}</strong>, but you have not told us where to send
+        the money yet.</p>
+        <p>Add a bank account, JazzCash, Easypaisa or PayPal payout method. Only a masked
+        form of the account is stored.</p>
+        ${settingsUrl ? `<p><a href="${settingsUrl}">Add payout details</a></p>` : ''}
+        `
+    );
+    const text = `${companyName} wants to pay you for "${taskTitle}". Add your payout details to receive it.`;
+    return { subject, html, text };
+};
+
 module.exports = {
     getEmailVerificationTemplate,
     getOTPTemplate,
@@ -948,5 +1231,14 @@ module.exports = {
     progressAtRisk,
     progressUpdatePosted,
     internshipStatusChanged,
-    internshipCompleted
+    internshipCompleted,
+    evaluationReady,
+    evaluationFinalized,
+    feedbackReceived,
+    feedbackResponded,
+    paymentReceivedStudent,
+    paymentReceiptCompany,
+    paymentFailedCompany,
+    paymentRefunded,
+    payoutDetailsNeeded
 };

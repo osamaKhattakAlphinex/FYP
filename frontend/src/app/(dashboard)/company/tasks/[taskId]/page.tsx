@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import {
     ArrowLeft,
+    ClipboardCheck,
     Pencil,
     Users,
     Eye,
@@ -23,6 +24,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { taskService, Task } from '@/services/taskService'
+import EvaluationCriteriaModal from '@/components/evaluation/EvaluationCriteriaModal'
 
 const statusVariants: Record<string, 'success' | 'muted' | 'warning' | 'destructive' | 'soft'> = {
     active: 'success',
@@ -41,6 +43,7 @@ export default function CompanyTaskDetailPage() {
     const [task, setTask] = useState<Task | null>(null)
     const [loading, setLoading] = useState(true)
     const [recomputing, setRecomputing] = useState(false)
+    const [rubricOpen, setRubricOpen] = useState(false)
 
     useEffect(() => {
         if (!taskId) return
@@ -202,6 +205,24 @@ export default function CompanyTaskDetailPage() {
                         </Button>
                     </Card>
 
+                    {/* Module 9 — the criteria completed internships are scored against. */}
+                    <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                            <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                <ClipboardCheck className="h-4 w-4 text-brand-600" />
+                                Evaluation rubric
+                            </h2>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                The criteria and weights each completed internship on this task is
+                                automatically scored against. You can still adjust every score before
+                                releasing it.
+                            </p>
+                        </div>
+                        <Button size="sm" variant="secondary" onClick={() => setRubricOpen(true)}>
+                            <ClipboardCheck className="h-4 w-4" /> Evaluation rubric
+                        </Button>
+                    </Card>
+
                     <Card className="space-y-2 p-5">
                         <h2 className="text-sm font-semibold text-foreground">Description</h2>
                         <p className="whitespace-pre-wrap text-sm text-foreground/80">
@@ -224,6 +245,14 @@ export default function CompanyTaskDetailPage() {
                         )}
                     </Card>
                 </>
+            )}
+
+            {rubricOpen && taskId && (
+                <EvaluationCriteriaModal
+                    taskId={taskId}
+                    isOpen
+                    onClose={() => setRubricOpen(false)}
+                />
             )}
         </AppShell>
     )

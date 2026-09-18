@@ -9,6 +9,7 @@ import AppShell from '@/components/shared/AppShell'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import GivenFeedbackSection from '@/components/feedback/GivenFeedbackSection'
 import { useRoleProtection } from '@/hooks/useRoleProtection'
 import { mentorAssignmentService } from '@/services/mentorAssignmentService'
 import type { MentorAssignment } from '@/types/mentor.types'
@@ -201,6 +202,9 @@ export default function MentorFeedbackPage() {
                     })}
                 </div>
             )}
+
+            {/* Module 10 — structured feedback this mentor wrote about students */}
+            <GivenFeedbackSection workspaceBase="/mentor/progress" />
         </AppShell>
     )
 }

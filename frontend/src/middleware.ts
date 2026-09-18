@@ -14,6 +14,8 @@ export function middleware(request: NextRequest) {
     "/reset-password",
     "/auth/callback",
     "/unauthorized",
+    // Module 9 — public confirmation of a finalized evaluation by its code.
+    "/verify",
   ];
 
   // Public profile routes (accessible to all)

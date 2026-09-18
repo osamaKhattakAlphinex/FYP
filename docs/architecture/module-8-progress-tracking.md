@@ -458,8 +458,8 @@ barely any logged time), and completed — so every state in the module is
 visible immediately without clicking through the whole lifecycle.
 
 ```bash
-cd backend    && npm test    # 69 tests, no database required
-cd ai-service && pytest -q   # 33 tests, 22 of them the progress engine
+cd backend    && npx jest            # 312 tests across the suite, 69 of them Module 8 (no database)
+cd ai-service && python -m pytest -q # 144 tests, 22 of them the progress engine
 ```
 
 The backend tests cover health derivation, the milestone state machine, overdue
@@ -469,5 +469,20 @@ contract with the AI service. That last one matters because if the two sides
 drift, the report silently falls back to the local rule set for *every*
 internship and nobody notices — the fallback returns the same shape by design.
 
-Everything that needs a live database is covered by the manual plan in
-[`docs/qa/module-8-progress-tracking.md`](../qa/module-8-progress-tracking.md).
+The HTTP-level cases in
+[`docs/qa/module-8-progress-tracking.md`](../qa/module-8-progress-tracking.md)
+were exercised through a scratch integration harness that boots these routes,
+controllers and models over in-memory SQLite (not part of the repo), with the AI
+service both down and up. That run also checked that the Module 9–12 hook-ins
+(the background evaluation draft on completion, the new associations) left the
+Module 8 responses unchanged. UI pages, SMTP delivery and MySQL-specific
+behaviour still need the live stack.
+
+**Fixed issue (found by that run).** `openBlockerCount` used to count a
+blocked milestone twice: `recalcProgressMetrics` added the number of `blocked`
+milestones to the number of open `blocker`/`risk_flag` updates, and blocking a
+milestone through `PUT …/milestones/:id/status` also creates an open `blocker`
+update for it — so one blocked milestone read as 2 open blockers (and the AI
+engine treats `open_blockers > 1` as critical). A blocked milestone now only adds
+to the count when no open update already stands for it; `m8.flow` A13 asserts
+`openBlockerCount = 1` and passes. Health was never affected.

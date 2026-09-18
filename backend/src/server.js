@@ -22,8 +22,9 @@ connectDB();
 
 const app = express();
 
-// Body parser
-app.use(express.json());
+// Body parser. The raw bytes are kept for payment-gateway webhooks (Module 12),
+// whose HMAC signature is computed over the body exactly as it was sent.
+app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 app.use(express.urlencoded({
     extended: true
 }));
@@ -83,6 +84,10 @@ app.use('/api/interviews', require('./routes/interviewRoutes'));
 app.use('/api/mentors', require('./routes/mentorRoutes'));
 app.use('/api/mentor-assignments', require('./routes/mentorAssignmentRoutes'));
 app.use('/api/progress', require('./routes/progressRoutes'));
+app.use('/api/evaluations', require('./routes/evaluationRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
 // Health check route

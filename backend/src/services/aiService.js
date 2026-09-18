@@ -397,16 +397,250 @@ const analyzeProgress = async (progressDto) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// Automated evaluation (Module 9)
+// ---------------------------------------------------------------------------
+
+// Mirrors EvaluationEvidence in ai-service/app/models/schemas.py, with the
+// type each field must be sent as. Pinned by tests/evaluation.aiContract.test.js.
+const EVALUATION_EVIDENCE_FIELDS = {
+    weighted_completion: 'number',
+    milestone_count: 'int',
+    completed_milestones: 'int',
+    required_outstanding: 'int',
+    closed_with_outstanding_work: 'bool',
+    submission_count: 'int',
+    reviewed_count: 'int',
+    on_time_submission_rate: 'number?',
+    rework_rate: 'number?',
+    first_time_approval_rate: 'number?',
+    average_review_score: 'number?',
+    supervisor_rating: 'number?',
+    hours_logged: 'number',
+    expected_hours: 'number?',
+    estimated_hours: 'number?',
+    active_weeks: 'number',
+    checkin_count: 'int',
+    blockers_raised: 'int',
+    blockers_resolved: 'int',
+    finished_on_time: 'bool?',
+    days_late: 'int'
+};
+
+const coerceEvidenceValue = (kind, value) => {
+    const optional = kind.endsWith('?');
+    const base = optional ? kind.slice(0, -1) : kind;
+    if (value == null || (base !== 'bool' && Number.isNaN(Number(value)))) {
+        if (optional) return null;
+        return base === 'bool' ? false : 0;
+    }
+    if (base === 'bool') return !!value;
+    if (base === 'int') return Math.round(Number(value));
+    return Number(value);
+};
+
+// Builds the snapshot the /evaluate-internship contract expects. The evidence
+// is already computed by evaluationService.computeEvidence — this only pins
+// field names and types (MySQL hands DECIMALs back as strings).
+const mapEvaluationToDto = (evaluationId, taskTitle, criteria = [], evidence = {}) => {
+    const ev = plainify(evidence) || {};
+    const evidenceDto = Object.keys(EVALUATION_EVIDENCE_FIELDS).reduce((acc, key) => {
+        acc[key] = coerceEvidenceValue(EVALUATION_EVIDENCE_FIELDS[key], ev[key]);
+        return acc;
+    }, {});
+
+    return {
+        id: String(evaluationId),
+        task_title: taskTitle || '',
+        criteria: criteria.map(plainify).map((c) => ({
+            id: String(c.key != null ? c.key : c.id),
+            name: c.name || '',
+            metric: c.metric,
+            weight: Math.min(10, Math.max(1, Number(c.weight) || 1))
+        })),
+        evidence: evidenceDto
+    };
+};
+
+const evaluateInternship = async (evaluationDto) => {
+    if (!evaluationDto) throw new Error('evaluateInternship: evaluation snapshot is required');
+    try {
+        return await instrument('POST /evaluate-internship', async () => {
+            const res = await http.post('/evaluate-internship', { evaluation: evaluationDto });
+            return res.data;
+        });
+    } catch (err) {
+        throw wrap('POST /evaluate-internship', err);
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Feedback assist (Module 10)
+// ---------------------------------------------------------------------------
+
+// Mirror FeedbackSnapshot / FeedbackCriterionIn / FeedbackIndicators /
+// FeedbackDraft in ai-service/app/models/schemas.py. Pinned by
+// tests/feedback.aiContract.test.js.
+const FEEDBACK_SNAPSHOT_FIELDS = [
+    'context', 'task_title', 'student_name', 'overall_rating', 'criteria', 'indicators', 'draft'
+];
+const FEEDBACK_INDICATOR_FIELDS = {
+    weighted_completion: 'number?',
+    on_time_submission_rate: 'number?',
+    rework_rate: 'number?',
+    average_review_score: 'number?',
+    checkin_count: 'int?',
+    hours_logged: 'number?'
+};
+const FEEDBACK_METRICS = ['quality', 'timeliness', 'completion', 'communication', 'effort', 'reliability'];
+
+const optionalRating = (value) => {
+    if (value == null || value === '' || Number.isNaN(Number(value))) return null;
+    return Math.min(5, Math.max(1, Math.round(Number(value))));
+};
+
+const optionalText = (value) => (value == null ? null : String(value));
+
+// Builds the snapshot the /feedback-assist contract expects: the Module 9
+// criterion scores and Module 8 indicators as evidence, plus the author's
+// draft. Only reshapes and pins types — the rules live in the AI service.
+const mapFeedbackAssistToDto = ({
+    context,
+    taskTitle = '',
+    studentName = null,
+    overallRating = null,
+    criteria = [],
+    indicators = {},
+    draft = {}
+} = {}) => {
+    const ind = plainify(indicators) || {};
+    const d = plainify(draft) || {};
+    return {
+        context: context === 'interview' ? 'interview' : 'internship',
+        task_title: taskTitle || '',
+        student_name: studentName || null,
+        overall_rating: optionalRating(overallRating),
+        criteria: (criteria || [])
+            .map(plainify)
+            .filter((c) => c && FEEDBACK_METRICS.includes(c.metric) && c.score != null && !Number.isNaN(Number(c.score)))
+            .map((c) => ({
+                name: c.name || '',
+                metric: c.metric,
+                score: Math.min(100, Math.max(0, Number(c.score))),
+                weight: Math.min(10, Math.max(1, Math.round(Number(c.weight) || 1)))
+            })),
+        indicators: Object.keys(FEEDBACK_INDICATOR_FIELDS).reduce((acc, key) => {
+            acc[key] = coerceEvidenceValue(FEEDBACK_INDICATOR_FIELDS[key], ind[key]);
+            return acc;
+        }, {}),
+        draft: {
+            strengths: optionalText(d.strengths),
+            improvements: optionalText(d.improvements),
+            suggestions: Array.isArray(d.suggestions)
+                ? d.suggestions.filter((s) => s != null).map(String)
+                : [],
+            overall_rating: optionalRating(d.overall_rating)
+        }
+    };
+};
+
+const assistFeedback = async (feedbackDto) => {
+    if (!feedbackDto) throw new Error('assistFeedback: feedback snapshot is required');
+    try {
+        return await instrument('POST /feedback-assist', async () => {
+            const res = await http.post('/feedback-assist', { feedback: feedbackDto });
+            return res.data;
+        });
+    } catch (err) {
+        throw wrap('POST /feedback-assist', err);
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Performance insights (Module 11)
+// ---------------------------------------------------------------------------
+
+// Mirror StudentPerformanceIn / PerformanceEvaluationIn in
+// ai-service/app/models/schemas.py. Pinned by tests/analytics.aiContract.test.js.
+const PERFORMANCE_STUDENT_FIELDS = [
+    'id', 'evaluations', 'criteria_averages', 'feedback_average', 'feedback_count',
+    'recommend_rate', 'completed_internships', 'abandoned_internships', 'on_time_rate'
+];
+const PERFORMANCE_EVALUATION_FIELDS = ['score', 'finalized_days_ago'];
+// The batch limit the AI endpoint accepts in one request.
+const PERFORMANCE_BATCH_LIMIT = 200;
+
+const optionalNumberIn = (value, min, max) => {
+    if (value == null || value === '' || Number.isNaN(Number(value))) return null;
+    return Math.min(max, Math.max(min, Number(value)));
+};
+const countOf = (value) => Math.max(0, Math.floor(Number(value) || 0));
+
+// Builds one student's record for /performance-insights. The numbers are
+// already computed by analyticsService.studentPerformanceRecord — this only
+// pins field names, types and ranges (MySQL hands DECIMALs back as strings).
+const mapStudentPerformanceToDto = (record = {}) => {
+    const r = plainify(record) || {};
+    const averages = plainify(r.criteria_averages) || {};
+    return {
+        id: String(r.id),
+        evaluations: (Array.isArray(r.evaluations) ? r.evaluations : [])
+            .map(plainify)
+            .filter((e) => e && e.score != null && !Number.isNaN(Number(e.score)))
+            .map((e) => ({
+                score: Math.min(100, Math.max(0, Number(e.score))),
+                finalized_days_ago: countOf(e.finalized_days_ago)
+            })),
+        criteria_averages: FEEDBACK_METRICS.reduce((acc, m) => {
+            const v = optionalNumberIn(averages[m], 0, 100);
+            if (v != null) acc[m] = v;
+            return acc;
+        }, {}),
+        feedback_average: optionalNumberIn(r.feedback_average, 1, 5),
+        feedback_count: countOf(r.feedback_count),
+        recommend_rate: optionalNumberIn(r.recommend_rate, 0, 1),
+        completed_internships: countOf(r.completed_internships),
+        abandoned_internships: countOf(r.abandoned_internships),
+        on_time_rate: optionalNumberIn(r.on_time_rate, 0, 1)
+    };
+};
+
+const getPerformanceInsights = async (studentDtos) => {
+    if (!Array.isArray(studentDtos) || studentDtos.length === 0) {
+        throw new Error('getPerformanceInsights: at least one student record is required');
+    }
+    try {
+        return await instrument('POST /performance-insights', async () => {
+            const res = await http.post('/performance-insights', { students: studentDtos });
+            return res.data;
+        });
+    } catch (err) {
+        throw wrap('POST /performance-insights', err);
+    }
+};
+
 module.exports = {
     AIServiceUnavailableError,
     matchTasksForStudent,
     rankCandidates,
     rankMentors,
     analyzeProgress,
+    evaluateInternship,
+    assistFeedback,
     mapStudentToDto,
     mapTaskToDto,
     mapMentorToDto,
     mapProgressToDto,
+    mapEvaluationToDto,
+    mapFeedbackAssistToDto,
+    EVALUATION_EVIDENCE_FIELDS,
+    FEEDBACK_SNAPSHOT_FIELDS,
+    FEEDBACK_INDICATOR_FIELDS,
+    getPerformanceInsights,
+    mapStudentPerformanceToDto,
+    PERFORMANCE_STUDENT_FIELDS,
+    PERFORMANCE_EVALUATION_FIELDS,
+    PERFORMANCE_BATCH_LIMIT,
     getAIHealth,
     // Exposed for tests / diagnostics
     _internal: {

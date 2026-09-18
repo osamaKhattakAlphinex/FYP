@@ -30,6 +30,10 @@ export interface RoleNav {
   tasks: { href: string; label: string };
   work: { href: string; label: string };
   progress?: { href: string; label: string };
+  /** Module 11 — performance analytics; mentors have no dashboard of their own. */
+  analytics?: { href: string; label: string };
+  /** Module 12 — payments; mentors never see compensation. Shown in the "Me" menu. */
+  payments?: { href: string; label: string };
   profile: string;
 }
 
@@ -39,6 +43,8 @@ export const ROLE_NAV: Record<UserRole, RoleNav> = {
     tasks: { href: "/tasks", label: "Tasks" },
     work: { href: "/student/interviews", label: "Interviews" },
     progress: { href: "/student/internships", label: "Internships" },
+    analytics: { href: "/student/analytics", label: "Analytics" },
+    payments: { href: "/student/payments", label: "Payments" },
     profile: "/student/profile",
   },
   company: {
@@ -46,6 +52,8 @@ export const ROLE_NAV: Record<UserRole, RoleNav> = {
     tasks: { href: "/company/tasks", label: "Tasks" },
     work: { href: "/company/interviews", label: "Interviews" },
     progress: { href: "/company/progress", label: "Progress" },
+    analytics: { href: "/company/analytics", label: "Analytics" },
+    payments: { href: "/company/payments", label: "Payments" },
     profile: "/company/profile",
   },
   mentor: {
@@ -59,6 +67,8 @@ export const ROLE_NAV: Record<UserRole, RoleNav> = {
     dashboard: "/admin/mentors",
     tasks: { href: "/admin/mentors", label: "Mentors" },
     work: { href: "/tasks", label: "Tasks" },
+    analytics: { href: "/admin/analytics", label: "Analytics" },
+    payments: { href: "/admin/payments", label: "Payments" },
     profile: "/admin/mentors",
   },
 };

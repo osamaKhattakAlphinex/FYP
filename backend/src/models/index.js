@@ -31,6 +31,13 @@ const MilestoneSubmission = require('./MilestoneSubmission');
 const ProgressTimeLog = require('./ProgressTimeLog');
 const ProgressUpdate = require('./ProgressUpdate');
 const ProgressStatusHistory = require('./ProgressStatusHistory');
+const TaskEvaluationCriterion = require('./TaskEvaluationCriterion');
+const InternshipEvaluation = require('./InternshipEvaluation');
+const EvaluationCriterionScore = require('./EvaluationCriterionScore');
+const Feedback = require('./Feedback');
+const Payment = require('./Payment');
+const PaymentEvent = require('./PaymentEvent');
+const StudentPayoutMethod = require('./StudentPayoutMethod');
 
 // User <-> role profiles
 User.hasOne(Student, { foreignKey: 'userId', as: 'studentProfile', onDelete: 'CASCADE' });
@@ -291,6 +298,91 @@ User.hasMany(ProgressStatusHistory, {
     as: 'progressStatusChanges'
 });
 
+// ---------------------------------------------------------------------------
+// Automated evaluation (Module 9)
+// ---------------------------------------------------------------------------
+
+// The rubric ("predefined criteria") a company defines per task.
+Task.hasMany(TaskEvaluationCriterion, {
+    foreignKey: 'taskId',
+    as: 'evaluationCriteria',
+    onDelete: 'CASCADE'
+});
+TaskEvaluationCriterion.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+
+// One evaluation per completed internship.
+InternshipProgress.hasOne(InternshipEvaluation, {
+    foreignKey: 'progressId',
+    as: 'evaluation',
+    onDelete: 'CASCADE'
+});
+InternshipEvaluation.belongsTo(InternshipProgress, { foreignKey: 'progressId', as: 'progress' });
+InternshipEvaluation.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+InternshipEvaluation.belongsTo(Task, { foreignKey: 'taskId', as: 'task' });
+InternshipEvaluation.belongsTo(Company, { foreignKey: 'companyId', as: 'company' });
+InternshipEvaluation.belongsTo(Application, { foreignKey: 'applicationId', as: 'application' });
+User.hasMany(InternshipEvaluation, { foreignKey: 'finalizedByUserId', as: 'finalizedEvaluations' });
+
+// The rubric snapshot + scores of one evaluation.
+InternshipEvaluation.hasMany(EvaluationCriterionScore, {
+    foreignKey: 'evaluationId',
+    as: 'criteria',
+    onDelete: 'CASCADE'
+});
+EvaluationCriterionScore.belongsTo(InternshipEvaluation, {
+    foreignKey: 'evaluationId',
+    as: 'evaluation'
+});
+
+// ---------------------------------------------------------------------------
+// Feedback system (Module 10)
+// ---------------------------------------------------------------------------
+
+// Structured feedback about a student, stored against the task it concerns so
+// it becomes part of the student's performance record.
+[
+    [Student, 'student', 'studentId'],
+    [Task, 'task', 'taskId'],
+    [Company, 'company', 'companyId'],
+    [InternshipProgress, 'progress', 'progressId'],
+    [Interview, 'interview', 'interviewId'],
+    [Application, 'application', 'applicationId']
+].forEach(([Parent, alias, foreignKey]) => {
+    Parent.hasMany(Feedback, { foreignKey, as: 'feedback', onDelete: 'CASCADE' });
+    Feedback.belongsTo(Parent, { foreignKey, as: alias });
+});
+User.hasMany(Feedback, { foreignKey: 'authorUserId', as: 'authoredFeedback' });
+Feedback.belongsTo(User, { foreignKey: 'authorUserId', as: 'author' });
+
+// ---------------------------------------------------------------------------
+// Payment integration (Module 12)
+// ---------------------------------------------------------------------------
+
+// Payments hang off the internship. SET NULL, not CASCADE: deleting an
+// internship, task or account must never erase the money history, so the
+// payment keeps its snapshots (studentName, companyName, taskTitle) instead.
+[
+    [InternshipProgress, 'progress', 'progressId'],
+    [Application, 'application', 'applicationId'],
+    [Task, 'task', 'taskId'],
+    [Student, 'student', 'studentId'],
+    [Company, 'company', 'companyId']
+].forEach(([Parent, alias, foreignKey]) => {
+    Parent.hasMany(Payment, { foreignKey, as: 'payments', onDelete: 'SET NULL' });
+    Payment.belongsTo(Parent, { foreignKey, as: alias, onDelete: 'SET NULL' });
+});
+User.hasMany(Payment, { foreignKey: 'initiatedByUserId', as: 'initiatedPayments', onDelete: 'SET NULL' });
+User.hasMany(Payment, { foreignKey: 'refundedByUserId', as: 'refundedPayments', onDelete: 'SET NULL' });
+
+// The audit trail of each payment.
+Payment.hasMany(PaymentEvent, { foreignKey: 'paymentId', as: 'events', onDelete: 'CASCADE' });
+PaymentEvent.belongsTo(Payment, { foreignKey: 'paymentId', as: 'payment' });
+User.hasMany(PaymentEvent, { foreignKey: 'actorUserId', as: 'paymentEvents', onDelete: 'SET NULL' });
+
+// Where the student wants to be paid (masked; see StudentPayoutMethod).
+Student.hasOne(StudentPayoutMethod, { foreignKey: 'studentId', as: 'payoutMethod', onDelete: 'CASCADE' });
+StudentPayoutMethod.belongsTo(Student, { foreignKey: 'studentId', as: 'student' });
+
 // Student profile completion hook (needs counts of associated rows)
 const recalcStudentCompletion = async (student) => {
     if (!student) return;
@@ -445,15 +537,16 @@ const recalcProgressMetrics = async (progressId, options = {}) => {
     const progress = await InternshipProgress.findByPk(progressId, { transaction });
     if (!progress) return null;
 
-    const [milestones, hoursSum, openUpdateBlockers] = await Promise.all([
+    const [milestones, hoursSum, openUpdates] = await Promise.all([
         ProgressMilestone.findAll({ where: { progressId }, transaction }),
         ProgressTimeLog.sum('hours', { where: { progressId }, transaction }),
-        ProgressUpdate.count({
+        ProgressUpdate.findAll({
             where: {
                 progressId,
                 type: { [Op.in]: ProgressUpdate.RESOLVABLE_TYPES },
                 resolvedAt: null
             },
+            attributes: ['id', 'milestoneId'],
             transaction
         })
     ]);
@@ -472,8 +565,16 @@ const recalcProgressMetrics = async (progressId, options = {}) => {
 
     const completedMilestoneCount = counted.filter((m) => m.earnsWeight()).length;
     const overdueMilestoneCount = counted.filter((m) => m.isOverdue(now)).length;
-    const blockedMilestoneCount = counted.filter((m) => m.status === 'blocked').length;
-    const openBlockerCount = blockedMilestoneCount + Number(openUpdateBlockers || 0);
+    // Blocking a milestone also opens a blocker update for it, so a blocked
+    // milestone only adds to the count when no open update already stands for
+    // it — otherwise one blocker would be reported as two.
+    const milestonesWithOpenUpdate = new Set(
+        openUpdates.filter((u) => u.milestoneId != null).map((u) => String(u.milestoneId))
+    );
+    const blockedMilestoneCount = counted.filter(
+        (m) => m.status === 'blocked' && !milestonesWithOpenUpdate.has(String(m.id))
+    ).length;
+    const openBlockerCount = blockedMilestoneCount + openUpdates.length;
     const totalHoursLogged = Number(hoursSum) || 0;
 
     progress.progressPercent = progressPercent;
@@ -571,6 +672,13 @@ module.exports = {
     ProgressTimeLog,
     ProgressUpdate,
     ProgressStatusHistory,
+    TaskEvaluationCriterion,
+    InternshipEvaluation,
+    EvaluationCriterionScore,
+    Feedback,
+    Payment,
+    PaymentEvent,
+    StudentPayoutMethod,
     recalcStudentCompletion,
     recalcCompanyCompletion,
     recalcMentorCompletion,

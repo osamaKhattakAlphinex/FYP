@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -193,3 +193,233 @@ class ProgressInsightResponse(BaseModel):
     signals: list[RiskSignal] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     indicators: dict[str, float] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Automated evaluation (Module 9)
+# ---------------------------------------------------------------------------
+
+
+EvaluationMetric = Literal[
+    "quality",
+    "timeliness",
+    "completion",
+    "communication",
+    "effort",
+    "reliability",
+]
+Grade = Literal["A", "B", "C", "D", "F"]
+
+
+class EvaluationCriterionIn(BaseModel):
+    """One rubric line. The metric decides which rule scores it."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str = ""
+    metric: EvaluationMetric
+    weight: int = Field(default=1, ge=1, le=10)
+
+
+class EvaluationEvidence(BaseModel):
+    """What the backend measured over the whole internship.
+
+    Rates are 0..1 and None when there was nothing to measure — None means
+    "no evidence", which is scored neutrally, never as zero.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    weighted_completion: float = Field(default=0, ge=0, le=100)
+    milestone_count: int = 0
+    completed_milestones: int = 0
+    required_outstanding: int = 0
+    closed_with_outstanding_work: bool = False
+    submission_count: int = 0
+    reviewed_count: int = 0
+    on_time_submission_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    rework_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    first_time_approval_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    average_review_score: Optional[float] = Field(default=None, ge=1, le=5)
+    supervisor_rating: Optional[float] = Field(default=None, ge=1, le=5)
+    hours_logged: float = 0
+    expected_hours: Optional[float] = None
+    estimated_hours: Optional[float] = None
+    active_weeks: float = Field(default=1, ge=0)
+    checkin_count: int = 0
+    blockers_raised: int = 0
+    blockers_resolved: int = 0
+    finished_on_time: Optional[bool] = None
+    days_late: int = Field(default=0, ge=0)
+
+
+class EvaluationSnapshot(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    task_title: str = ""
+    criteria: list[EvaluationCriterionIn] = Field(min_length=1)
+    evidence: EvaluationEvidence
+
+
+class EvaluateRequest(BaseModel):
+    evaluation: EvaluationSnapshot
+
+
+class CriterionResult(BaseModel):
+    id: str
+    score: float = Field(ge=0, le=100)
+    rationale: str
+    evidence: list[str] = Field(default_factory=list)
+    # False when the rule had nothing to go on and fell back to the neutral score.
+    has_evidence: bool = True
+
+
+class EvaluateResponse(BaseModel):
+    evaluation_id: str
+    overall_score: float = Field(ge=0, le=100)
+    grade: Grade
+    # Share of criteria that were backed by recorded evidence, 0..1.
+    confidence: float = Field(ge=0, le=1)
+    summary: str
+    criteria: list[CriterionResult]
+    strengths: list[str] = Field(default_factory=list)
+    improvements: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Feedback assist (Module 10)
+# ---------------------------------------------------------------------------
+
+
+FeedbackContext = Literal["internship", "interview"]
+
+
+class FeedbackCriterionIn(BaseModel):
+    """One scored criterion from the Module 9 evaluation, used as evidence."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    name: str = ""
+    metric: EvaluationMetric
+    score: float = Field(ge=0, le=100)
+    weight: int = Field(default=1, ge=1, le=10)
+
+
+class FeedbackIndicators(BaseModel):
+    """Module 8 performance indicators. Rates are 0..1; None = not measured."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    weighted_completion: Optional[float] = Field(default=None, ge=0, le=100)
+    on_time_submission_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    rework_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    average_review_score: Optional[float] = Field(default=None, ge=1, le=5)
+    checkin_count: Optional[int] = Field(default=None, ge=0)
+    hours_logged: Optional[float] = Field(default=None, ge=0)
+
+
+class FeedbackDraft(BaseModel):
+    """What the author has written so far. Everything optional."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    strengths: Optional[str] = None
+    improvements: Optional[str] = None
+    suggestions: list[str] = Field(default_factory=list)
+    overall_rating: Optional[int] = Field(default=None, ge=1, le=5)
+
+
+class FeedbackSnapshot(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    context: FeedbackContext
+    task_title: str = ""
+    student_name: Optional[str] = None
+    overall_rating: Optional[int] = Field(default=None, ge=1, le=5)
+    criteria: list[FeedbackCriterionIn] = Field(default_factory=list)
+    indicators: FeedbackIndicators = Field(default_factory=FeedbackIndicators)
+    draft: FeedbackDraft = Field(default_factory=FeedbackDraft)
+
+
+class FeedbackAssistRequest(BaseModel):
+    feedback: FeedbackSnapshot
+
+
+class FeedbackIssue(BaseModel):
+    code: str
+    severity: Severity
+    message: str
+
+
+class FeedbackReview(BaseModel):
+    quality_score: int = Field(ge=0, le=100)
+    issues: list[FeedbackIssue] = Field(default_factory=list)
+
+
+class FeedbackAssistResponse(BaseModel):
+    suggested_overall_rating: Optional[int] = Field(default=None, ge=1, le=5)
+    suggested_strengths: list[str] = Field(default_factory=list)
+    suggested_improvements: list[str] = Field(default_factory=list)
+    suggested_suggestions: list[str] = Field(default_factory=list)
+    review: FeedbackReview
+
+
+# ---------------------------------------------------------------------------
+# Performance insights (Module 11)
+# ---------------------------------------------------------------------------
+
+
+PerformanceBand = Literal["excellent", "strong", "developing", "needs_support", "insufficient_data"]
+PerformanceTrend = Literal["improving", "stable", "declining", "insufficient_data"]
+
+
+class PerformanceEvaluationIn(BaseModel):
+    """One finalized Module 9 evaluation: its final score and its age."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    score: float = Field(ge=0, le=100)
+    # Whole days since the evaluation was finalized; drives recency weighting
+    # and the chronological order used for the trend.
+    finalized_days_ago: int = Field(default=0, ge=0)
+
+
+class StudentPerformanceIn(BaseModel):
+    """A student's recorded track record. Rates are 0..1; None = not measured."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    evaluations: list[PerformanceEvaluationIn] = Field(default_factory=list)
+    # Average final criterion score per Module 9 metric, 0..100.
+    criteria_averages: dict[EvaluationMetric, Annotated[float, Field(ge=0, le=100)]] = Field(default_factory=dict)
+    feedback_average: Optional[float] = Field(default=None, ge=1, le=5)
+    feedback_count: int = Field(default=0, ge=0)
+    recommend_rate: Optional[float] = Field(default=None, ge=0, le=1)
+    completed_internships: int = Field(default=0, ge=0)
+    abandoned_internships: int = Field(default=0, ge=0)
+    on_time_rate: Optional[float] = Field(default=None, ge=0, le=1)
+
+
+class PerformanceInsightsRequest(BaseModel):
+    students: list[StudentPerformanceIn] = Field(min_length=1, max_length=200)
+
+
+class PerformanceInsight(BaseModel):
+    id: str
+    performance_index: float = Field(ge=0, le=100)
+    band: PerformanceBand
+    trend: PerformanceTrend
+    # Points per evaluation (least-squares slope), None with < 2 evaluations.
+    trend_slope: Optional[float] = None
+    predicted_next_score: Optional[float] = Field(default=None, ge=0, le=100)
+    confidence: float = Field(ge=0, le=1)
+    strengths: list[str] = Field(default_factory=list)
+    focus_areas: list[str] = Field(default_factory=list)
+    insights: list[str] = Field(default_factory=list)
+
+
+class PerformanceInsightsResponse(BaseModel):
+    results: list[PerformanceInsight] = Field(default_factory=list)

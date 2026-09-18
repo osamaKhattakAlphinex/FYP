@@ -7,6 +7,7 @@ import {
     Building2,
     Video,
     MessageSquarePlus,
+    MessagesSquare,
     Loader2,
     Sparkles,
 } from 'lucide-react'
@@ -350,6 +351,15 @@ export default function StudentInterviewsPage() {
                                                 interview.ratings?.student != null
                                                     ? 'Edit feedback'
                                                     : 'Leave feedback'}
+                                            </Button>
+                                        )}
+                                        {/* Module 10 — the company's structured feedback to you */}
+                                        {interview.status === 'completed' && (
+                                            <Button asChild size="sm" variant="secondary">
+                                                <Link href="/student/feedback?context=interview">
+                                                    <MessagesSquare className="h-3.5 w-3.5" />
+                                                    View feedback
+                                                </Link>
                                             </Button>
                                         )}
                                     </div>

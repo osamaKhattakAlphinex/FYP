@@ -69,6 +69,8 @@ import type { Interview } from '@/types/interview.types'
 import ScheduleInterviewModal from '@/components/interviews/ScheduleInterviewModal'
 import CandidateMentorTab from '@/components/company/CandidateMentorTab'
 import InternshipProgressLink from '@/components/progress/InternshipProgressLink'
+import InterviewFeedbackAction from '@/components/feedback/InterviewFeedbackAction'
+import CandidatePerformanceCard from '@/components/analytics/CandidatePerformanceCard'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
@@ -543,6 +545,9 @@ export default function CandidateDetailPage() {
                                 </div>
                             </>
                         )}
+
+                        {/* Module 11 — the candidate's proven track record */}
+                        {s?._id && <CandidatePerformanceCard studentId={String(s._id)} />}
                     </Card>
 
                     {/* Right: tabs */}
@@ -778,6 +783,14 @@ export default function CandidateDetailPage() {
                                                     )}
                                                 </Card>
                                             </div>
+                                        )}
+
+                                        {/* Module 10 — structured feedback after the interview */}
+                                        {interview.status === 'completed' && (
+                                            <InterviewFeedbackAction
+                                                interviewId={interview._id}
+                                                taskTitle={application.task?.title}
+                                            />
                                         )}
 
                                         {['scheduled', 'rescheduled'].includes(

@@ -6,7 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.routes import evaluation as evaluation_routes
+from app.routes import feedback as feedback_routes
 from app.routes import match as match_routes
+from app.routes import performance as performance_routes
 from app.routes import progress as progress_routes
 from app.services.matcher import is_model_loaded, warm_embedder
 
@@ -54,3 +57,6 @@ def health() -> dict:
 
 app.include_router(match_routes.router)
 app.include_router(progress_routes.router)
+app.include_router(evaluation_routes.router)
+app.include_router(feedback_routes.router)
+app.include_router(performance_routes.router)

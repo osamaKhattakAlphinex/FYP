@@ -15,6 +15,8 @@ import {
     LayoutDashboard,
     CalendarClock,
     ListChecks,
+    BarChart3,
+    Wallet,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -97,6 +99,10 @@ export default function Navbar() {
     const tasksLabel = nav.tasks.label
     // Module 8 — only the roles that work on an internship get this entry.
     const progressNav = nav.progress
+    // Module 11 — student, company and admin dashboards.
+    const analyticsNav = nav.analytics
+    // Module 12 — in the "Me" menu / drawer rather than a seventh top icon.
+    const paymentsNav = nav.payments
 
     const userName =
         user?.firstName && user?.lastName
@@ -154,6 +160,14 @@ export default function Navbar() {
                                 active={pathname?.startsWith(progressNav.href)}
                             />
                         )}
+                        {analyticsNav && (
+                            <NavIconLink
+                                href={analyticsNav.href}
+                                icon={BarChart3}
+                                label={analyticsNav.label}
+                                active={pathname?.startsWith(analyticsNav.href)}
+                            />
+                        )}
                         <NavIconLink
                             href={profileHref}
                             icon={UserIcon}
@@ -199,6 +213,11 @@ export default function Navbar() {
                                 <DropdownMenuItem onClick={() => router.push(profileHref)}>
                                     <UserIcon className="h-4 w-4" /> View profile
                                 </DropdownMenuItem>
+                                {paymentsNav && (
+                                    <DropdownMenuItem onClick={() => router.push(paymentsNav.href)}>
+                                        <Wallet className="h-4 w-4" /> {paymentsNav.label}
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem onClick={() => router.push('/settings')}>
                                     <Settings className="h-4 w-4" /> Settings
                                 </DropdownMenuItem>
@@ -286,6 +305,24 @@ export default function Navbar() {
                                         className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                                     >
                                         <ListChecks className="h-4 w-4" /> {progressNav.label}
+                                    </Link>
+                                )}
+                                {analyticsNav && (
+                                    <Link
+                                        href={analyticsNav.href}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                    >
+                                        <BarChart3 className="h-4 w-4" /> {analyticsNav.label}
+                                    </Link>
+                                )}
+                                {paymentsNav && (
+                                    <Link
+                                        href={paymentsNav.href}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                                    >
+                                        <Wallet className="h-4 w-4" /> {paymentsNav.label}
                                     </Link>
                                 )}
                                 <Link

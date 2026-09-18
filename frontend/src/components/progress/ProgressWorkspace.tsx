@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
     ArrowLeft,
+    Award,
     BarChart3,
     Building2,
     CalendarClock,
@@ -12,12 +13,14 @@ import {
     Flag,
     ListChecks,
     MessageSquare,
+    MessagesSquare,
     Pause,
     Pencil,
     Play,
     Plus,
     Target,
     User2,
+    Wallet,
     XCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -38,6 +41,9 @@ import ProgressUpdatesPanel from './ProgressUpdatesPanel'
 import ProgressReportPanel from './ProgressReportPanel'
 import EditPlanModal from './EditPlanModal'
 import CompleteInternshipModal from './CompleteInternshipModal'
+import EvaluationPanel from '@/components/evaluation/EvaluationPanel'
+import FeedbackPanel from '@/components/feedback/FeedbackPanel'
+import PaymentsPanel from '@/components/payments/PaymentsPanel'
 import { useAuth } from '@/contexts/AuthContext'
 import { progressService } from '@/services/progressService'
 import { apiErrorMessage } from '@/lib/apiError'
@@ -48,14 +54,22 @@ import type {
 } from '@/types/progress.types'
 import { cn } from '@/lib/utils'
 
-type Tab = 'milestones' | 'time' | 'updates' | 'report'
+type Tab = 'milestones' | 'time' | 'updates' | 'report' | 'evaluation' | 'feedback' | 'payments'
 
 const TABS: Array<{ value: Tab; label: string; icon: React.ElementType }> = [
     { value: 'milestones', label: 'Milestones', icon: ListChecks },
     { value: 'time', label: 'Time log', icon: Clock3 },
     { value: 'updates', label: 'Timeline', icon: MessageSquare },
     { value: 'report', label: 'Report', icon: BarChart3 },
+    // Module 9 — automated evaluation of the completed internship.
+    { value: 'evaluation', label: 'Evaluation', icon: Award },
+    // Module 10 — structured feedback from the company and the mentor.
+    { value: 'feedback', label: 'Feedback', icon: MessagesSquare },
+    // Module 12 — compensation; only the company and the student see this tab.
+    { value: 'payments', label: 'Payments', icon: Wallet },
 ]
+
+const PAYMENT_PERSPECTIVES: ProgressPerspective[] = ['company', 'student']
 
 const formatDate = (iso?: string | null) =>
     !iso
@@ -125,6 +139,15 @@ export default function ProgressWorkspace({
     useEffect(() => {
         load()
     }, [load])
+
+    // Deep links such as ?tab=payments (the checkout page and payment emails
+    // return here). Read once on mount; unknown or hidden tabs are ignored.
+    useEffect(() => {
+        const wanted = new URLSearchParams(window.location.search).get('tab') as Tab | null
+        if (!wanted || !TABS.some((t) => t.value === wanted)) return
+        if (wanted === 'payments' && !PAYMENT_PERSPECTIVES.includes(perspective)) return
+        setTab(wanted)
+    }, [perspective])
 
     // Any mutation can move the percentage, the health and the report, so the
     // whole record is refetched rather than patched locally.
@@ -448,7 +471,9 @@ export default function ProgressWorkspace({
             {/* Tabs ------------------------------------------------------------ */}
             <div className="overflow-x-auto">
                 <div className="flex gap-1.5 border-b border-border pb-1">
-                    {TABS.map((t) => {
+                    {TABS.filter(
+                        (t) => t.value !== 'payments' || PAYMENT_PERSPECTIVES.includes(perspective),
+                    ).map((t) => {
                         const Icon = t.icon
                         return (
                             <button
@@ -515,6 +540,18 @@ export default function ProgressWorkspace({
 
             {tab === 'report' && (
                 <ProgressReportPanel progressId={progressId} refreshKey={reportKey} />
+            )}
+
+            {tab === 'evaluation' && (
+                <EvaluationPanel progress={progress} perspective={perspective} refreshKey={reportKey} />
+            )}
+
+            {tab === 'feedback' && (
+                <FeedbackPanel progress={progress} perspective={perspective} refreshKey={reportKey} />
+            )}
+
+            {tab === 'payments' && PAYMENT_PERSPECTIVES.includes(perspective) && (
+                <PaymentsPanel progress={progress} perspective={perspective} refreshKey={reportKey} />
             )}
 
             {/* Modals ---------------------------------------------------------- */}

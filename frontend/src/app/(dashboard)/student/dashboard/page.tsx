@@ -20,6 +20,7 @@ import WelcomeBanner from '@/components/student/dashboard/WelcomeBanner'
 import RecommendedTasksCard from '@/components/student/dashboard/RecommendedTasksCard'
 import UpcomingInterviewsCard from '@/components/student/dashboard/UpcomingInterviewsCard'
 import ActiveInternshipsCard from '@/components/progress/ActiveInternshipsCard'
+import RecentFeedbackCard from '@/components/feedback/RecentFeedbackCard'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -198,6 +199,8 @@ export default function StudentDashboard() {
             }
             rightRail={
                 <>
+                    {/* Module 10 — newest feedback, links to /student/feedback */}
+                    <RecentFeedbackCard />
                     <Card className="p-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-foreground">

@@ -20,6 +20,7 @@ const {
 } = require('../models');
 const ErrorResponse = require('../utils/errorResponse');
 const aiService = require('../services/aiService');
+const { generateEvaluation } = require('../services/evaluationService');
 const {
     notifyStudentOfMilestone,
     notifyReviewersOfSubmission,
@@ -91,6 +92,10 @@ const resolveActor = async (user, applicationId = null) => {
 
     return actor;
 };
+
+// Exposed so Module 9 (evaluationController) authorises with exactly the same
+// actor shape instead of re-deriving it.
+exports.resolveActor = resolveActor;
 
 const progressIncludes = () => ([
     { model: Student, as: 'student', attributes: STUDENT_BASIC_ATTRS },
@@ -599,6 +604,12 @@ exports.completeProgress = async (req, res, next) => {
 
         await recalcAndAlert(progress.id, { suppressAlerts: true });
         notifyOfCompletion(progress.id);
+        // Module 9: draft the automated evaluation in the background. Never
+        // awaited and never allowed to fail the completion — a supervisor
+        // opening the Evaluation tab back-fills it if this did not run.
+        generateEvaluation(progress.id, { trigger: 'completion' }).catch((err) =>
+            console.warn('[progress] automatic evaluation failed:', err.message)
+        );
 
         const fresh = await InternshipProgress.findByPk(progress.id, { include: progressIncludes() });
         res.status(200).json({

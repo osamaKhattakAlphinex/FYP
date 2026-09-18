@@ -231,6 +231,7 @@ smart-ai-micro-internship/
 | [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)                           | Quick reference for developers       |
 | [backend/README.md](./backend/README.md)                             | Backend API documentation            |
 | [backend/API_TESTING_GUIDE.md](./backend/API_TESTING_GUIDE.md)       | API testing guide                    |
+| [docs/qa/README.md](./docs/qa/README.md)                             | Testing documentation index, Modules 7–12 |
 
 ## 🧪 Testing
 
@@ -305,6 +306,9 @@ curl -X POST http://localhost:5000/api/auth/login \
 - [x] Intelligent task matching (Module 6)
 - [x] AI-ranked mentor suggestions (Module 7)
 - [x] Progress risk assessment and performance indicators (Module 8)
+- [x] Rubric-based automated evaluation with reviewer sign-off (Module 9)
+- [x] Feedback drafting assistant and tone review (Module 10)
+- [x] Performance index, score trend and projection for analytics dashboards (Module 11)
 - [ ] AI-powered skill assessment
 - [ ] Automated feedback generation
 
@@ -317,17 +321,17 @@ curl -X POST http://localhost:5000/api/auth/login \
 | 6 | AI-Based Matching | ✅ | [Architecture](./docs/architecture/module-6-ai-matching.md) |
 | 7 | Mentor Assignment | ✅ | [QA plan](./docs/qa/module-7-mentor-assignment.md) |
 | 8 | Progress Tracking | ✅ | [Architecture](./docs/architecture/module-8-progress-tracking.md) · [QA plan](./docs/qa/module-8-progress-tracking.md) |
-| 9 | Automated Evaluation | ⏳ | — |
-| 10 | Feedback System | ⏳ | — |
-| 11 | Performance Analytics | ⏳ | — |
-| 12 | Payment Integration | ⏳ | — |
+| 9 | Automated Evaluation | ✅ | [Architecture](./docs/architecture/module-9-automated-evaluation.md) · [QA plan](./docs/qa/module-9-automated-evaluation.md) |
+| 10 | Feedback System | ✅ | [Architecture](./docs/architecture/module-10-feedback-system.md) · [QA plan](./docs/qa/module-10-feedback-system.md) |
+| 11 | Performance Analytics | ✅ | [Architecture](./docs/architecture/module-11-performance-analytics.md) · [QA plan](./docs/qa/module-11-performance-analytics.md) |
+| 12 | Payment Integration | ✅ | [Architecture](./docs/architecture/module-12-payment-integration.md) · [QA plan](./docs/qa/module-12-payment-integration.md) |
 | 13 | Document Verification | ⏳ | — |
 
 ### Phase 4: Advanced Features
 
 - [ ] Real-time chat
 - [ ] Video interviews
-- [ ] Payment integration
+- [x] Payment integration (Module 12 — sandbox + Stripe Checkout, signed webhooks)
 - [ ] Certificate generation
 
 ## 🤝 Contributing
