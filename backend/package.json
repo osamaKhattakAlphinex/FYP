@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "start:render": "node src/scripts/seedIfEmpty.js && node src/server.js",
+    "start:render": "node src/scripts/seedIfEmpty.js && node src/scripts/seedAdmin.js --if-configured && node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "echo 'No build step required'",
     "test": "jest",
@@ -13,7 +13,8 @@
     "seed:applications": "node src/scripts/seedApplications.js",
     "check:companies": "node src/scripts/checkCompanies.js",
     "seed:mentors": "node src/scripts/seedMentors.js",
-    "seed:progress": "node src/scripts/seedProgress.js"
+    "seed:progress": "node src/scripts/seedProgress.js",
+    "seed:admin": "node src/scripts/seedAdmin.js"
   },
   "dependencies": {
     "axios": "^1.6.7",

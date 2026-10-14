@@ -120,6 +120,10 @@ cd backend
 node src/scripts/seedDemo.js   # users, tasks, applications
 npm run seed:mentors           # mentors + mentor assignments (Module 7)
 npm run seed:progress          # internship progress (Module 8)
+
+# Administrator account (none of the seeds above create one). Needed for the
+# mentor verification queue, platform analytics and payment oversight:
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='<a strong password>' npm run seed:admin
 ```
 
 5. **Access the application**
