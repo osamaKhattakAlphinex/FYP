@@ -11,7 +11,10 @@ const sendEmail = require('../utils/sendEmail');
 
 const to = process.argv[2] || process.env.EMAIL_USER;
 
-console.log(`Sending via ${process.env.EMAIL_HOST}:${process.env.EMAIL_PORT} as ${process.env.EMAIL_USER} to ${to}`);
+const via = process.env.BREVO_API_KEY
+    ? 'Brevo API'
+    : `${process.env.EMAIL_HOST}:${process.env.EMAIL_PORT} as ${process.env.EMAIL_USER}`;
+console.log(`Sending via ${via} to ${to}`);
 
 sendEmail({
     email: to,
