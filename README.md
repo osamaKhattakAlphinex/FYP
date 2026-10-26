@@ -1,322 +1,88 @@
-# Smart AI Micro Internship Platform
+# NexIntern: Smart AI Micro-Internship Platform
 
-A full-stack web application connecting students with micro-internship opportunities, powered by AI-driven matching and assessment.
+NexIntern connects university students with short, paid micro-internships posted by companies. Students build a profile and get tasks ranked by how well they fit; companies post tasks, review ranked applicants, interview and evaluate them; mentors guide students through the work. Every AI score comes with written reasons.
 
-## 🎯 Project Overview
+- **Live:** https://fyp-two-green.vercel.app
+- **Case study:** https://osama-s-porfolio-beige.vercel.app/projects/nexintern
 
-This platform enables:
+Final-year project for the BS in Software Engineering at SZABIST Islamabad, designed and built by [Osama Khattak](https://osama-s-porfolio-beige.vercel.app).
 
-- **Students** to find and apply for micro-internships
-- **Companies** to post tasks and evaluate candidates
-- **AI-powered** matching and skill assessment
-- **Real-time** collaboration and feedback
+## Architecture
 
-## 🏗️ Architecture
+Three services: a Next.js front end, an Express API that owns the data and business rules, and a Python FastAPI service for the AI scoring.
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Next.js   │────▶│  Express.js │────▶│   MongoDB   │
-│  Frontend   │     │   Backend   │     │  Database   │
-│  (Port 3000)│     │  (Port 5000)│     │             │
-└─────────────┘     └─────────────┘     └─────────────┘
-                           │
-                           ▼
-                    ┌─────────────┐
-                    │  AI Service │
-                    │  (Port 8000)│
-                    └─────────────┘
+┌──────────────────┐      ┌──────────────────────┐      ┌─────────────┐
+│ Next.js frontend │ ───▶ │ Express + Node.js API│ ───▶ │  MySQL 8    │
+│  (port 3000)     │      │  (port 5000)         │      │ (Sequelize) │
+└──────────────────┘      └──────────┬───────────┘      └─────────────┘
+                                     │
+                                     ▼
+                          ┌──────────────────────┐
+                          │ FastAPI AI service   │
+                          │  (port 8000)         │
+                          └──────────────────────┘
 ```
 
-## ✅ Integration Status
-
-**Frontend-Backend Integration:** ✅ Complete
-
-All authentication endpoints are connected and functional:
-
-- ✅ User Registration (Student/Company/Admin)
-- ✅ Email/Password Login
-- ✅ Email Verification with OTP
-- ✅ Password Reset Flow
-- ✅ Google OAuth Integration
-- ✅ Protected Routes with Role-based Access
-- ✅ Token Management
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js 18+
-- MongoDB
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-
-```bash
-git clone <repository-url>
-cd smart-ai-micro-internship
-```
-
-2. **Run setup script**
-
-**Windows:**
-
-```bash
-setup-integration.bat
-```
-
-**Mac/Linux:**
-
-```bash
-chmod +x setup-integration.sh
-./setup-integration.sh
-```
-
-**Or manually:**
-
-```bash
-cd frontend
-npm install
-```
-
-3. **Configure environment variables**
-
-**Frontend (`.env.local`):**
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
-
-**Backend (`.env`):**
-
-```env
-PORT=5000
-MONGODB_URI=mongodb://localhost:27017/smart_ai_internship
-JWT_SECRET=your-secret-key-here
-FRONTEND_URL=http://localhost:3000
-```
-
-4. **Start the services**
-
-**Terminal 1 - Backend:**
-
-```bash
-cd backend
-npm start
-```
-
-**Terminal 2 - Frontend:**
-
-```bash
-cd frontend
-npm run dev
-```
-
-**Optional - seed a demo dataset (run in order):**
-
-```bash
-cd backend
-node src/scripts/seedDemo.js   # users, tasks, applications
-npm run seed:mentors           # mentors + mentor assignments (Module 7)
-npm run seed:progress          # internship progress (Module 8)
-
-# Administrator account (none of the seeds above create one). Needed for the
-# mentor verification queue, platform analytics and payment oversight:
-ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='<a strong password>' npm run seed:admin
-```
-
-5. **Access the application**
-
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- Health Check: http://localhost:5000/health
-
-## 📁 Project Structure
-
-```
-smart-ai-micro-internship/
-├── frontend/                 # Next.js frontend application
-│   ├── src/
-│   │   ├── app/             # Next.js pages (App Router)
-│   │   ├── components/      # React components
-│   │   ├── contexts/        # React contexts
-│   │   ├── services/        # API services
-│   │   ├── lib/             # Utilities (HTTP client)
-│   │   └── types/           # TypeScript types
-│   └── package.json
-│
-├── backend/                  # Express.js backend API
-│   ├── src/
-│   │   ├── config/          # Configuration files
-│   │   ├── controllers/     # Business logic
-│   │   ├── middleware/      # Express middleware
-│   │   ├── models/          # Database models
-│   │   ├── routes/          # API routes
-│   │   └── server.js        # Express app
-│   └── package.json
-│
-├── ai-service/              # Python AI service (Future)
-│
-└── Documentation/
-    ├── INTEGRATION_COMPLETE.md
-    ├── FRONTEND_BACKEND_INTEGRATION.md
-    ├── INTEGRATION_CHECKLIST.md
-    ├── INTEGRATION_ARCHITECTURE.md
-    └── QUICK_REFERENCE.md
-```
-
-## 🔑 Key Features
-
-### Authentication & Authorization
-
-- Multi-role registration (Student, Company, Admin)
-- Email verification with OTP
-- JWT-based authentication
-- Google OAuth integration
-- Password reset functionality
-- Protected routes with role-based access
-
-### Student Features
-
-- Profile management
-- Task browsing and application
-- Skill assessment
-- Progress tracking
-- Certificate generation
-
-### Company Features
-
-- Task posting and management
-- Candidate evaluation
-- Analytics dashboard
-- Team collaboration
-
-### Admin Features
-
-- User management
-- Platform analytics
-- Content moderation
-
-## 🛠️ Technology Stack
-
-### Frontend
-
-- **Framework:** Next.js 14 (React 18)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS
-- **HTTP Client:** Axios
-- **Icons:** Lucide React
-- **State Management:** React Context API
-
-### Backend
-
-- **Framework:** Express.js
-- **Language:** JavaScript (Node.js)
-- **Database:** MongoDB with Mongoose
-- **Authentication:** JWT + Passport.js
-- **Security:** Helmet, CORS, Rate Limiting
-- **Validation:** Express Validator
-
-### AI Service (Future)
-
-- **Framework:** FastAPI
-- **Language:** Python
-- **ML Libraries:** TensorFlow, scikit-learn
-
-## 📚 Documentation
-
-| Document                                                             | Description                          |
-| -------------------------------------------------------------------- | ------------------------------------ |
-| [INTEGRATION_COMPLETE.md](./INTEGRATION_COMPLETE.md)                 | Integration overview and quick start |
-| [FRONTEND_BACKEND_INTEGRATION.md](./FRONTEND_BACKEND_INTEGRATION.md) | Detailed integration guide           |
-| [INTEGRATION_CHECKLIST.md](./INTEGRATION_CHECKLIST.md)               | Testing checklist                    |
-| [INTEGRATION_ARCHITECTURE.md](./INTEGRATION_ARCHITECTURE.md)         | System architecture diagrams         |
-| [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)                           | Quick reference for developers       |
-| [backend/README.md](./backend/README.md)                             | Backend API documentation            |
-| [backend/API_TESTING_GUIDE.md](./backend/API_TESTING_GUIDE.md)       | API testing guide                    |
-| [docs/qa/README.md](./docs/qa/README.md)                             | Testing documentation index, Modules 7–12 |
-
-## 🧪 Testing
-
-### Test Authentication Flow
-
-1. **Register a new user**
-   - Go to http://localhost:3000/register
-   - Fill in the form and submit
-   - Check email for OTP
-
-2. **Verify email**
-   - Enter OTP code
-   - Should redirect to dashboard
-
-3. **Login**
-   - Go to http://localhost:3000/login
-   - Enter credentials
-   - Should redirect to role-specific dashboard
-
-4. **Test protected routes**
-   - Try accessing `/student/dashboard` without login
-   - Should redirect to login page
-
-### API Testing
-
-Use the Postman collection in `backend/postman_collection.json` or test with curl:
-
-```bash
-# Health check
-curl http://localhost:5000/health
-
-# Register
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123","role":"student"}'
-
-# Login
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-```
-
-## 🔐 Security
-
-- JWT token-based authentication
-- Password hashing with bcrypt
-- CORS protection
-- Rate limiting
-- Input validation and sanitization
-- Helmet security headers
-- MongoDB injection prevention
-
-## 🚧 Roadmap
-
-### Phase 1: Core Features ✅
-
-- [x] Authentication system
-- [x] User registration and login
-- [x] Email verification
-- [x] Password reset
-- [x] Google OAuth
-
-### Phase 2: User Features (In Progress)
-
-- [ ] Student profile management
-- [ ] Company profile management
-- [ ] Task posting and browsing
-- [ ] Application system
-
-### Phase 3: AI Integration
-
-- [x] Intelligent task matching (Module 6)
-- [x] AI-ranked mentor suggestions (Module 7)
-- [x] Progress risk assessment and performance indicators (Module 8)
-- [x] Rubric-based automated evaluation with reviewer sign-off (Module 9)
-- [x] Feedback drafting assistant and tone review (Module 10)
-- [x] Performance index, score trend and projection for analytics dashboards (Module 11)
-- [ ] AI-powered skill assessment
-- [ ] Automated feedback generation
-
-### Module status
+The API calls the AI service for matching, progress risk, evaluation, feedback drafting and performance insights. If the AI service is unreachable, the API falls back to its own copy of the same rules, so the platform keeps working.
+
+> **Database history:** the project started on MongoDB with Mongoose. In May 2026, at my supervisor's request, I moved it to MySQL with Sequelize, splitting nested data (student skills, education, task attachments and so on) into their own tables.
+
+## Tech stack
+
+| Layer | Tools |
+| --- | --- |
+| Frontend | Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Radix UI, Formik + Yup, Axios |
+| Backend | Node.js, Express 4, Sequelize 6 on MySQL 8, JWT, Passport (Google OAuth), bcrypt, Multer, Nodemailer or Brevo for email |
+| Security | Helmet, CORS, express-rate-limit, express-validator, xss-clean |
+| AI service | Python 3.11, FastAPI, Pydantic, scikit-learn (TF-IDF), optional sentence-transformers embeddings |
+| Payments | Stripe Checkout over Stripe's REST API, with signed webhooks and a sandbox provider for testing |
+| Testing | Jest + Supertest (backend), pytest (AI service) |
+| Deployment | Vercel (frontend), Render (API), managed MySQL over TLS, Docker and docker-compose for local runs |
+
+## Features
+
+**Accounts and roles**
+- Four roles with their own dashboards: student, company, mentor and admin
+- Registration with email verification by one-time code, password reset and Google sign-in
+- JWT authentication with role-based route protection on both the API and the frontend
+
+**Students**
+- Profile with skills, education, experience, projects and certificates
+- Task recommendations ranked by match score, applications and interview tracking
+- Internship progress with milestones, time logs and submissions; mentorship; feedback, analytics and payouts
+
+**Companies**
+- Task posting with required skills and an evaluation rubric
+- Applicants ranked by match score, interviews, mentor assignment and progress monitoring
+- Analytics and payments
+
+**Mentors and admins**
+- Mentors review assigned students' progress and give feedback
+- Admins verify mentors and oversee platform analytics and payments
+
+**Evaluation and trust**
+- Rubric-based evaluations, finalized with reviewer sign-off and checkable by anyone at `/verify/<code>`
+- Feedback assistant that drafts balanced feedback and flags personal or insulting language before it is saved
+
+## AI service
+
+Every engine is deterministic: the same input always gives the same output, and every score comes with plain-language reasons. Nothing is a black box, so each number can be explained in a viva or to a user.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /match` | 0-100 match score between a student and a task |
+| `POST /rank-candidates` | Ranks a task's applicants by match score |
+| `POST /rank-mentors` | Suggests mentors for a student |
+| `POST /progress-insight` | Performance indicators and early delay warnings for an internship |
+| `POST /evaluate-internship` | Scores each rubric criterion with a rationale and evidence |
+| `POST /feedback-assist` | Drafts feedback and reviews tone |
+| `POST /performance-insights` | Performance index, score trend and projection |
+| `GET /health` | Service status and whether the embedding model is loaded |
+
+The match score is a weighted sum: skill match 55%, experience fit 15%, level fit 10%, interest overlap 10% and text similarity 10% (TF-IDF, or sentence embeddings when `AI_USE_EMBEDDINGS=true`). See [docs/module-6-matching-explained.md](./docs/module-6-matching-explained.md).
+
+## Modules
 
 | # | Module | Status | Docs |
 | - | ------ | ------ | ---- |
@@ -331,48 +97,96 @@ curl -X POST http://localhost:5000/api/auth/login \
 | 12 | Payment Integration | ✅ | [Architecture](./docs/architecture/module-12-payment-integration.md) · [QA plan](./docs/qa/module-12-payment-integration.md) |
 | 13 | Document Verification | ⏳ | — |
 
-### Phase 4: Advanced Features
+## Running it locally
 
-- [ ] Real-time chat
-- [ ] Video interviews
-- [x] Payment integration (Module 12 — sandbox + Stripe Checkout, signed webhooks)
-- [ ] Certificate generation
+### Option 1: Docker
 
-## 🤝 Contributing
+```bash
+docker compose up --build
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+This starts MySQL, Redis, the API, the AI service and the frontend with the settings in `docker-compose.yml`.
 
-## 📝 License
+### Option 2: each service by hand
 
-[Add your license here]
+**Prerequisites:** Node.js 18+, Python 3.11, MySQL 8.
 
-## 👥 Team
+**1. Backend API** (http://localhost:5000, health check at `/health`)
 
-[Add team members here]
+```bash
+cd backend
+cp .env.example .env      # set DB_*, JWT_SECRET, FRONTEND_URL, AI_SERVICE_URL and email settings
+npm install
+npm run dev
+```
 
-## 📞 Support
+Every setting is documented in [`backend/.env.example`](./backend/.env.example), including Google OAuth, Stripe, file storage and the admin account.
 
-For issues and questions:
+**2. AI service** (http://localhost:8000)
 
-- Check the documentation
-- Review error messages in browser console
-- Check backend logs
-- Create an issue on GitHub
+```bash
+cd ai-service
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
 
-## 🙏 Acknowledgments
+Optional settings: `AI_USE_EMBEDDINGS=true` (semantic similarity), `AI_EMBEDDING_MODEL`, and `BACKEND_URL`, `FRONTEND_URL` or `AI_EXTRA_ORIGINS` for CORS.
 
-- Next.js team for the amazing framework
-- Express.js community
-- MongoDB team
-- All contributors
+**3. Frontend** (http://localhost:3000)
 
----
+```bash
+cd frontend
+echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api" > .env.local
+npm install
+npm run dev
+```
 
-**Project Status:** 🟢 Active Development
-**Integration Status:** ✅ Complete
-**Version:** 1.0.0
-**Last Updated:** 2024
+### Demo data
+
+```bash
+cd backend
+node src/scripts/seedDemo.js   # users, tasks, applications
+npm run seed:mentors           # mentors and mentor assignments
+npm run seed:progress          # internship progress
+
+# Administrator account (the seeds above don't create one)
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='<a strong password>' npm run seed:admin
+```
+
+More detail in [backend/SEEDING_GUIDE.md](./backend/SEEDING_GUIDE.md).
+
+## Tests
+
+```bash
+cd backend && npm test        # Jest: business rules and AI-service contracts
+cd ai-service && pytest       # every AI engine
+```
+
+A Postman collection is in [`backend/postman_collection.json`](./backend/postman_collection.json). Test plans for modules 4 and 7-12 are in [docs/qa](./docs/qa/README.md).
+
+## Deployment notes
+
+- **Frontend:** Vercel, with `NEXT_PUBLIC_API_URL` pointing at the API.
+- **API:** Render, started with `npm run start:render`. It seeds demo data into an empty database when `SEED_IF_EMPTY=true` and creates the admin account when `ADMIN_EMAIL`/`ADMIN_PASSWORD` are set.
+- **Database:** managed MySQL with `DB_SSL=true` (paste the provider's CA into `DB_SSL_CA` to verify the certificate).
+- **Uploads:** set `FILE_STORAGE=db` on hosts whose disk is wiped on every deploy, so avatars, résumés and attachments are kept in MySQL.
+- **Email:** set `BREVO_API_KEY` to send over HTTPS where the host blocks SMTP ports.
+- Set `TRUST_PROXY=1` behind a hosting proxy so rate limiting sees real client IPs.
+
+## Project structure
+
+```
+├── frontend/            Next.js app (App Router): pages, components, contexts, services
+├── backend/             Express API: config, controllers, middleware, models, routes, services
+│   └── tests/           Jest tests
+├── ai-service/          FastAPI service: routes, services (the engines), schemas
+│   └── tests/           pytest tests
+├── docs/                Architecture notes and QA plans per module
+└── docker-compose.yml   Local stack: MySQL, Redis, API, AI service, frontend
+```
+
+## Author
+
+**Osama Khattak** · full-stack Next.js / MERN developer, Islamabad
+[Portfolio](https://osama-s-porfolio-beige.vercel.app) · [LinkedIn](https://www.linkedin.com/in/osama-khattak-253626365/) · [GitHub](https://github.com/osamaKhattakAlphinex)
